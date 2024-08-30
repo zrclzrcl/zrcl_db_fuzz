@@ -25,3 +25,5 @@ char* link_LLM(const char*, const char*);
 //输入LLM响应字符串，只返回其内容
 char* get_response_content(char*);
 
+//创建目录函数，用于创建给定字符串所指向目录
+void create_directory_if_not_exists(char*);

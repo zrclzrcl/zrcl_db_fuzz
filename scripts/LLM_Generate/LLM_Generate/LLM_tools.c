@@ -135,3 +135,22 @@ char* get_response_content(char* response)
 
     return need_return;
 }
+
+
+// 定义一个函数来创建目录
+void create_directory_if_not_exists(char* path) {
+    // 尝试创建目录
+    if (_mkdir(path) == 0) {
+        printf("Directory created: %s\n", path);
+    }
+    else {
+        if (errno == EEXIST) {
+            // 目录已经存在
+            printf("Directory already exists: %s\n", path);
+        }
+        else {
+            // 其他错误
+            fprintf(stderr, "Failed to create directory: %s\n", path);
+        }
+    }
+}
