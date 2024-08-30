@@ -38,8 +38,7 @@
               "RelativeToolTip": "LLM_Generate\\file_tools.c",
               "ViewState": "AQIAABUAAAAAAAAAAAAAACMAAAAFAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
-              "WhenOpened": "2024-08-30T07:16:24.631Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-30T07:16:24.631Z"
             },
             {
               "$type": "Document",
@@ -51,8 +50,7 @@
               "RelativeToolTip": "LLM_Generate\\LLM_tools.c",
               "ViewState": "AQIAAGYAAAAAAAAAAAA3wIcAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
-              "WhenOpened": "2024-08-30T03:01:25.904Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-30T03:01:25.904Z"
             },
             {
               "$type": "Document",
@@ -64,8 +62,7 @@
               "RelativeToolTip": "LLM_Generate\\zrcl_Richard.h",
               "ViewState": "AQIAAAwAAAAAAAAAAAAAAAIAAAASAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2024-08-29T09:48:53.956Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-29T09:48:53.956Z"
             },
             {
               "$type": "Document",
@@ -75,7 +72,7 @@
               "RelativeDocumentMoniker": "LLM_Generate\\LLM_Generate.c",
               "ToolTip": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_Generate.c",
               "RelativeToolTip": "LLM_Generate\\LLM_Generate.c",
-              "ViewState": "AQIAAAkAAAAAAAAAAAAAABkAAAAJAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAADBAQAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
               "WhenOpened": "2024-08-29T09:45:44.142Z",
               "EditorCaption": ""
