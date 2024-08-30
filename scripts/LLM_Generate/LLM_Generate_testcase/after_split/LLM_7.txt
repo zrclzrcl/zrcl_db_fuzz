@@ -1,0 +1,7 @@
+CREATE TABLE Tickets (ticketId INTEGER PRIMARY KEY, passengerName TEXT, fare REAL);
+INSERT INTO Tickets VALUES (101, 'George', 50.5), (102, 'Harry', 45.2), (103, 'Kevin', 55.3);
+SELECT MIN(fare) FROM Tickets;
+UPDATE Tickets SET fare = fare + 5 WHERE ticketId = 102;
+SELECT * FROM Tickets;
+DROP TABLE Tickets;
+

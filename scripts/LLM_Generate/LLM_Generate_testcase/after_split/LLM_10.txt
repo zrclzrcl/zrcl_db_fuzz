@@ -1,0 +1,8 @@
+CREATE TABLE Membership(id INTEGER PRIMARY KEY, name TEXT, duration INTEGER, cost REAL);
+INSERT INTO Membership VALUES(1, 'Basic Plan', 3, 999.99), (2, 'Premium Plan', 6, 1999.99);
+SELECT * FROM Membership WHERE duration BETWEEN 2 AND 5;
+UPDATE Membership SET cost = cost * 0.9 WHERE name = 'Basic Plan';
+SELECT * FROM Membership;
+DROP TABLE Membership;
+
+

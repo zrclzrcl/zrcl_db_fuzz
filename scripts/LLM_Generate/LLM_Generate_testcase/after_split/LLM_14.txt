@@ -1,0 +1,8 @@
+CREATE TABLE Products(Id INT, Name VARCHAR(255), Price INT);
+CREATE TABLE Cart(Id INT, Product_id INT, Quantity INT);
+INSERT INTO Products(Id, Name, Price) VALUES(1, 'Shirt', 500);
+INSERT INTO Cart(Id, Product_id, Quantity) VALUES(1, 1, 2);
+SELECT * FROM Cart JOIN Products ON Cart.Product_id = Products.Id;
+DELETE FROM Products WHERE Id = 1;
+DROP TABLE Products, Cart;
+

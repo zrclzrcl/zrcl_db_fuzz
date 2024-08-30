@@ -1,0 +1,8 @@
+CREATE TABLE Users (UserID INTEGER PRIMARY KEY, UserName TEXT, UserPassword TEXT);
+INSERT INTO Users VALUES(1, 'Admin', '12345');
+INSERT INTO Users VALUES(2, 'User1', 'abcd');
+BEGIN TRANSACTION;
+   UPDATE Users SET UserPassword = '67890' WHERE UserName = 'Admin';
+   UPDATE Users SET UserName = 'UserX' WHERE UserID = 2;
+COMMIT;
+

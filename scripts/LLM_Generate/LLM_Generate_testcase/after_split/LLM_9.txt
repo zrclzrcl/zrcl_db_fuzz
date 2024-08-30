@@ -1,0 +1,7 @@
+CREATE TABLE Vehicles (vehicleId INTEGER PRIMARY KEY, ownerName TEXT, registrationFee REAL);
+INSERT INTO Vehicles VALUES (2001, 'Tom', 150.5), (2002, 'Jerry', 250.7), (2003, 'Spike', 350.3);
+SELECT SUM(registrationFee) FROM Vehicles;
+UPDATE Vehicles SET registrationFee = registrationFee - 50 WHERE vehicleId = 2003;
+SELECT * FROM Vehicles;
+DROP TABLE Vehicles;
+

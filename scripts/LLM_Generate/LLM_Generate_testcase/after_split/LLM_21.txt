@@ -1,0 +1,7 @@
+CREATE TABLE Authors(Id INT, Name VARCHAR(255), Country VARCHAR(255));
+INSERT INTO Authors(Id, Name, Country) VALUES(1, 'Dan Brown', 'United States');
+SELECT * FROM Authors WHERE Country = 'United States';
+UPDATE Authors SET Country = 'USA' WHERE Id = 1;
+DELETE FROM Authors WHERE Id = 1;
+DROP TABLE Authors;
+

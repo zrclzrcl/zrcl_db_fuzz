@@ -1,0 +1,3 @@
+CREATE TABLE Customers (CustomerID INTEGER PRIMARY KEY, CustomerName TEXT, ContactName TEXT, Address TEXT, City TEXT, PostalCode TEXT, Country TEXT);
+CREATE TABLE Orders (OrderID INTEGER PRIMARY KEY, CustomerID INTEGER, EmployeeID INTEGER, OrderDate TEXT, ShipperID INTEGER);
+

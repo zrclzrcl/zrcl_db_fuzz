@@ -1,0 +1,7 @@
+CREATE TABLE Orders (orderId INTEGER  PRIMARY KEY, productId INTEGER, quantity INTEGER);
+INSERT INTO Orders VALUES (501, 221, 3), (502, 222, 5), (503, 223, 9);
+SELECT COUNT(orderId) FROM Orders WHERE quantity > 5;
+UPDATE Orders SET quantity = 4 WHERE orderId = 502;
+SELECT * FROM Orders;
+DROP TABLE Orders;
+

@@ -1,0 +1,7 @@
+CREATE TABLE Students(Id INT, Name VARCHAR(255), CGPA FLOAT);
+INSERT INTO Students(Id, Name, CGPA) VALUES(1, 'Sophia', 3.8);
+SELECT * FROM Students WHERE CGPA BETWEEN 3.5 AND 4;
+UPDATE Students SET CGPA = 3.9 WHERE Id = 1;
+DELETE FROM Students WHERE Id = 1;
+DROP TABLE Students;
+

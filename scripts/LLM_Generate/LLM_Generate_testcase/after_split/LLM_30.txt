@@ -1,0 +1,6 @@
+CREATE TABLE Sales (ID INTEGER PRIMARY KEY, Product TEXT, Quantity INTEGER);
+INSERT INTO Sales VALUES (1, 'Laptop', 5);
+INSERT INTO Sales VALUES (2, 'Desktop', 7);
+CREATE VIEW V_Sales AS SELECT Product, SUM(Quantity) as 'Total Quantity' FROM Sales GROUP BY Product;
+SELECT * FROM V_Sales;
+

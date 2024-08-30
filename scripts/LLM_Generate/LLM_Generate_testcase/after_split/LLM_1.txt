@@ -1,0 +1,8 @@
+CREATE TABLE customers(id INTEGER PRIMARY KEY, name TEXT, age INTEGER);
+INSERT INTO customers VALUES(1, 'John Doe', 25);
+INSERT INTO customers VALUES(2, 'Jane Doe', 23);
+UPDATE customers SET age = 30 WHERE name = 'John Doe';
+DELETE FROM customers WHERE name = 'Jane Doe';
+SELECT * from customers;
+DROP TABLE customers;
+

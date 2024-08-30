@@ -3,16 +3,20 @@
   "WorkspaceRootPath": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_Generate.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|solutionrelative:LLM_Generate\\LLM_Generate.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\file_tools.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|solutionrelative:LLM_Generate\\file_tools.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_tools.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|solutionrelative:LLM_Generate\\LLM_tools.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\zrcl_Richard.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|solutionrelative:LLM_Generate\\zrcl_Richard.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_Generate.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{231D1582-7D0A-4A7D-AC23-3469E3DCA18F}|LLM_Generate\\LLM_Generate.vcxproj|solutionrelative:LLM_Generate\\LLM_Generate.c||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,43 +26,56 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
+              "Title": "file_tools.c",
+              "DocumentMoniker": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\file_tools.c",
+              "RelativeDocumentMoniker": "LLM_Generate\\file_tools.c",
+              "ToolTip": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\file_tools.c",
+              "RelativeToolTip": "LLM_Generate\\file_tools.c",
+              "ViewState": "AQIAABUAAAAAAAAAAAAAACMAAAAFAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
+              "WhenOpened": "2024-08-30T07:16:24.631Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "LLM_tools.c",
               "DocumentMoniker": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_tools.c",
               "RelativeDocumentMoniker": "LLM_Generate\\LLM_tools.c",
               "ToolTip": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_tools.c",
               "RelativeToolTip": "LLM_Generate\\LLM_tools.c",
-              "ViewState": "AQIAAIEAAAAAAAAAAAA3wIQAAAAPAAAA",
+              "ViewState": "AQIAAGYAAAAAAAAAAAA3wIcAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
               "WhenOpened": "2024-08-30T03:01:25.904Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "zrcl_Richard.h",
               "DocumentMoniker": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\zrcl_Richard.h",
               "RelativeDocumentMoniker": "LLM_Generate\\zrcl_Richard.h",
               "ToolTip": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\zrcl_Richard.h",
               "RelativeToolTip": "LLM_Generate\\zrcl_Richard.h",
-              "ViewState": "AQIAAA8AAAAAAAAAAAAAABoAAAAAAAAA",
+              "ViewState": "AQIAAAwAAAAAAAAAAAAAAAIAAAASAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2024-08-29T09:48:53.956Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "LLM_Generate.c",
               "DocumentMoniker": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_Generate.c",
               "RelativeDocumentMoniker": "LLM_Generate\\LLM_Generate.c",
               "ToolTip": "F:\\Master\\DBMS_FUZZ\\zrcl_db_fuzz\\scripts\\LLM_Generate\\LLM_Generate\\LLM_Generate.c",
               "RelativeToolTip": "LLM_Generate\\LLM_Generate.c",
-              "ViewState": "AQIAABgAAAAAAAAAAAAAACYAAAAAAAAA",
+              "ViewState": "AQIAAAkAAAAAAAAAAAAAABkAAAAJAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000423|",
               "WhenOpened": "2024-08-29T09:45:44.142Z",
               "EditorCaption": ""

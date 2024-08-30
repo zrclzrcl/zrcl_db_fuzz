@@ -126,10 +126,6 @@ char* get_response_content(char* response)
 
     char* need_return = strdup(content->valuestring);
 
-
-
-
-
     // 清理JSON对象
     cJSON_Delete(json);
 
@@ -137,20 +133,3 @@ char* get_response_content(char* response)
 }
 
 
-// 定义一个函数来创建目录
-void create_directory_if_not_exists(char* path) {
-    // 尝试创建目录
-    if (_mkdir(path) == 0) {
-        printf("Directory created: %s\n", path);
-    }
-    else {
-        if (errno == EEXIST) {
-            // 目录已经存在
-            printf("Directory already exists: %s\n", path);
-        }
-        else {
-            // 其他错误
-            fprintf(stderr, "Failed to create directory: %s\n", path);
-        }
-    }
-}

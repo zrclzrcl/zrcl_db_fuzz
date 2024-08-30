@@ -1,0 +1,4 @@
+CREATE TABLE Players (PlayerID INTEGER PRIMARY KEY, PlayerName TEXT, TeamID INTEGER);
+CREATE TABLE Teams (TeamID INTEGER PRIMARY KEY, TeamName TEXT);
+SELECT Players.PlayerName, Teams.TeamName FROM Players LEFT JOIN Teams ON Players.TeamID = Teams.TeamID;
+

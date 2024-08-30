@@ -1,0 +1,7 @@
+CREATE TABLE OrderDetails (OrderID INTEGER PRIMARY KEY, ProductID INTEGER, Quantity INTEGER);
+INSERT INTO OrderDetails VALUES(1, 1, 10);
+INSERT INTO OrderDetails VALUES(2, 2, 20);
+SELECT SUM(Quantity) FROM OrderDetails;
+UPDATE OrderDetails SET Quantity = 30 WHERE OrderID=1;
+ALTER TABLE OrderDetails ADD COLUMN Price FLOAT;
+

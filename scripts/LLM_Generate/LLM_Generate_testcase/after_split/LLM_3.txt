@@ -1,0 +1,7 @@
+CREATE TABLE Inventory (id INTEGER PRIMARY KEY, itemName TEXT, quantity INTEGER);
+INSERT INTO Inventory VALUES (1, 'Pen', 30), (2, 'Pencil', 15), (3, 'Eraser', 20);
+SELECT SUM(quantity) FROM Inventory;
+UPDATE Inventory SET quantity = quantity + 10 WHERE itemName LIKE "%Pen%";
+SELECT * FROM Inventory;
+DROP TABLE Inventory;
+

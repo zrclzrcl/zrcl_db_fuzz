@@ -1,0 +1,7 @@
+CREATE TABLE Teams(Id INT, Name VARCHAR(255), Points INT);
+INSERT INTO Teams(Id, Name, Points) VALUES(1, 'Real Madrid', 80);
+SELECT * FROM Teams ORDER BY Points DESC;
+UPDATE Teams SET Points = 85 WHERE Id = 1;
+DELETE FROM Teams WHERE Id = 1;
+DROP TABLE Teams;
+

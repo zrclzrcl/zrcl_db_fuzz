@@ -1,0 +1,7 @@
+CREATE TABLE Account (id INTEGER PRIMARY KEY, name TEXT, balance REAL);
+INSERT INTO Account VALUES (1,'John',5000.0), (2,'Doe',3000.0);
+SELECT MAX(balance) FROM Account;
+UPDATE Account SET balance = balance - 500 WHERE id = 2;
+SELECT * FROM Account;
+DROP TABLE Account;
+

@@ -1,0 +1,7 @@
+CREATE TABLE Tickets(Id INT, Section VARCHAR(255), Row INT, Seat INT);
+INSERT INTO Tickets(Id, Section, Row, Seat) VALUES(1, 'A', 1, 1);
+SELECT * FROM Tickets WHERE Section = 'A' AND Row = 1;
+UPDATE Tickets SET Section = 'B', Row = 2, Seat = 2 WHERE Id = 1;
+DELETE FROM Tickets WHERE Id = 1;
+DROP TABLE Tickets;
+

@@ -1,5 +1,5 @@
 #pragma once
-#pragma once
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,3 +27,9 @@ char* get_response_content(char*);
 
 //创建目录函数，用于创建给定字符串所指向目录
 void create_directory_if_not_exists(char*);
+
+//通过给定测试用例内容以及编号，在指定目录下创建LLM_X.txt 用于分割从LLM获取到的多个testcase
+void write_test_case_to_file(const char*, int);
+
+//给定总测试用例的路径加文件名，进行分割，存入多个txt
+int split_testcases(char*);

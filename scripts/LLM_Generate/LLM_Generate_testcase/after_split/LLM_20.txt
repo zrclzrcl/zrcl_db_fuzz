@@ -1,0 +1,7 @@
+CREATE TABLE Courses(Id INT, Name VARCHAR(255), Credits INT);
+INSERT INTO Courses(Id, Name, Credits) VALUES(1, 'Database Systems', 4);
+SELECT * FROM Courses WHERE Credits >= 4;
+UPDATE Courses SET Name = 'Advanced Database Systems', Credits = 5 WHERE Id = 1;
+DELETE FROM Courses WHERE Id = 1;
+DROP TABLE Courses;
+

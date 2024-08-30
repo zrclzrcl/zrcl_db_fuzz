@@ -1,0 +1,7 @@
+CREATE TABLE Student(Id INT, Name VARCHAR(255), Age INT);
+INSERT INTO Student(Id, Name, Age) VALUES(1, 'Adam', 21);
+UPDATE Student SET Age = 22 WHERE Id = 1;
+SELECT * FROM Student WHERE Age > 20;
+DELETE FROM Student WHERE Id = 1;
+DROP TABLE Student;
+

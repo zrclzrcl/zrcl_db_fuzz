@@ -1,0 +1,5 @@
+CREATE TABLE Customers (CustomerID INTEGER PRIMARY KEY, CustomerName TEXT, ContactName TEXT, Country TEXT);
+INSERT INTO Customers VALUES (1, 'Alfreds Futterkiste', 'Maria Anders', 'Germany');
+INSERT INTO Customers VALUES (2, 'Ana Trujillo', 'Ana Trujillo', 'Mexico');
+SELECT Country FROM Customers GROUP BY Country HAVING COUNT(CustomerID) > 1;
+

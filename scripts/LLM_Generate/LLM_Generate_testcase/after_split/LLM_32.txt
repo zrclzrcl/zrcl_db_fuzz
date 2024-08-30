@@ -1,0 +1,3 @@
+CREATE TABLE Trainers (Id INTEGER PRIMARY KEY, Name TEXT, StartDate TEXT, EndDate TEXT);
+CREATE TRIGGER trg_before_insert BEFORE INSERT ON Trainers FOR EACH ROW BEGIN SELECT CASE WHEN ((new.StartDate > new.EndDate) OR (new.StartDate IS NULL) OR (new.EndDate IS NULL)) THEN RAISE (ABORT, 'Insert has been aborted.') END; END;
+

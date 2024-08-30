@@ -131,6 +131,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cJSON.c" />
+    <ClCompile Include="file_tools.c" />
     <ClCompile Include="LLM_Generate.c" />
     <ClCompile Include="LLM_tools.c" />
   </ItemGroup>
