@@ -6,3 +6,5 @@
   最原始的版本，只修改了git的版本号
 - with_LLM_Generate_1
   第一个实验版本，添加了LLM生成的分割代码
+_ just_LLM_Generate
+  第二个实验版本，删除原input，只采用LLM生成的测试用例
