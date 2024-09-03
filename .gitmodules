@@ -1,0 +1,3 @@
+[submodule "Squirrel"]
+	path = Squirrel
+	url = https://github.com/s3team/Squirrel.git
