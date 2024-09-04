@@ -1,9 +1,9 @@
 /*
-* ´´½¨ÈË zrcl_Richard_Zhang
-* ´´½¨ÈÕÆÚ£º2024-9-3
-* ±¾ÎÄ¼şÓÃÓÚ±àĞ´zrcl¿ÍÖÆ»¯±äÒìÆ÷
-* Ö÷Òª¹¦ÄÜÎªÊµÏÖAFL++µÄÏà¹Ø½Ó¿Ú£¬ÊµÏÖ¿ÍÖÆ»¯±äÒìÆ÷Éú³ÉSQL
-* Ö÷ÒªÉú³É·½·¨²ÉÓÃ´´½¨ĞÂÏß³ÌµÄÄ£Ê½£¬Ö÷Ïß³ÌÓÃÓÚ½øĞĞÅĞ¶Ï£¬¸±Ïß³ÌÓÃÓÚÁ´½ÓLLMÍøÂç²¢Éú³É²âÊÔÓÃÀı
+* åˆ›å»ºäºº zrcl_Richard_Zhang
+* åˆ›å»ºæ—¥æœŸï¼š2024-9-3
+* æœ¬æ–‡ä»¶ç”¨äºç¼–å†™zrclå®¢åˆ¶åŒ–å˜å¼‚å™¨
+* ä¸»è¦åŠŸèƒ½ä¸ºå®ç°AFL++çš„ç›¸å…³æ¥å£ï¼Œå®ç°å®¢åˆ¶åŒ–å˜å¼‚å™¨ç”ŸæˆSQL
+* ä¸»è¦ç”Ÿæˆæ–¹æ³•é‡‡ç”¨åˆ›å»ºæ–°çº¿ç¨‹çš„æ¨¡å¼ï¼Œä¸»çº¿ç¨‹ç”¨äºè¿›è¡Œåˆ¤æ–­ï¼Œå‰¯çº¿ç¨‹ç”¨äºé“¾æ¥LLMç½‘ç»œå¹¶ç”Ÿæˆæµ‹è¯•ç”¨ä¾‹
 */
 #include <cassert>
 #include <fstream>
@@ -14,18 +14,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <direct.h>//winÏÂÆô¶¯
+//#include <direct.h>//winä¸‹å¯åŠ¨
 #include "afl-fuzz.h"
 #include <sys/stat.h>//linux
 #include <sys/types.h>//linux
  
 struct ZrclMutator {
-	ZrclMutator() : fuzz_now(-1),fuzz_next(0) {				// ³õÊ¼»¯ fuzz_now Îª 0
-		strcpy(LLM_in_dir, "../LLM_testcase/");  // Ê¹ÓÃ strcpy ³õÊ¼»¯×Ö·ûÊı×é
+	ZrclMutator() : fuzz_now(-1),fuzz_next(0) {				// åˆå§‹åŒ– fuzz_now ä¸º 0
+		strcpy(LLM_in_dir, "../LLM_testcase/");  // ä½¿ç”¨ strcpy åˆå§‹åŒ–å­—ç¬¦æ•°ç»„
 	}
 	~ZrclMutator() {
-		// Èç¹ûÓĞĞèÒªÇåÀíµÄ×ÊÔ´£¬¿ÉÒÔÔÚÕâÀï´¦Àí
-		// Ä¿Ç°Ã»ÓĞĞèÒªÇåÀíµÄ¶¯Ì¬×ÊÔ´
+		// å¦‚æœæœ‰éœ€è¦æ¸…ç†çš„èµ„æºï¼Œå¯ä»¥åœ¨è¿™é‡Œå¤„ç†
+		// ç›®å‰æ²¡æœ‰éœ€è¦æ¸…ç†çš„åŠ¨æ€èµ„æº
 	}
 	char LLM_in_dir[50];
 	int fuzz_now;
@@ -34,8 +34,8 @@ struct ZrclMutator {
 
 static int make_dir(char* dir_name) {
 
-	// ´´½¨Ä¿Â¼
-	if (mkdir(dir_name) == -1) {
+	// åˆ›å»ºç›®å½•
+	if (mkdir(dir_name , 0755) == -1) {
 		std::cerr << "can not create LLM testcase dir"<< std::endl;
 		exit(-1);
 		return 1;
@@ -47,24 +47,24 @@ static int make_dir(char* dir_name) {
 extern "C" {
 	
 	/*
-	* ³õÊ¼»¯afl¿ÍÖÆ»¯±äÒìÆ÷
-	* ³õÊ¼»¯µÄ¹¤×÷ÄÚÈİ,µ±Ç°»¹Î´Öª
+	* åˆå§‹åŒ–aflå®¢åˆ¶åŒ–å˜å¼‚å™¨
+	* åˆå§‹åŒ–çš„å·¥ä½œå†…å®¹,å½“å‰è¿˜æœªçŸ¥
 	* 
 	*/
 	void* afl_custom_init(afl_state_t* afl, unsigned int seed) {
-		//³õÊ¼»¯Ò»¸ö±äÒìÆ÷Àà
+		//åˆå§‹åŒ–ä¸€ä¸ªå˜å¼‚å™¨ç±»
 		ZrclMutator* mutator = new ZrclMutator();
 
-		//´´½¨LLMÉú³É²âÊÔÓÃÀıµÄÎÄ¼ş¼Ğ
+		//åˆ›å»ºLLMç”Ÿæˆæµ‹è¯•ç”¨ä¾‹çš„æ–‡ä»¶å¤¹
 		make_dir(mutator->LLM_in_dir);
-		//Æô¶¯LLMÁ´½Ó£¬Éú³É²âÊÔÓÃÀı
-		//·µ»Ø³õÊ¼»¯µÄ±äÒìÆ÷
+		//å¯åŠ¨LLMé“¾æ¥ï¼Œç”Ÿæˆæµ‹è¯•ç”¨ä¾‹
+		//è¿”å›åˆå§‹åŒ–çš„å˜å¼‚å™¨
 		return mutator;
 	}
 
 
 	/*
-	* ¿Õº¯Êı£¬¸æÖªafl²»ÓÃ´«µİÆ´½ÓÎÄ±¾£¬¼õÉÙ²ÎÊı´«µİ
+	* ç©ºå‡½æ•°ï¼Œå‘ŠçŸ¥aflä¸ç”¨ä¼ é€’æ‹¼æ¥æ–‡æœ¬ï¼Œå‡å°‘å‚æ•°ä¼ é€’
 	*/
 	void afl_custom_splice_optout(void* data)
 	{
@@ -72,9 +72,9 @@ extern "C" {
 	}
 
 	/*
-	* Ö÷ÒªµÄfuzzº¯Êı
-	* ÓÃÓÚ½øĞĞ±äÒì£¬²¢·µ»Ø±äÒìÊäÈëµÄ´óĞ¡
-	* ´ËÊ±µÄ±äÒìÎªLLMµÄÉú³É
+	* ä¸»è¦çš„fuzzå‡½æ•°
+	* ç”¨äºè¿›è¡Œå˜å¼‚ï¼Œå¹¶è¿”å›å˜å¼‚è¾“å…¥çš„å¤§å°
+	* æ­¤æ—¶çš„å˜å¼‚ä¸ºLLMçš„ç”Ÿæˆ
 	*/
 	size_t afl_custom_fuzz(
 		ZrclMutator* mutator,
@@ -86,50 +86,50 @@ extern "C" {
 		size_t max_size)
 	{
 		/*
-		* ¶ÁÈ¡LLMµÄ²âÊÔÓÃÀı
-		* Ê×ÏÈÆ´½Ó×Ö·û´®£¬ĞÎ³É×îĞÂµÄÂ·¾¶
-		* ÅĞ¶ÏÂ·¾¶ÉÏµÄ²âÊÔÓÃÀıÊÇ·ñ´æÔÚ
-		* µ±²»´æÔÚÊ±Ôò·µ»Ø0£¬Ìø¹ı±¾´Î±äÒì¡£
+		* è¯»å–LLMçš„æµ‹è¯•ç”¨ä¾‹
+		* é¦–å…ˆæ‹¼æ¥å­—ç¬¦ä¸²ï¼Œå½¢æˆæœ€æ–°çš„è·¯å¾„
+		* åˆ¤æ–­è·¯å¾„ä¸Šçš„æµ‹è¯•ç”¨ä¾‹æ˜¯å¦å­˜åœ¨
+		* å½“ä¸å­˜åœ¨æ—¶åˆ™è¿”å›0ï¼Œè·³è¿‡æœ¬æ¬¡å˜å¼‚ã€‚
 		*/
-		//Æ´½Ó×Ö·û´®
+		//æ‹¼æ¥å­—ç¬¦ä¸²
 		char char_tmp_next[30];
 		char file_name[40] = "LLM_G_";
 		char LLM_in_path[50];
 
-		//Ê×ÏÈÆ´½ÓÎÄ¼şÃû
-		strcpy(LLM_in_path, mutator->LLM_in_dir);	//½«mutatorÖĞµÄÂ·¾¶È¡³ö·ÅÈëLLM_in_path
-		sprintf(char_tmp_next, "%d", mutator->fuzz_next);	//½«ÏÂÒ»¸ö²âÊÔµÄÊı×Ö×ªÎª×Ö·û´®´æÈëchar_tmp_next
-		strcat(file_name, char_tmp_next);//Æ´½ÓÇ°×ºÓëÊı×Ö
+		//é¦–å…ˆæ‹¼æ¥æ–‡ä»¶å
+		strcpy(LLM_in_path, mutator->LLM_in_dir);	//å°†mutatorä¸­çš„è·¯å¾„å–å‡ºæ”¾å…¥LLM_in_path
+		sprintf(char_tmp_next, "%d", mutator->fuzz_next);	//å°†ä¸‹ä¸€ä¸ªæµ‹è¯•çš„æ•°å­—è½¬ä¸ºå­—ç¬¦ä¸²å­˜å…¥char_tmp_next
+		strcat(file_name, char_tmp_next);//æ‹¼æ¥å‰ç¼€ä¸æ•°å­—
 		strcat(file_name, ".txt");
-		//Æ´½ÓÂ·¾¶
+		//æ‹¼æ¥è·¯å¾„
 		strcat(LLM_in_path, file_name);
 
-		//µÃµ½Â·¾¶ºó£¬¿ªÊ¼¶ÁÈ¡ÎÄ¼ş
+		//å¾—åˆ°è·¯å¾„åï¼Œå¼€å§‹è¯»å–æ–‡ä»¶
 		FILE* file = fopen(LLM_in_path, "r");
 
 		if (file == NULL) {
-			//´ËÊ±ÈôÎŞ·¨´ò¿ªÎÄ¼şÔò±íÊ¾LLMÉú³ÉËÙ¶ÈÂıÓÚ²âÊÔËÙ¶È£¬·µ»Ø0£¬Ìø¹ı±¾´Î±äÒì,ÔòÖ»Ê¹ÓÃSQUIRREL
+			//æ­¤æ—¶è‹¥æ— æ³•æ‰“å¼€æ–‡ä»¶åˆ™è¡¨ç¤ºLLMç”Ÿæˆé€Ÿåº¦æ…¢äºæµ‹è¯•é€Ÿåº¦ï¼Œè¿”å›0ï¼Œè·³è¿‡æœ¬æ¬¡å˜å¼‚,åˆ™åªä½¿ç”¨SQUIRREL
 			return 0;
 		}
 
-		//»ñÈ¡ÎÄ¼ş´óĞ¡
+		//è·å–æ–‡ä»¶å¤§å°
 		fseek(file, 0, SEEK_END);
 		size_t file_size = ftell(file);
 		rewind(file);
 		
-		// ¶ÁÈ¡ÎÄ¼şÄÚÈİµ½»º³åÇøout_bufÖĞ
+		// è¯»å–æ–‡ä»¶å†…å®¹åˆ°ç¼“å†²åŒºout_bufä¸­
 
 
 		size_t bytes_read = fread(*out_buf, 1, file_size, file);
 
-		// ¹Ø±ÕÎÄ¼ş
+		// å…³é—­æ–‡ä»¶
 		fclose(file);
 
-		// ·µ»Ø¶ÁÈ¡µÄ×Ö½ÚÊı
+		// è¿”å›è¯»å–çš„å­—èŠ‚æ•°
 		return bytes_read;
 	}
 	
-	//fuzzÍ£Ö¹ºó£¬É¾³ı¿ÍÖÆ»¯±äÒìÆ÷
+	//fuzzåœæ­¢åï¼Œåˆ é™¤å®¢åˆ¶åŒ–å˜å¼‚å™¨
 	void afl_custom_deinit(ZrclMutator* data) { delete data; }
 
 }
