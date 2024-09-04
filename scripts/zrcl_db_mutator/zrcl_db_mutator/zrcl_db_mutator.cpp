@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 //#include <direct.h>//winÏÂÆô¶¯
-#include "alloc-inl.h"
 #include "afl-fuzz.h"
 #include <sys/stat.h>//linux
 #include <sys/types.h>//linux
