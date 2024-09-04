@@ -6,5 +6,8 @@
   最原始的版本，只修改了git的版本号
 - with_LLM_Generate_1
   第一个实验版本，添加了LLM生成的分割代码
-_ just_LLM_Generate
+- just_LLM_Generate
   第二个实验版本，删除原input，只采用LLM生成的测试用例
+- with_zrcl_mutator_0
+  此版本是第一次添加了zrcl_mutator的版本的docker，内容进行了大概，不再clone Squirrel，而是直接clone zrcl_mutator
+  
