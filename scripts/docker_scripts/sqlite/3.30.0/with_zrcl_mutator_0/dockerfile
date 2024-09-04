@@ -68,9 +68,9 @@ WORKDIR /home
 #全部下载后，进行编译Squirrel和AFL++
 RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git && \
     cd zrcl_db_fuzz && git submodule update --init && \
+    cd Squirrel && git submodule update --init && cd .. && \
     cd scripts/zrcl_db_mutator/zrcl_db_mutator/ &&  \
-    gcc -shared -Wall -O3 zrcl_db_mutator.cpp -o zrcl_db_mutator.so -I ../../Squirrel/AFLplusplus/include/ && \
-    cd Squirrel && git submodule update --init && \
+    gcc -shared -Wall -O3 zrcl_db_mutator.cpp -o zrcl_db_mutator.so -I /home/zrcl_db_fuzz/Squirrel/AFLplusplus/include/ && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSQLITE=ON && \
     cmake --build build -j && \
     cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
