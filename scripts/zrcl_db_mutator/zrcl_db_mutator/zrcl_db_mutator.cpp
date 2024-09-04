@@ -14,9 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <direct.h>//win下启动
+//#include <direct.h>//win下启动
 #include "alloc-inl.h"
 #include "afl-fuzz.h"
+#include <sys/stat.h>//linux
+#include <sys/types.h>//linux
  
 struct ZrclMutator {
 	ZrclMutator() : fuzz_now(-1),fuzz_next(0) {				// 初始化 fuzz_now 为 0
@@ -34,7 +36,7 @@ struct ZrclMutator {
 static int make_dir(char* dir_name) {
 
 	// 创建目录
-	if (_mkdir(dir_name) == -1) {
+	if (mkdir(dir_name) == -1) {
 		std::cerr << "can not create LLM testcase dir"<< std::endl;
 		exit(-1);
 		return 1;
