@@ -119,6 +119,8 @@ extern "C" {
 		rewind(file);
 		
 		// 读取文件内容到缓冲区out_buf中
+
+
 		size_t bytes_read = fread(*out_buf, 1, file_size, file);
 
 		// 关闭文件
