@@ -1,0 +1,27 @@
+﻿  zrcl_db_mutator.cpp
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(246,20): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(253,16): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(263,15): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(273,14): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(283,15): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(293,16): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(306,16): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(319,17): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(335,23): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\debug.h(347,17): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(49,28): error C2010: “.”: 宏参数表中的意外
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(89,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(89,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(91,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(91,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(137,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(137,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(144,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(144,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(159,30): warning C4267: “=”: 从“size_t”转换到“u32”，可能丢失数据
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(161,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(161,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(163,3): warning C4002: 类函数宏的调用“colorfilter”参数过多
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(163,3): warning C4473: “printf”: 没有为格式字符串传递足够的参数
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\alloc-inl.h(635,6): warning C4200: 使用了非标准扩展: 结构/联合中的零大小数组
+F:\Master\DBMS_FUZZ\zrcl_db_fuzz\Squirrel\AFLplusplus\include\common.h(32,10): error C1083: 无法打开包括文件: “unistd.h”: No such file or directory

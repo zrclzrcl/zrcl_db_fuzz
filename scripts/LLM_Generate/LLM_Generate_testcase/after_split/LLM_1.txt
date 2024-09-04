@@ -5,4 +5,3 @@ UPDATE customers SET age = 30 WHERE name = 'John Doe';
 DELETE FROM customers WHERE name = 'Jane Doe';
 SELECT * from customers;
 DROP TABLE customers;
-

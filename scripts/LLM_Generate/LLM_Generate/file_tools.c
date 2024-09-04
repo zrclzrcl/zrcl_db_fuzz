@@ -1,24 +1,24 @@
 #include "zrcl_Richard.h"
 
-// 定义一个函数来创建目录
+// 瀹氫箟涓�涓嚱鏁版潵鍒涘缓鐩綍
 void create_directory_if_not_exists(char* path) {
-    // 尝试创建目录
+    // 灏濊瘯鍒涘缓鐩綍
     if (_mkdir(path) == 0) {
         printf("Directory created: %s\n", path);
     }
     else {
         if (errno == EEXIST) {
-            // 目录已经存在
+            // 鐩綍宸茬粡瀛樺湪
             printf("Directory already exists: %s\n", path);
         }
         else {
-            // 其他错误
+            // 鍏朵粬閿欒
             fprintf(stderr, "Failed to create directory: %s\n", path);
         }
     }
 }
 
-//通过给定测试用例内容以及编号，在指定目录下创建LLM_X.txt 用于分割从LLM获取到的多个testcase
+//閫氳繃缁欏畾娴嬭瘯鐢ㄤ緥鍐呭浠ュ強缂栧彿锛屽湪鎸囧畾鐩綍涓嬪垱寤篖LM_X.txt 鐢ㄤ簬鍒嗗壊浠嶭LM鑾峰彇鍒扮殑澶氫釜testcase
 void write_test_case_to_file(const char* test_case, int case_number) {
     char filename[512];
     snprintf(filename, sizeof(filename), "../LLM_Generate_testcase/after_split/LLM_%d.txt", case_number);
