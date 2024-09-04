@@ -1,0 +1,3 @@
+[submodule "Squirrel"]
+	path = Squirrel
+	url = https://github.com/zrclzrcl/Squirrel.git
