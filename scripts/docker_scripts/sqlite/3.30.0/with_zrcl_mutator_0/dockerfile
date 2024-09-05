@@ -66,7 +66,7 @@ WORKDIR /home
 
 #clone zrcl_db_fuzz项目，里面已经包含了squirrel子项目
 #全部下载后，进行编译Squirrel和AFL++
-RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  && \
+RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git &&\
     cd zrcl_db_fuzz && git submodule update --init && \
     cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSQLITE=ON && \
@@ -78,7 +78,7 @@ ENV CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc
 #指定c语言变异器为afl-c++ 用于在编译时插桩
 ENV CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++
 
-RUN cd zrcl_db_fuzz/scripts/zrcl_db_mutator/zrcl_db_mutator/ &&  \
+RUN RUN mkdir ./LLM_testcase/ && cd zrcl_db_fuzz/scripts/zrcl_db_mutator/zrcl_db_mutator/ &&  \
     g++ -O3 -fPIC -shared -g -I ../../../Squirrel/AFLplusplus/include/ zrcl_db_mutator.cpp -o zrcl_db_mutator.so 
 
 RUN cd zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split && \

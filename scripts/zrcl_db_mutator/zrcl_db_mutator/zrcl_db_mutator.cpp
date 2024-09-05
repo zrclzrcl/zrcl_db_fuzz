@@ -21,7 +21,7 @@
  
 struct ZrclMutator {
 	ZrclMutator() : fuzz_now(-1),fuzz_next(0) {				// 初始化 fuzz_now 为 0
-		strcpy(LLM_in_dir, "../LLM_testcase/");  // 使用 strcpy 初始化字符数组
+		strcpy(LLM_in_dir, "/home/LLM_testcase/");  // 使用 strcpy 初始化字符数组
 	}
 	~ZrclMutator() {
 		// 如果有需要清理的资源，可以在这里处理
@@ -31,17 +31,6 @@ struct ZrclMutator {
 	int fuzz_now;
 	int fuzz_next;
 };
-
-static int make_dir(char* dir_name) {
-
-	// 创建目录
-	if (mkdir(dir_name , 0755) == -1) {
-		std::cerr << "can not create LLM testcase dir"<< std::endl;
-		exit(-1);
-		return 1;
-	}
-	return 0;
-}
 
 
 extern "C" {
@@ -55,9 +44,7 @@ extern "C" {
 		//初始化一个变异器类
 		ZrclMutator* mutator = new ZrclMutator();
 
-		//创建LLM生成测试用例的文件夹
-		make_dir(mutator->LLM_in_dir);
-		//启动LLM链接，生成测试用例
+
 		//返回初始化的变异器
 		return mutator;
 	}
