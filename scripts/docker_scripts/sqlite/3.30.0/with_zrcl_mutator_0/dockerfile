@@ -78,7 +78,7 @@ RUN cd zrcl_db_fuzz/Squirrel && \
 
 
 RUN cd zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split && \
-    cp /home/zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split/*.txt /home/Squirrel/data/fuzz_root/input/  
+    cp /home/zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split/*.txt /home/zrcl_db_fuzz/Squirrel/data/fuzz_root/input/  
 
 #定义一个临时变量，只能在docker构建时使用
 #CFLAGS是常用于编译 C/C++ 程序时传递给编译器的选项。在这种情况下，CFLAGS 被用来传递给编译 SQLite 的编译器选项。
@@ -96,9 +96,9 @@ RUN git clone https://github.com/sqlite/sqlite sqlite3/ && cd sqlite3 && git che
 WORKDIR /home/sqlite3/bld
 
 #指定c语言变异器为afl-cc 用于在编译时插桩
-ENV CC=/home/Squirrel/AFLplusplus/afl-cc
+ENV CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc
 #指定c语言变异器为afl-c++ 用于在编译时插桩
-ENV CXX=/home/Squirrel/AFLplusplus/afl-c++
+ENV CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++
 #执行运行 configure 脚本。这个脚本用于检查构建环境，并生成一个适合当前环境的 Makefile
 #进行并行编译 插装，插装后使用 make 工具生成 sqlite3.c 文件。sqlite3.c 是 SQLite 的一个单文件合并版本（amalgamation file），它包含了 SQLite 所有源代码的一个单一文件
 RUN ../configure && make -j && make sqlite3.c
@@ -114,7 +114,7 @@ RUN $CXX $CXXFLAGS \
     /home/sqlite3/test/ossfuzz.o /home/sqlite3/test/ossshell.o -o /home/ossfuzz \
    ./sqlite3.o -ldl -pthread
 #切换工作目录
-WORKDIR /home/zrcl_db_mutator/Squirrel/scripts/utils
+WORKDIR /home/zrcl_db_fuzz/Squirrel/scripts/utils
 #进入点 命令 指定docker启动时的主命令 这里启动了run.py脚本并传递了两个参数
 #第一个参数是数据库名 第二个参数为输入文件目录
 ENTRYPOINT python3 run_zrcl_mutator.py sqlite ../../data/fuzz_root/input
