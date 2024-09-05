@@ -68,14 +68,18 @@ WORKDIR /home
 #全部下载后，进行编译Squirrel和AFL++
 RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git && \
     cd zrcl_db_fuzz && git submodule update --init && \
-    cd Squirrel && git submodule update --init && cd .. && \
-    cd scripts/zrcl_db_mutator/zrcl_db_mutator/ &&  \
-    gcc -shared -Wall -O3 -fPIC zrcl_db_mutator.cpp -o zrcl_db_mutator.so -I /home/zrcl_db_fuzz/Squirrel/AFLplusplus/include/
-RUN cd zrcl_db_fuzz/Squirrel && \
+    cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSQLITE=ON && \
     cmake --build build -j && \
     cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
 
+#指定c语言变异器为afl-cc 用于在编译时插桩
+ENV CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc
+#指定c语言变异器为afl-c++ 用于在编译时插桩
+ENV CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++
+
+RUN cd zrcl_db_fuzz/scripts/zrcl_db_mutator/zrcl_db_mutator/ &&  \
+    g++ -O3 -fPIC -shared -g -I ../../../Squirrel/AFLplusplus/include/ zrcl_db_mutator.cpp -o zrcl_db_mutator.so 
 
 RUN cd zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split && \
     cp /home/zrcl_db_fuzz/scripts/LLM_Generate/LLM_Generate_testcase/after_split/*.txt /home/zrcl_db_fuzz/Squirrel/data/fuzz_root/input/  
@@ -95,10 +99,7 @@ RUN git clone https://github.com/sqlite/sqlite sqlite3/ && cd sqlite3 && git che
 #切换到bld目录
 WORKDIR /home/sqlite3/bld
 
-#指定c语言变异器为afl-cc 用于在编译时插桩
-ENV CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc
-#指定c语言变异器为afl-c++ 用于在编译时插桩
-ENV CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++
+
 #执行运行 configure 脚本。这个脚本用于检查构建环境，并生成一个适合当前环境的 Makefile
 #进行并行编译 插装，插装后使用 make 工具生成 sqlite3.c 文件。sqlite3.c 是 SQLite 的一个单文件合并版本（amalgamation file），它包含了 SQLite 所有源代码的一个单一文件
 RUN ../configure && make -j && make sqlite3.c
