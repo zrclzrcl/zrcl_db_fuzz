@@ -1,370 +1,69 @@
-1. Test Case: 
-```sql
-CREATE TABLE customers(id INTEGER PRIMARY KEY, name TEXT, age INTEGER);
-INSERT INTO customers VALUES(1, 'John Doe', 25);
-INSERT INTO customers VALUES(2, 'Jane Doe', 23);
-UPDATE customers SET age = 30 WHERE name = 'John Doe';
-DELETE FROM customers WHERE name = 'Jane Doe';
-SELECT * from customers;
-DROP TABLE customers;
-```
+Test Case 1: Testing CRUD Operations
 
-2. Test Case:
-```sql
-CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL);
-INSERT INTO products VALUES(1, 'Apple', 0.25), (2, 'Banana', 0.15), (3, 'Cherry', 0.05);
-SELECT AVG(price) from products;
-UPDATE products SET price = price * 1.1;
-SELECT * FROM products;
-DROP TABLE products;
-```
+- SQL1: CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);
+- SQL2: INSERT INTO test (name) VALUES ('Test1');
+- SQL3: SELECT * FROM test;
+- SQL4: UPDATE test SET name='TestUpdated' WHERE id=1;
+- SQL5: SELECT * FROM test;
+- SQL6: DELETE FROM test WHERE id=1;
+- SQL7: SELECT * FROM test;
 
-3. Test Case:
-```sql
-CREATE TABLE Inventory (id INTEGER PRIMARY KEY, itemName TEXT, quantity INTEGER);
-INSERT INTO Inventory VALUES (1, 'Pen', 30), (2, 'Pencil', 15), (3, 'Eraser', 20);
-SELECT SUM(quantity) FROM Inventory;
-UPDATE Inventory SET quantity = quantity + 10 WHERE itemName LIKE "%Pen%";
-SELECT * FROM Inventory;
-DROP TABLE Inventory;
-```
+Test Case 2: Testing NULL Values 
 
-4. Test Case: 
-```sql
-CREATE TABLE Users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);
-INSERT INTO Users VALUES (01, 'Alex', 'pass1234'), (02, 'Ben', 'pass789'), (03, 'Chris', 'pass456');
-SELECT COUNT(Username) FROM Users WHERE password LIKE "pass%";
-UPDATE Users SET password = 'pass567' WHERE username = 'Ben';
-SELECT * FROM Users;
-DROP TABLE Users;
-```
+- SQL1: CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);
+- SQL2: INSERT INTO test (name) VALUES (null);
+- SQL3: SELECT * FROM test where name IS NULL;
+- SQL4: UPDATE test SET name='Test' WHERE name IS NULL;
+- SQL5: SELECT * FROM test where name IS NULL;
+- SQL6: DELETE FROM test WHERE name IS NULL;
+- SQL7: SELECT * FROM test;
 
-5. Test Case: 
-```sql
-CREATE TABLE Account (id INTEGER PRIMARY KEY, name TEXT, balance REAL);
-INSERT INTO Account VALUES (1,'John',5000.0), (2,'Doe',3000.0);
-SELECT MAX(balance) FROM Account;
-UPDATE Account SET balance = balance - 500 WHERE id = 2;
-SELECT * FROM Account;
-DROP TABLE Account;
-```
+Test Case 3: Testing Constraints – UNIQUE
 
-6. Test Case: 
-```sql
-CREATE TABLE Orders (orderId INTEGER  PRIMARY KEY, productId INTEGER, quantity INTEGER);
-INSERT INTO Orders VALUES (501, 221, 3), (502, 222, 5), (503, 223, 9);
-SELECT COUNT(orderId) FROM Orders WHERE quantity > 5;
-UPDATE Orders SET quantity = 4 WHERE orderId = 502;
-SELECT * FROM Orders;
-DROP TABLE Orders;
-```
+- SQL1: CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT UNIQUE);
+- SQL2: INSERT INTO test (name) VALUES ('Test1');
+- SQL3: SELECT * FROM test;
+- SQL4: INSERT INTO test (name) VALUES ('Test1');
 
-7. Test Case: 
-```sql
-CREATE TABLE Tickets (ticketId INTEGER PRIMARY KEY, passengerName TEXT, fare REAL);
-INSERT INTO Tickets VALUES (101, 'George', 50.5), (102, 'Harry', 45.2), (103, 'Kevin', 55.3);
-SELECT MIN(fare) FROM Tickets;
-UPDATE Tickets SET fare = fare + 5 WHERE ticketId = 102;
-SELECT * FROM Tickets;
-DROP TABLE Tickets;
-```
+Test Case 4: Testing JOIN Operations
 
-8. Test Case: 
-```sql
-CREATE TABLE Invoices (invoiceId INTEGER PRIMARY KEY, customerId INTEGER, total REAL);
-INSERT INTO Invoices VALUES (1001, 201, 350.5), (1002, 202, 450.7), (1003, 203, 550.3);
-SELECT AVG(total) FROM Invoices;
-UPDATE Invoices SET total = total - 50 WHERE invoiceId = 1003;
-SELECT * FROM Invoices;
-DROP TABLE Invoices;
-```
+- SQL1: CREATE TABLE test1 (id INTEGER PRIMARY KEY, name TEXT);
+- SQL2: CREATE TABLE test2 (id INTEGER PRIMARY KEY, test1_id INTEGER, description TEXT);
+- SQL3: INSERT INTO test1 (name) VALUES ('Test1');
+- SQL4: INSERT INTO test2 (test1_id, description) VALUES (1, 'Test2');
+- SQL5: SELECT * FROM test1 JOIN test2 on test1.id = test2.test1_id;
 
-9. Test Case:
-```sql
-CREATE TABLE Vehicles (vehicleId INTEGER PRIMARY KEY, ownerName TEXT, registrationFee REAL);
-INSERT INTO Vehicles VALUES (2001, 'Tom', 150.5), (2002, 'Jerry', 250.7), (2003, 'Spike', 350.3);
-SELECT SUM(registrationFee) FROM Vehicles;
-UPDATE Vehicles SET registrationFee = registrationFee - 50 WHERE vehicleId = 2003;
-SELECT * FROM Vehicles;
-DROP TABLE Vehicles;
-```
+Test Case 5: Testing BLOB Data Type
 
-10. Test Case:
-```sql
-CREATE TABLE Membership(id INTEGER PRIMARY KEY, name TEXT, duration INTEGER, cost REAL);
-INSERT INTO Membership VALUES(1, 'Basic Plan', 3, 999.99), (2, 'Premium Plan', 6, 1999.99);
-SELECT * FROM Membership WHERE duration BETWEEN 2 AND 5;
-UPDATE Membership SET cost = cost * 0.9 WHERE name = 'Basic Plan';
-SELECT * FROM Membership;
-DROP TABLE Membership;
+- SQL1: CREATE TABLE test (id INTEGER PRIMARY KEY, name BLOB);
+- SQL2: INSERT INTO test (name) VALUES (x'53514C697465');
+- SQL3: SELECT * FROM test;
 
-```
-TestCase 1:
-```sql
-CREATE TABLE Employees(Id INT, Name VARCHAR(255), Organization VARCHAR(255));
-INSERT INTO Employees(Id, Name, Organization) VALUES(1, 'John', 'Google');
-INSERT INTO Employees(Id, Name, Organization) VALUES(2, 'Jack', 'Microsoft');
-SELECT * FROM Employees;
-UPDATE Employees SET Name = 'James' WHERE Id = 2;
-DELETE FROM Employees WHERE Id = 1;
-DROP TABLE Employees;
-```
+Ensure to evaluate the result of each SQL statement to ensure it's performing the expected operation.
+Choices is not an array!
 
-TestCase 2:
-```sql
-CREATE TABLE Customers(Id INT, Name VARCHAR(255));
-CREATE TABLE Orders(Id INT, Order_number INT, Customer_id INT);
-INSERT INTO Customers(Id, Name) VALUES(1, 'Alex');
-INSERT INTO Orders(Id, Order_number, Customer_id) VALUES(1, 12345, 1);
-SELECT * FROM Customers JOIN Orders ON Customers.Id = Orders.Customer_id;
-DELETE FROM Orders WHERE Id = 1;
-DROP TABLE Customers, Orders;
-```
+Choices is not an array!
 
-TestCase 3:
-```sql
-CREATE TABLE Student(Id INT, Name VARCHAR(255), Age INT);
-INSERT INTO Student(Id, Name, Age) VALUES(1, 'Adam', 21);
-UPDATE Student SET Age = 22 WHERE Id = 1;
-SELECT * FROM Student WHERE Age > 20;
-DELETE FROM Student WHERE Id = 1;
-DROP TABLE Student;
-```
+Choices is not an array!
 
-TestCase 4:
-```sql
-CREATE TABLE Products(Id INT, Name VARCHAR(255), Price INT);
-CREATE TABLE Cart(Id INT, Product_id INT, Quantity INT);
-INSERT INTO Products(Id, Name, Price) VALUES(1, 'Shirt', 500);
-INSERT INTO Cart(Id, Product_id, Quantity) VALUES(1, 1, 2);
-SELECT * FROM Cart JOIN Products ON Cart.Product_id = Products.Id;
-DELETE FROM Products WHERE Id = 1;
-DROP TABLE Products, Cart;
-```
+Choices is not an array!
 
-TestCase 5:
-```sql
-CREATE TABLE Users(Id INT, Name VARCHAR(255), Email VARCHAR(255));
-INSERT INTO Users(Id, Name, Email) VALUES(1, 'Mike', 'mike@gmail.com');
-SELECT * FROM Users WHERE Name LIKE 'M%';
-UPDATE Users SET Email = 'mike@yahoo.com' WHERE Id = 1;
-DELETE FROM Users WHERE Id = 1;
-DROP TABLE Users;
-```
+Choices is not an array!
 
-TestCase 6:
-```sql
-CREATE TABLE Books(Id INT, Title VARCHAR(255), Author VARCHAR(255));
-INSERT INTO Books(Id, Title, Author) VALUES(1, 'A Game of Thrones', 'George R. R. Martin');
-SELECT * FROM Books WHERE Author LIKE '%Martin';
-UPDATE Books SET Author = 'G. Martin' WHERE Id = 1;
-DELETE FROM Books WHERE Id = 1;
-DROP TABLE Books;
-```
+Choices is not an array!
 
-TestCase 7:
-```sql
-CREATE TABLE Cars(Id INT, Model VARCHAR(255), Year INT);
-INSERT INTO Cars(Id, Model, Year) VALUES(1, 'Tesla Model S', 2020);
-SELECT * FROM Cars WHERE Year BETWEEN 2015 AND 2021;
-UPDATE Cars SET Model = 'Tesla Model X', Year = 2021 WHERE Id = 1;
-DELETE FROM Cars WHERE Id = 1;
-DROP TABLE Cars;
-```
-
-TestCase 8:
-```sql
-CREATE TABLE Teams(Id INT, Name VARCHAR(255), Points INT);
-INSERT INTO Teams(Id, Name, Points) VALUES(1, 'Real Madrid', 80);
-SELECT * FROM Teams ORDER BY Points DESC;
-UPDATE Teams SET Points = 85 WHERE Id = 1;
-DELETE FROM Teams WHERE Id = 1;
-DROP TABLE Teams;
-```
-
-TestCase 9:
-```sql
-CREATE TABLE Employees(Id INT, Name VARCHAR(255), Salary INT);
-INSERT INTO Employees(Id, Name, Salary) VALUES(1, 'Steve', 10000);
-INSERT INTO Employees(Id, Name, Salary) VALUES(2, 'Bill', 15000);
-SELECT AVG(Salary) FROM Employees;
-UPDATE Employees SET Salary = 12000 WHERE Id = 1;
-DELETE FROM Employees WHERE Id = 2;
-DROP TABLE Employees;
-```
-
-TestCase 10:
-```sql
-CREATE TABLE Courses(Id INT, Name VARCHAR(255), Credits INT);
-INSERT INTO Courses(Id, Name, Credits) VALUES(1, 'Database Systems', 4);
-SELECT * FROM Courses WHERE Credits >= 4;
-UPDATE Courses SET Name = 'Advanced Database Systems', Credits = 5 WHERE Id = 1;
-DELETE FROM Courses WHERE Id = 1;
-DROP TABLE Courses;
-```
-
-TestCase 11:
-```sql
-CREATE TABLE Authors(Id INT, Name VARCHAR(255), Country VARCHAR(255));
-INSERT INTO Authors(Id, Name, Country) VALUES(1, 'Dan Brown', 'United States');
-SELECT * FROM Authors WHERE Country = 'United States';
-UPDATE Authors SET Country = 'USA' WHERE Id = 1;
-DELETE FROM Authors WHERE Id = 1;
-DROP TABLE Authors;
-```
-
-TestCase 12:
-```sql
-CREATE TABLE Students(Id INT, Name VARCHAR(255), CGPA FLOAT);
-INSERT INTO Students(Id, Name, CGPA) VALUES(1, 'Sophia', 3.8);
-SELECT * FROM Students WHERE CGPA BETWEEN 3.5 AND 4;
-UPDATE Students SET CGPA = 3.9 WHERE Id = 1;
-DELETE FROM Students WHERE Id = 1;
-DROP TABLE Students;
-```
-
-TestCase 13:
-```sql
-CREATE TABLE Workers(Id INT, Name VARCHAR(255), Department VARCHAR(255));
-INSERT INTO Workers(Id, Name, Department) VALUES(1, 'Pete', 'Engineering');
-SELECT * FROM Workers WHERE Department = 'Engineering';
-UPDATE Workers SET Name = 'Peter', Department = 'Design' WHERE Id = 1;
-DELETE FROM Workers WHERE Id = 1;
-DROP TABLE Workers;
-```
-
-TestCase 14:
-```sql
-CREATE TABLE Songs(Id INT, Title VARCHAR(255), Artist VARCHAR(255));
-INSERT INTO Songs(Id, Title, Artist) VALUES(1, 'In the End', 'Linkin Park');
-SELECT * FROM Songs WHERE Artist = 'Linkin Park';
-UPDATE Songs SET Artist = 'Chester Bennington' WHERE Id = 1;
-DELETE FROM Songs WHERE Id = 1;
-DROP TABLE Songs;
-```
-
-TestCase 15:
-```sql
-CREATE TABLE Tickets(Id INT, Section VARCHAR(255), Row INT, Seat INT);
-INSERT INTO Tickets(Id, Section, Row, Seat) VALUES(1, 'A', 1, 1);
-SELECT * FROM Tickets WHERE Section = 'A' AND Row = 1;
-UPDATE Tickets SET Section = 'B', Row = 2, Seat = 2 WHERE Id = 1;
-DELETE FROM Tickets WHERE Id = 1;
-DROP TABLE Tickets;
-```
+Choices is not an array!
 
 Test Case 1:
 ```sql
-CREATE TABLE inventory (ID INTEGER PRIMARY KEY, name TEXT, quantity INTEGER);
-INSERT INTO inventory (name, quantity) VALUES ('apple', 100);
-INSERT INTO inventory (name, quantity) VALUES ('orange', 50);
-SELECT * FROM inventory WHERE quantity > 60;
-UPDATE inventory SET quantity = 110 WHERE name = 'apple';
-DELETE FROM inventory WHERE name = 'orange';
+CREATE TABLE v0 ( v2 FLOAT , v4 FLOAT , v3 TEXT , v1 TEXT ) ;
+INSERT INTO v0 ( v2 ) VALUES ( 1 ) ,( 1 ) ;
+UPDATE v0 SET v2 = ( v3 < v1 + 2147483647 IN ( 1.100000 , 9223372036854775807 , v3 < ( SELECT v2 WHERE v1 BETWEEN 1.100000 AND v3 + NULL LIKE v4 ) ) ) ;
 ```
 
 Test Case 2:
 ```sql
-CREATE TABLE OrderDetails (OrderID INTEGER PRIMARY KEY, ProductID INTEGER, Quantity INTEGER);
-INSERT INTO OrderDetails VALUES(1, 1, 10);
-INSERT INTO OrderDetails VALUES(2, 2, 20);
-SELECT SUM(Quantity) FROM OrderDetails;
-UPDATE OrderDetails SET Quantity = 30 WHERE OrderID=1;
-ALTER TABLE OrderDetails ADD COLUMN Price FLOAT;
+-- You can add another test case here
 ```
+Choices is not an array!
 
-Test Case 3:
-```sql
-CREATE TABLE Employees (ID INTEGER PRIMARY KEY, Name TEXT, Salary INTEGER, ManagerID INTEGER);
-INSERT INTO Employees VALUES(1, 'Mike', 50000, NULL);
-INSERT INTO Employees VALUES(2, 'Lisa', 55000, 1);
-SELECT Name FROM Employees WHERE Salary > (SELECT Salary FROM Employees WHERE Name = 'Mike');
-```
-
-Test Case 4:
-```sql
-CREATE TABLE Customers (CustomerID INTEGER PRIMARY KEY, CustomerName TEXT, ContactName TEXT, Country TEXT);
-INSERT INTO Customers VALUES (1, 'Alfreds Futterkiste', 'Maria Anders', 'Germany');
-INSERT INTO Customers VALUES (2, 'Ana Trujillo', 'Ana Trujillo', 'Mexico');
-SELECT Country FROM Customers GROUP BY Country HAVING COUNT(CustomerID) > 1;
-```
-
-Test Case 5:
-```sql
-CREATE TABLE Sales (ID INTEGER PRIMARY KEY, Product TEXT, Quantity INTEGER);
-INSERT INTO Sales VALUES (1, 'Laptop', 5);
-INSERT INTO Sales VALUES (2, 'Desktop', 7);
-CREATE VIEW V_Sales AS SELECT Product, SUM(Quantity) as 'Total Quantity' FROM Sales GROUP BY Product;
-SELECT * FROM V_Sales;
-```
- 
-Test Case 6:
-```sql
-CREATE TABLE Suppliers (SupplierID INTEGER PRIMARY KEY, SupplierName TEXT, ContactName TEXT, City TEXT, Country TEXT, Phone TEXT);
-CREATE UNIQUE INDEX idx_SupplierName ON Suppliers (SupplierName);
-```
-
-Test Case 7:
-```sql
-CREATE TABLE Trainers (Id INTEGER PRIMARY KEY, Name TEXT, StartDate TEXT, EndDate TEXT);
-CREATE TRIGGER trg_before_insert BEFORE INSERT ON Trainers FOR EACH ROW BEGIN SELECT CASE WHEN ((new.StartDate > new.EndDate) OR (new.StartDate IS NULL) OR (new.EndDate IS NULL)) THEN RAISE (ABORT, 'Insert has been aborted.') END; END;
-```
-
-Test Case 8:
-```sql
-CREATE TABLE Customers (CustomerID INTEGER PRIMARY KEY, CustomerName TEXT, ContactName TEXT, Address TEXT, City TEXT, PostalCode TEXT, Country TEXT);
-CREATE TABLE Orders (OrderID INTEGER PRIMARY KEY, CustomerID INTEGER, EmployeeID INTEGER, OrderDate TEXT, ShipperID INTEGER);
-```
-
-Test Case 9:
-```sql
-CREATE TABLE Albums (AlbumId INTEGER PRIMARY KEY, Title TEXT, ArtistId INTEGER);
-CREATE TABLE Artists (ArtistId INTEGER PRIMARY KEY, Name TEXT);
-SELECT Albums.Title, Artists.Name FROM Albums INNER JOIN Artists ON Albums.ArtistId = Artists.ArtistId;
-```
-
-Test Case 10:
-```sql
-CREATE TABLE Products (ProductID INTEGER PRIMARY KEY, ProductName TEXT, SupplierID INTEGER, CategoryID INTEGER, Unit TEXT, Price DECIMAL(10,2));
-SELECT ProductName, Price FROM Products WHERE Price > (SELECT AVG(Price) FROM Products);
-```
-
-Test Case 11:
-```sql
-CREATE TABLE Users (UserID INTEGER PRIMARY KEY, UserName TEXT, UserPassword TEXT);
-INSERT INTO Users VALUES(1, 'Admin', '12345');
-INSERT INTO Users VALUES(2, 'User1', 'abcd');
-BEGIN TRANSACTION;
-   UPDATE Users SET UserPassword = '67890' WHERE UserName = 'Admin';
-   UPDATE Users SET UserName = 'UserX' WHERE UserID = 2;
-COMMIT;
-```
-
-Test Case 12:
-```sql
-CREATE TABLE Invoices (InvoiceId INTEGER PRIMARY KEY, CustomerId INTEGER, InvoiceDate TEXT, BillingAddress TEXT, BillingCity TEXT, BillingState TEXT, BillingCountry TEXT, BillingPostalCode TEXT, Total DECIMAL(10,2));
-SELECT InvoiceId, Total FROM Invoices WHERE Total BETWEEN 10 AND 20;
-```
-
-Test Case 13:
-```sql
-CREATE TABLE Employees (ID INTEGER PRIMARY KEY, Name TEXT, HireDate TEXT);
-INSERT INTO Employees VALUES(1, 'Bob', DATE('now'));
-INSERT INTO Employees VALUES(2, 'Dan', DATE('now'));
-UPDATE Employees SET Name = 'Sam' WHERE Name = 'Bob';
-```
-
-Test Case 14:
-```sql
-CREATE TABLE Students (StudentID INTEGER PRIMARY KEY, StudentName TEXT, Department TEXT, Age INTEGER, GPA FLOAT);
-INSERT INTO Students VALUES(1, 'Tom', 'Physics', 22, 3.5);
-INSERT INTO Students VALUES(2, 'Sally', 'Biology', 23, 3.7);
-SELECT AVG(GPA) FROM Students WHERE Department = 'Physics';
-```
-
-Test Case 15:
-```sql
-CREATE TABLE Players (PlayerID INTEGER PRIMARY KEY, PlayerName TEXT, TeamID INTEGER);
-CREATE TABLE Teams (TeamID INTEGER PRIMARY KEY, TeamName TEXT);
-SELECT Players.PlayerName, Teams.TeamName FROM Players LEFT JOIN Teams ON Players.TeamID = Teams.TeamID;
-```

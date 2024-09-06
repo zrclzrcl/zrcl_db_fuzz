@@ -1,15 +1,15 @@
 #include "zrcl_Richard.h"
 
-// »Øµ÷º¯Êı£¬ÓÃÓÚ´¦ÀíÊÕµ½µÄÊı¾İ
+// å›è°ƒå‡½æ•°ï¼Œç”¨äºå¤„ç†æ”¶åˆ°çš„æ•°æ®
 static size_t WriteCallback(void* data, size_t size, size_t nmemb, void* userp) {
     size_t realsize = size * nmemb;
     struct Memory* mem = (struct Memory*)userp;
 
-    // ÏÔÊ½ÀàĞÍ×ª»»Îªchar*
+    // æ˜¾å¼ç±»å‹è½¬æ¢ä¸ºchar*
     char* ptr = (char*)realloc(mem->response, mem->size + realsize + 1);
     if (ptr == NULL) {
         printf("Not enough memory (realloc returned NULL)\n");
-        return 0;  // ÄÚ´æ·ÖÅäÊ§°Ü
+        return 0;  // å†…å­˜åˆ†é…å¤±è´¥
     }
 
     mem->response = ptr;
@@ -21,18 +21,18 @@ static size_t WriteCallback(void* data, size_t size, size_t nmemb, void* userp) 
 }
 
 
-// ¹¹½¨ÇëÇó²¢µ÷ÓÃAPIµÄº¯Êı
+// æ„å»ºè¯·æ±‚å¹¶è°ƒç”¨APIçš„å‡½æ•°
 char* link_LLM(const char* model, const char* message_content) {
     CURL* curl;
     CURLcode res;
-    struct Memory chunk = { 0 }; // ³õÊ¼»¯ÏìÓ¦Êı¾İ½á¹¹
+    struct Memory chunk = { 0 }; // åˆå§‹åŒ–å“åº”æ•°æ®ç»“æ„
 
-    // ³õÊ¼»¯cURL
+    // åˆå§‹åŒ–cURL
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
 
     if (curl) {
-        // ¹¹½¨JSONÇëÇóÊı¾İ
+        // æ„å»ºJSONè¯·æ±‚æ•°æ®
         cJSON* root = cJSON_CreateObject();
         cJSON_AddStringToObject(root, "model", model);
         cJSON* messages = cJSON_AddArrayToObject(root, "messages");
@@ -41,14 +41,14 @@ char* link_LLM(const char* model, const char* message_content) {
         cJSON_AddStringToObject(message, "content", message_content);
         cJSON_AddItemToArray(messages, message);
 
-        // ½«JSON¶ÔÏó×ª»»Îª×Ö·û´®
+        // å°†JSONå¯¹è±¡è½¬æ¢ä¸ºå­—ç¬¦ä¸²
         char* post_data = cJSON_PrintUnformatted(root);
-        cJSON_Delete(root); // ÇåÀíJSON¶ÔÏó
+        cJSON_Delete(root); // æ¸…ç†JSONå¯¹è±¡
 
-        // ÉèÖÃcURLÑ¡Ïî
+        // è®¾ç½®cURLé€‰é¡¹
         curl_easy_setopt(curl, CURLOPT_URL, "https://api.zhizengzeng.com/v1/chat/completions");
 
-        // ÉèÖÃAPIÃÜÔ¿
+        // è®¾ç½®APIå¯†é’¥
         struct curl_slist* headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
         char auth_header[256];
@@ -56,28 +56,28 @@ char* link_LLM(const char* model, const char* message_content) {
         headers = curl_slist_append(headers, auth_header);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        // ÉèÖÃPOSTÊı¾İ
+        // è®¾ç½®POSTæ•°æ®
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 
-        // ÉèÖÃ»Øµ÷º¯ÊıÀ´½ÓÊÕÏìÓ¦Êı¾İ
+        // è®¾ç½®å›è°ƒå‡½æ•°æ¥æ¥æ”¶å“åº”æ•°æ®
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
 
-        //½ûÓÃSSLÖ¤Êé¼ì²é
+        //ç¦ç”¨SSLè¯ä¹¦æ£€æŸ¥
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-        // Ö´ĞĞÇëÇó
+        // æ‰§è¡Œè¯·æ±‚
         res = curl_easy_perform(curl);
 
-        // ¼ì²éÇëÇóÊÇ·ñ³É¹¦
+        // æ£€æŸ¥è¯·æ±‚æ˜¯å¦æˆåŠŸ
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             free(chunk.response);
             chunk.response = NULL;
         }
 
-        // ÇåÀí
+        // æ¸…ç†
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         free(post_data);
@@ -85,19 +85,19 @@ char* link_LLM(const char* model, const char* message_content) {
 
     curl_global_cleanup();
 
-    return chunk.response; // ·µ»ØAPIÏìÓ¦
+    return chunk.response; // è¿”å›APIå“åº”
 }
 
-//ÊäÈëÏìÓ¦µÄJSON Êä³öÆäÖĞµÄĞÅÏ¢£¬Èô½âÎöÊ§°ÜÔò·µ»ØÏàÓ¦µÄ´íÎóĞÅÏ¢
+//è¾“å…¥å“åº”çš„JSON è¾“å‡ºå…¶ä¸­çš„ä¿¡æ¯ï¼Œè‹¥è§£æå¤±è´¥åˆ™è¿”å›ç›¸åº”çš„é”™è¯¯ä¿¡æ¯
 char* get_response_content(char* response)
 {
-    // ½âÎöJSON×Ö·û´®
+    // è§£æJSONå­—ç¬¦ä¸²
     cJSON* json = cJSON_Parse(response);
     if (json == NULL) {
         return "Error parsing JSON!\n";
     }
 
-    // ·ÃÎÊ "choices" Êı×éÖĞµÄµÚÒ»¸ö¶ÔÏó
+    // è®¿é—® "choices" æ•°ç»„ä¸­çš„ç¬¬ä¸€ä¸ªå¯¹è±¡
     cJSON* choices = cJSON_GetObjectItemCaseSensitive(json, "choices");
     if (!cJSON_IsArray(choices)) {
         cJSON_Delete(json);
@@ -110,7 +110,7 @@ char* get_response_content(char* response)
         return "First choice is not an object!\n";
     }
 
-    // »ñÈ¡ "message" ¶ÔÏóÖĞµÄ "content"
+    // è·å– "message" å¯¹è±¡ä¸­çš„ "content"
     cJSON* message = cJSON_GetObjectItemCaseSensitive(first_choice, "message");
     if (!cJSON_IsObject(message)) {
         cJSON_Delete(json);
@@ -126,7 +126,7 @@ char* get_response_content(char* response)
 
     char* need_return = strdup(content->valuestring);
 
-    // ÇåÀíJSON¶ÔÏó
+    // æ¸…ç†JSONå¯¹è±¡
     cJSON_Delete(json);
 
     return need_return;

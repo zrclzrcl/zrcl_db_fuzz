@@ -7,29 +7,29 @@
 #include "cJSON.h"
 
 
-// ¶¨ÒåÓÃÓÚ´æ´¢ÏìÓ¦Êý¾ÝµÄ½á¹¹
+// å®šä¹‰ç”¨äºŽå­˜å‚¨å“åº”æ•°æ®çš„ç»“æž„
 struct Memory {
     char* response;
     size_t size;
 };
 
-//Ê¹ÓÃµÄLLM API KEY ×¢Òâ¸ü¸Ä£¡
+//ä½¿ç”¨çš„LLM API KEY æ³¨æ„æ›´æ”¹ï¼
 #define API_KEY "sk-zk2f9f24b5c15ff89a2642cb5ca134a9e20665fcb7849a17"
 
-//»Øµ÷º¯Êý£¬ÓÃÓÚ´¦ÀíÊÕµ½µÄÊý¾Ý
+//å›žè°ƒå‡½æ•°ï¼Œç”¨äºŽå¤„ç†æ”¶åˆ°çš„æ•°æ®
 static size_t WriteCallback(void*, size_t, size_t, void*);
 
-//Á´½ÓLLM·µ»ØÏìÓ¦µÄº¯Êý£¬´«µÝÏëÊ¹ÓÃµÄÄ£ÐÍÓëÐÅÏ¢
+//é“¾æŽ¥LLMè¿”å›žå“åº”çš„å‡½æ•°ï¼Œä¼ é€’æƒ³ä½¿ç”¨çš„æ¨¡åž‹ä¸Žä¿¡æ¯
 char* link_LLM(const char*, const char*);
 
-//ÊäÈëLLMÏìÓ¦×Ö·û´®£¬Ö»·µ»ØÆäÄÚÈÝ
+//è¾“å…¥LLMå“åº”å­—ç¬¦ä¸²ï¼Œåªè¿”å›žå…¶å†…å®¹
 char* get_response_content(char*);
 
-//´´½¨Ä¿Â¼º¯Êý£¬ÓÃÓÚ´´½¨¸ø¶¨×Ö·û´®ËùÖ¸ÏòÄ¿Â¼
+//åˆ›å»ºç›®å½•å‡½æ•°ï¼Œç”¨äºŽåˆ›å»ºç»™å®šå­—ç¬¦ä¸²æ‰€æŒ‡å‘ç›®å½•
 void create_directory_if_not_exists(char*);
 
-//Í¨¹ý¸ø¶¨²âÊÔÓÃÀýÄÚÈÝÒÔ¼°±àºÅ£¬ÔÚÖ¸¶¨Ä¿Â¼ÏÂ´´½¨LLM_X.txt ÓÃÓÚ·Ö¸î´ÓLLM»ñÈ¡µ½µÄ¶à¸ötestcase
+//é€šè¿‡ç»™å®šæµ‹è¯•ç”¨ä¾‹å†…å®¹ä»¥åŠç¼–å·ï¼Œåœ¨æŒ‡å®šç›®å½•ä¸‹åˆ›å»ºLLM_X.txt ç”¨äºŽåˆ†å‰²ä»ŽLLMèŽ·å–åˆ°çš„å¤šä¸ªtestcase
 void write_test_case_to_file(const char*, int);
 
-//¸ø¶¨×Ü²âÊÔÓÃÀýµÄÂ·¾¶¼ÓÎÄ¼þÃû£¬½øÐÐ·Ö¸î£¬´æÈë¶à¸ötxt
+//ç»™å®šæ€»æµ‹è¯•ç”¨ä¾‹çš„è·¯å¾„åŠ æ–‡ä»¶åï¼Œè¿›è¡Œåˆ†å‰²ï¼Œå­˜å…¥å¤šä¸ªtxt
 int split_testcases(char*);
