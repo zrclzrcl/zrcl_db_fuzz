@@ -1,0 +1,14 @@
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    price REAL
+);
+
+CREATE TRIGGER update_price AFTER UPDATE OF price ON products
+BEGIN
+    UPDATE products SET price = NEW.price * 0.9 WHERE id = NEW.id;
+END;
+
+INSERT INTO products (name, price) VALUES ('Laptop', 1000), ('Phone', 800);
+
+INSERT INTO products (name, price) VALUES ('Tablet', 500), ('Monitor', 300);

@@ -1,0 +1,16 @@
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY,
+    customer_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER,
+    total_price REAL
+);
+
+CREATE TRIGGER calculate_total_price AFTER INSERT ON orders
+BEGIN
+    UPDATE orders SET total_price = NEW.quantity * (SELECT price FROM products WHERE id = NEW.product_id) WHERE id = NEW.id;
+END;
+
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (1, 1, 2), (2, 2, 3);
+
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (3, 1, 1), (4, 2, 4);

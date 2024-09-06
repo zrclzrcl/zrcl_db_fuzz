@@ -1,0 +1,55 @@
+```sql
+CREATE TABLE employees (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK(age >= 18),
+    salary REAL
+);
+
+CREATE TRIGGER update_salary AFTER UPDATE OF salary ON employees
+BEGIN
+    UPDATE employees SET salary = NEW.salary * 1.1 WHERE id = NEW.id;
+END;
+
+INSERT INTO employees (name, age, salary) VALUES ('John', 25, 50000), ('Alice', 30, 60000);
+
+INSERT INTO employees (name, age, salary) VALUES ('Bob', 20, 45000), ('Eve', 22, 48000);
+```
+
+```sql
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    price REAL
+);
+
+CREATE TRIGGER update_price AFTER UPDATE OF price ON products
+BEGIN
+    UPDATE products SET price = NEW.price * 0.9 WHERE id = NEW.id;
+END;
+
+INSERT INTO products (name, price) VALUES ('Laptop', 1000), ('Phone', 800);
+
+INSERT INTO products (name, price) VALUES ('Tablet', 500), ('Monitor', 300);
+```
+
+```sql
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY,
+    customer_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER,
+    total_price REAL
+);
+
+CREATE TRIGGER calculate_total_price AFTER INSERT ON orders
+BEGIN
+    UPDATE orders SET total_price = NEW.quantity * (SELECT price FROM products WHERE id = NEW.product_id) WHERE id = NEW.id;
+END;
+
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (1, 1, 2), (2, 2, 3);
+
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (3, 1, 1), (4, 2, 4);
+``` 
+
+These are three test cases that include table creation, trigger creation, and data insertion for testing different functionalities of specified SQLITE database.

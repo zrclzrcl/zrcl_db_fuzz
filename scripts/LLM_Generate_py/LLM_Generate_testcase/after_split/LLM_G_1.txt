@@ -1,0 +1,15 @@
+CREATE TABLE employees (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK(age >= 18),
+    salary REAL
+);
+
+CREATE TRIGGER update_salary AFTER UPDATE OF salary ON employees
+BEGIN
+    UPDATE employees SET salary = NEW.salary * 1.1 WHERE id = NEW.id;
+END;
+
+INSERT INTO employees (name, age, salary) VALUES ('John', 25, 50000), ('Alice', 30, 60000);
+
+INSERT INTO employees (name, age, salary) VALUES ('Bob', 20, 45000), ('Eve', 22, 48000);
