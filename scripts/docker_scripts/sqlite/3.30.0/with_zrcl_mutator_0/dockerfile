@@ -35,7 +35,7 @@ RUN apt-get update
 #python3-fire: 一个 Python 库，用于根据 Python 代码自动生成命令行界面（CLI）。
 RUN apt-get -y install make cmake build-essential vim sudo git tcl8.6 tcl8.6-tdbc-sqlite3\
     clang ninja-build pkg-config clang-format \
-    libpq-dev libyaml-cpp-dev lld llvm python3-fire
+    libpq-dev libyaml-cpp-dev lld llvm python3-fire python3-pip && RUN pip3 install openai
 
 #构建文件夹 -p用于如果父目录不存在则一起创建 不会报错
 #添加一个用户组，叫做dobigthing 
@@ -115,7 +115,7 @@ RUN $CXX $CXXFLAGS \
     /home/sqlite3/test/ossfuzz.o /home/sqlite3/test/ossshell.o -o /home/ossfuzz \
    ./sqlite3.o -ldl -pthread
 #切换工作目录
-WORKDIR /home/zrcl_db_fuzz/Squirrel/scripts/utils
+WORKDIR /home/zrcl_db_fuzz/scripts/help_run/
 #进入点 命令 指定docker启动时的主命令 这里启动了run.py脚本并传递了两个参数
 #第一个参数是数据库名 第二个参数为输入文件目录
-ENTRYPOINT python3 run_zrcl_mutator.py sqlite ../../data/fuzz_root/input
+ENTRYPOINT ["./zrcl_mutator.sh"]

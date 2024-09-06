@@ -1,6 +1,7 @@
 from openai import OpenAI
 from pathlib import Path
 import re
+import time
 
 #api key
 zrcl_api_key = 'sk-zk2fb6b73ba7e18c5fe5bc7bda039e14259665fcbf809ae8'
@@ -10,7 +11,7 @@ zrcl_base_url = "https://api.zhizengzeng.com/v1/"
 LLM_Generate_filename = "test_case.txt"
 
 LLM_Generate_path = "../LLM_Generate_testcase/"
-LLM_Generate_split_path = "../LLM_Generate_testcase/after_split/"
+LLM_Generate_split_path = "/home/LLM_testcase/"
 
 #LLM测试用例总生成路径
 LLM_Generate_path_use = Path(LLM_Generate_path)
@@ -53,34 +54,38 @@ Separate the generated test cases. "
 #创建LLM生成测试用例的保存文件夹
 if not LLM_Generate_path_use.exists():
     LLM_Generate_path_use.mkdir(parents=True)
-    print(f"文件夹 '{LLM_Generate_path_use}' 已创建")
-else:
-    print(f"文件夹 '{LLM_Generate_path_use}' 已存在")
+
 
 #创建LLM生成测试用例分割后的保存文件夹
 if not LLM_Generate_split_path_use.exists():
     LLM_Generate_split_path_use.mkdir(parents=True)
-    print(f"文件夹 '{LLM_Generate_split_path_use}' 已创建")
-else:
-    print(f"文件夹 '{LLM_Generate_split_path_use}' 已存在")
 
+
+counter = 1
+round = 0
 #发起请求：获取响应
-response = link_llm(user_input)
+while True:
+    round += 1
+    # 发起请求：获取响应
+    response = link_llm(user_input)
 
-full_file_path = LLM_Generate_path_use / LLM_Generate_filename
-# 使用 with 语句打开文件并写入
-with open(full_file_path, "w", encoding="utf-8") as full_file:
-    full_file.write(response)
+    # 将完整的测试用例保存到单个文件
+    full_file_path = LLM_Generate_path_use / LLM_Generate_filename
+    with open(full_file_path, "w", encoding="utf-8") as full_file:
+        full_file.write(response)
 
+    # 读取文件内容
+    with open(full_file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
 
-# 读取文件内容
-with open(full_file_path , 'r', encoding='utf-8') as file:
-    content = file.read()
+    # 使用正则表达式匹配 ```sql 和 ``` 之间的内容
+    sql_cases = re.findall(r'```sql(.*?)```', content, re.DOTALL)
 
-# 使用正则表达式匹配 ```sql 和 ``` 之间的内容
-sql_cases = re.findall(r'```sql(.*?)```', content, re.DOTALL)
+    # 分别将每个测试用例保存到独立的 txt 文件
+    for i, sql_case in enumerate(sql_cases, 1):
+        with open(f'{LLM_Generate_split_path}LLM_G_{counter}.txt', 'w', encoding='utf-8') as output_file:
+            output_file.write(sql_case.strip())  # 去除多余的空白字符
+        counter += 1
 
-# 分别将每个测试用例保存到独立的txt文件
-for i, sql_case in enumerate(sql_cases, 1):
-    with open(f'{LLM_Generate_split_path}LLM_G_{i}.txt', 'w', encoding='utf-8') as output_file:
-        output_file.write(sql_case.strip())  # 去除多余的空白字符
+    # 每隔1分钟执行一次
+    time.sleep(60)
