@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 # common config
 
 #更新apt-get包管理器 保证下载最新的
-RUN apt-get update
+RUN  apt-get update  && apt-get -y upgrade
 
 #进行包安装 -y表示一切都是yes 无需询问，下面详细解释每个包的作用
 #make cmake build-essential vim sudo git tcl8.6 tcl8.6-tdbc-sqlite3\
@@ -35,7 +35,7 @@ RUN apt-get update
 #python3-fire: 一个 Python 库，用于根据 Python 代码自动生成命令行界面（CLI）。
 RUN apt-get -y install make cmake build-essential vim sudo git tcl8.6 tcl8.6-tdbc-sqlite3\
     clang ninja-build pkg-config clang-format \
-    libpq-dev libyaml-cpp-dev lld llvm python3-fire python3-pip && RUN pip3 install openai
+    libpq-dev libyaml-cpp-dev lld llvm python3-fire python3-pip && pip3 install openai
 
 #构建文件夹 -p用于如果父目录不存在则一起创建 不会报错
 #添加一个用户组，叫做dobigthing 
@@ -116,6 +116,7 @@ RUN $CXX $CXXFLAGS \
    ./sqlite3.o -ldl -pthread
 #切换工作目录
 WORKDIR /home/zrcl_db_fuzz/scripts/help_run/
+RUN sudo chmod -R 777 /home/
 #进入点 命令 指定docker启动时的主命令 这里启动了run.py脚本并传递了两个参数
 #第一个参数是数据库名 第二个参数为输入文件目录
 ENTRYPOINT ["./zrcl_mutator.sh"]
