@@ -66,13 +66,12 @@ WORKDIR /home
 
 #clone zrcl_db_fuzz项目，里面已经包含了squirrel子项目
 #全部下载后，进行编译Squirrel和AFL++
-RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  &&   \
+RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git   &&  \
     cd zrcl_db_fuzz && git submodule update --init && \
     cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSQLITE=ON && \
     cmake --build build -j && \
-    cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20 && \
-    echo "Build time: $(date)"
+    cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
 
 #指定c语言变异器为afl-cc 用于在编译时插桩
 ENV CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc

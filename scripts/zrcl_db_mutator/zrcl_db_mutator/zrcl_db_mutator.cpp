@@ -20,7 +20,7 @@
 #include <sys/types.h>//linux
  
 struct ZrclMutator {
-	ZrclMutator() : fuzz_now(-1),fuzz_next(0) {				// 初始化 fuzz_now 为 0
+	ZrclMutator() : fuzz_now(0),fuzz_next(1) {				// 初始化 fuzz_now 为 0
 		strcpy(LLM_in_dir, "/home/LLM_testcase/");  // 使用 strcpy 初始化字符数组
 	}
 	~ZrclMutator() {
