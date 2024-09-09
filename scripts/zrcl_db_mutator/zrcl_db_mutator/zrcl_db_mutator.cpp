@@ -106,7 +106,7 @@ extern "C" {
 		
 		// 读取文件内容到缓冲区out_buf中
 
-
+		*out_buf = (unsigned char*)malloc(file_size);
 		size_t bytes_read = fread(*out_buf, 1, file_size, file);
 
 		// 关闭文件
