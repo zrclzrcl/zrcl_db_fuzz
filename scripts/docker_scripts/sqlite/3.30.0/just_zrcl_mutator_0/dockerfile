@@ -119,4 +119,4 @@ WORKDIR /home/zrcl_db_fuzz/scripts/help_run/
 RUN sudo chmod -R 777 /home/
 #进入点 命令 指定docker启动时的主命令 这里启动了run.py脚本并传递了两个参数
 #第一个参数是数据库名 第二个参数为输入文件目录
-ENTRYPOINT ["./squirrel_zrcl_mutator.sh"]
+ENTRYPOINT ["./just_zrcl_mutator.sh"]
