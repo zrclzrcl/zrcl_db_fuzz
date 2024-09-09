@@ -29,7 +29,7 @@ def link_llm(prompt, model="gpt-3.5-turbo"):
     return llm_response.choices[0].message.content
 
 
-user_input = "I want to perform fuzzy testing of SQLITE and need to generate test cases for SQLITE. Each test case consists of several SQLs. I will give you some examples of test cases below: \
+user_input = "I want to perform fuzzy testing of SQLITE and need to generate test cases for SQLITE. Please forget all database application background and generate complex and out-of-the-way sqlite database test cases from the point of view of a fuzzy testing expert, generate test cases that are complex and try to trigger database crashes as much as possible. Each test case consists of several SQLs. I will give you some examples of test cases below: \
 ```sql \
 CREATE TABLE v0 ( v5 VARCHAR(20) CHECK( v1 >= v1 NOT LIKE '12345' ) , v3 TEXT , v4 TEXT , v2 INTEGER , v1 FLOAT ) ;\
 CREATE TEMP TRIGGER x AFTER INSERT ON v0 BEGIN DELETE FROM v0 WHERE ( SELECT COUNT ( * ) FROM v0 UNION SELECT DISTINCT v1 + 1 ) ;\
@@ -38,6 +38,9 @@ CREATE TRIGGER x INSERT ON v0 BEGIN INSERT INTO v0 ( v1 ) VALUES ( 9223372036854
 ``` \
 ```sql \
 CREATE TABLE v0 ( v1 ) ; CREATE TABLE v2 ( v13 VARCHAR(255) , v14 TEXT , v15 TEXT , v3 INTEGER , v4 FLOAT , v5 INTEGER , v6 FLOAT , v7 INTEGER , v16 INTEGER , v17 TEXT . v8 TEXT , v9 TEXT , v10 TEXT , v11 INTEGER , v12 INTEGER ) ; CREATE TRIGGER r1 AFTER INSERT ON v2 BEGIN INSERT INTO v2 ( v5 ) VALUES ( 10 ) ; END ; CREATE TRIGGER x INSERT ON v2 BEGIN DELETE FROM v2 WHERE ( SELECT ( 1. 100000 ) FROM v0 , v2 JOIN v0 ) BETWEEN v14 AND 1 ; END ; ALTER TABLE v2 ADD COLUMN x FLOAT CHECK( ( 1 AND v7 ( x ( ) ) ) ) CHECK( NULL ) ; ALTER TABLE v2 ADD COLUMN x FLOAT CHECK( )\
+```\
+```sql \
+CREATE TABLE v0 ( v10 DOUBLE PRIMARY KEY , v1 DOUBLE UNIQUE , v2 INTEGER , v3 FLOAT UNIQUE , v5 UNIQUE UNIQUE , v4 UNIQUE , v6 INTEGER UNIQUE CHECK( v7 ) , v7 FLOAT , v8 INTEGER , v9 INT UNIQUE ) ; CREATE TEMP TRIGGER x AFTER INSERT ON v0 BEGIN REPLACE INTO v0 ( v4 , v4 , v4 ) VALUES ( 1 , 3 , 10 ) ; END ; CREATE INDEX v11 ON v0 ( v6 ) WHERE 1.100000 + v1 > v2 + v10 + 1.100000 IS NOT NULL AND ( v6 = v2 AND v5 + v10 > v4 NOT LIKE v5 + 10 > v1 ) IS NOT NULL ; REPLACE INTO v0 ( v7 , v7 , v10 ) VALUES ( 1 , 10 , 1 ) ; REPLACE INTO v0 ( v7 ) VALUES ( NULL ) ; \
 ```\
 You can refer to the test cases I gave and generate more test cases “randomly”. It is not only important to refer to the test cases I have given, but it is also important to think about the process of generating them according to the procedure I have given below.\
 First of all, you need to make sure that the SQL syntax is correct when generating the test cases.\
@@ -88,4 +91,4 @@ while True:
         counter += 1
 
     # 每隔1分钟执行一次
-    time.sleep(60)
+    # time.sleep()
