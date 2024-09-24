@@ -1,0 +1,7 @@
+CREATE TABLE v7 (v1 INTEGER PRIMARY KEY, v2 TEXT, v3 TEXT);
+CREATE TEMP TRIGGER trg9 AFTER INSERT ON v7 BEGIN 
+    INSERT INTO v7 (v2, v3) VALUES ('abc', '123'), ('xyz', '789');
+END;
+CREATE INDEX idx_v7 ON v7(v2, v3);
+INSERT INTO v7 (v1, v2, v3) VALUES (1, 'first', '123'), (2, 'second', '456');
+SELECT * FROM v7 WHERE v3 = (SELECT MIN(v3) FROM v7);

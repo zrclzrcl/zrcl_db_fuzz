@@ -1,0 +1,9 @@
+CREATE TABLE v1 (v1 INTEGER, v2 TEXT, v3 REAL);
+CREATE INDEX idx_v1 ON v1(v3) WHERE v1 > 0;
+CREATE TEMP VIEW v_view AS SELECT v1, SUM(v3) AS total FROM v1 GROUP BY v1;
+CREATE TRIGGER trg2 AFTER UPDATE ON v1 BEGIN 
+    INSERT INTO v1 (v1, v2, v3) VALUES (NEW.v1 + 1, 'updated', NEW.v3 * 2);
+END;
+INSERT INTO v1 (v1, v2, v3) VALUES (1, 'row1', 1.5), (2, 'row2', 2.5);
+UPDATE v1 SET v3 = (SELECT MAX(v3) FROM v1);
+SELECT * FROM v_view WHERE total > 1;

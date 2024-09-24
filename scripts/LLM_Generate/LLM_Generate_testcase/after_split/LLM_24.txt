@@ -1,0 +1,8 @@
+CREATE TABLE v1 (v1 INTEGER, v2 REAL, v3 TEXT);
+CREATE TEMP VIEW v_view AS SELECT v1, COUNT(v2) AS count FROM v1 GROUP BY v1 HAVING count > 0;
+CREATE TRIGGER trg2 AFTER DELETE ON v1 BEGIN 
+    INSERT INTO v1 (v1, v2, v3) VALUES (OLD.v1 + 1, OLD.v2 * 2, 'deleted');
+END;
+INSERT INTO v1 (v1, v2, v3) VALUES (1, 1.5, 'row1'), (2, 2.5, 'row2');
+DELETE FROM v1 WHERE v1 = 1;
+SELECT * FROM v_view WHERE count > 0;

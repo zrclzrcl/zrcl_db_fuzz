@@ -1,0 +1,7 @@
+CREATE TABLE v4 (v1 INTEGER, v2 TEXT, v3 REAL);
+CREATE TEMP TRIGGER trg5 AFTER UPDATE ON v4 BEGIN 
+    INSERT INTO v4 (v1, v2, v3) VALUES (NEW.v1 + 1, 'after_update', NEW.v3 + 1);
+END;
+INSERT INTO v4 (v1, v2, v3) VALUES (1, 'example', 0.5), (2, 'test', 1.5);
+UPDATE v4 SET v3 = (SELECT AVG(v3) FROM v4 WHERE v1 < NEW.v1);
+SELECT * FROM v4 WHERE v3 > (SELECT MAX(v3) FROM v4);
