@@ -1,3 +1,0 @@
-CREATE TABLE Products (ProductID INTEGER PRIMARY KEY, ProductName TEXT, SupplierID INTEGER, CategoryID INTEGER, Unit TEXT, Price DECIMAL(10,2));
-SELECT ProductName, Price FROM Products WHERE Price > (SELECT AVG(Price) FROM Products);
-

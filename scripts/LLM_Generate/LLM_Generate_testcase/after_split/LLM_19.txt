@@ -1,8 +1,0 @@
-CREATE TABLE Employees(Id INT, Name VARCHAR(255), Salary INT);
-INSERT INTO Employees(Id, Name, Salary) VALUES(1, 'Steve', 10000);
-INSERT INTO Employees(Id, Name, Salary) VALUES(2, 'Bill', 15000);
-SELECT AVG(Salary) FROM Employees;
-UPDATE Employees SET Salary = 12000 WHERE Id = 1;
-DELETE FROM Employees WHERE Id = 2;
-DROP TABLE Employees;
-

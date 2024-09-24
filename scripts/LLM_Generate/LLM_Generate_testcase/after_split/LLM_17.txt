@@ -1,7 +1,0 @@
-CREATE TABLE Cars(Id INT, Model VARCHAR(255), Year INT);
-INSERT INTO Cars(Id, Model, Year) VALUES(1, 'Tesla Model S', 2020);
-SELECT * FROM Cars WHERE Year BETWEEN 2015 AND 2021;
-UPDATE Cars SET Model = 'Tesla Model X', Year = 2021 WHERE Id = 1;
-DELETE FROM Cars WHERE Id = 1;
-DROP TABLE Cars;
-

@@ -1,7 +1,0 @@
-CREATE TABLE Invoices (invoiceId INTEGER PRIMARY KEY, customerId INTEGER, total REAL);
-INSERT INTO Invoices VALUES (1001, 201, 350.5), (1002, 202, 450.7), (1003, 203, 550.3);
-SELECT AVG(total) FROM Invoices;
-UPDATE Invoices SET total = total - 50 WHERE invoiceId = 1003;
-SELECT * FROM Invoices;
-DROP TABLE Invoices;
-

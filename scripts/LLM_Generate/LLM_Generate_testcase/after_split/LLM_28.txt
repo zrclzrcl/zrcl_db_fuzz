@@ -1,5 +1,0 @@
-CREATE TABLE Employees (ID INTEGER PRIMARY KEY, Name TEXT, Salary INTEGER, ManagerID INTEGER);
-INSERT INTO Employees VALUES(1, 'Mike', 50000, NULL);
-INSERT INTO Employees VALUES(2, 'Lisa', 55000, 1);
-SELECT Name FROM Employees WHERE Salary > (SELECT Salary FROM Employees WHERE Name = 'Mike');
-

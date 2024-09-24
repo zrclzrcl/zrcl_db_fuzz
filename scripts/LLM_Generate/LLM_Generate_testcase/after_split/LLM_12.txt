@@ -1,8 +1,0 @@
-CREATE TABLE Customers(Id INT, Name VARCHAR(255));
-CREATE TABLE Orders(Id INT, Order_number INT, Customer_id INT);
-INSERT INTO Customers(Id, Name) VALUES(1, 'Alex');
-INSERT INTO Orders(Id, Order_number, Customer_id) VALUES(1, 12345, 1);
-SELECT * FROM Customers JOIN Orders ON Customers.Id = Orders.Customer_id;
-DELETE FROM Orders WHERE Id = 1;
-DROP TABLE Customers, Orders;
-

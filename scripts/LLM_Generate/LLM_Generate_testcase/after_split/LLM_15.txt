@@ -1,7 +1,0 @@
-CREATE TABLE Users(Id INT, Name VARCHAR(255), Email VARCHAR(255));
-INSERT INTO Users(Id, Name, Email) VALUES(1, 'Mike', 'mike@gmail.com');
-SELECT * FROM Users WHERE Name LIKE 'M%';
-UPDATE Users SET Email = 'mike@yahoo.com' WHERE Id = 1;
-DELETE FROM Users WHERE Id = 1;
-DROP TABLE Users;
-

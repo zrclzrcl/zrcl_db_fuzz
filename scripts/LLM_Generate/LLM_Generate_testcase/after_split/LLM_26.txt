@@ -1,7 +1,0 @@
-CREATE TABLE inventory (ID INTEGER PRIMARY KEY, name TEXT, quantity INTEGER);
-INSERT INTO inventory (name, quantity) VALUES ('apple', 100);
-INSERT INTO inventory (name, quantity) VALUES ('orange', 50);
-SELECT * FROM inventory WHERE quantity > 60;
-UPDATE inventory SET quantity = 110 WHERE name = 'apple';
-DELETE FROM inventory WHERE name = 'orange';
-

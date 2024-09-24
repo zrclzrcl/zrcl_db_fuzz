@@ -1,4 +1,0 @@
-CREATE TABLE Albums (AlbumId INTEGER PRIMARY KEY, Title TEXT, ArtistId INTEGER);
-CREATE TABLE Artists (ArtistId INTEGER PRIMARY KEY, Name TEXT);
-SELECT Albums.Title, Artists.Name FROM Albums INNER JOIN Artists ON Albums.ArtistId = Artists.ArtistId;
-

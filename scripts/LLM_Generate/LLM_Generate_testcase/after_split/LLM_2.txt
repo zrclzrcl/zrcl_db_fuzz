@@ -1,7 +1,0 @@
-CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL);
-INSERT INTO products VALUES(1, 'Apple', 0.25), (2, 'Banana', 0.15), (3, 'Cherry', 0.05);
-SELECT AVG(price) from products;
-UPDATE products SET price = price * 1.1;
-SELECT * FROM products;
-DROP TABLE products;
-

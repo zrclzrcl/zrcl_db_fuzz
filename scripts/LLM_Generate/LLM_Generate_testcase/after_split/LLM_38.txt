@@ -1,5 +1,0 @@
-CREATE TABLE Employees (ID INTEGER PRIMARY KEY, Name TEXT, HireDate TEXT);
-INSERT INTO Employees VALUES(1, 'Bob', DATE('now'));
-INSERT INTO Employees VALUES(2, 'Dan', DATE('now'));
-UPDATE Employees SET Name = 'Sam' WHERE Name = 'Bob';
-

@@ -1,7 +1,0 @@
-CREATE TABLE Users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);
-INSERT INTO Users VALUES (01, 'Alex', 'pass1234'), (02, 'Ben', 'pass789'), (03, 'Chris', 'pass456');
-SELECT COUNT(Username) FROM Users WHERE password LIKE "pass%";
-UPDATE Users SET password = 'pass567' WHERE username = 'Ben';
-SELECT * FROM Users;
-DROP TABLE Users;
-

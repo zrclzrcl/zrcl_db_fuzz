@@ -1,5 +1,0 @@
-CREATE TABLE Students (StudentID INTEGER PRIMARY KEY, StudentName TEXT, Department TEXT, Age INTEGER, GPA FLOAT);
-INSERT INTO Students VALUES(1, 'Tom', 'Physics', 22, 3.5);
-INSERT INTO Students VALUES(2, 'Sally', 'Biology', 23, 3.7);
-SELECT AVG(GPA) FROM Students WHERE Department = 'Physics';
-

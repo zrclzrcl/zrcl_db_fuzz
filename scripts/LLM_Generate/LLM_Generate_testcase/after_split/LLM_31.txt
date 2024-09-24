@@ -1,3 +1,0 @@
-CREATE TABLE Suppliers (SupplierID INTEGER PRIMARY KEY, SupplierName TEXT, ContactName TEXT, City TEXT, Country TEXT, Phone TEXT);
-CREATE UNIQUE INDEX idx_SupplierName ON Suppliers (SupplierName);
-

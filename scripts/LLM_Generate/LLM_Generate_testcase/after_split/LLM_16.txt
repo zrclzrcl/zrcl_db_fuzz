@@ -1,7 +1,0 @@
-CREATE TABLE Books(Id INT, Title VARCHAR(255), Author VARCHAR(255));
-INSERT INTO Books(Id, Title, Author) VALUES(1, 'A Game of Thrones', 'George R. R. Martin');
-SELECT * FROM Books WHERE Author LIKE '%Martin';
-UPDATE Books SET Author = 'G. Martin' WHERE Id = 1;
-DELETE FROM Books WHERE Id = 1;
-DROP TABLE Books;
-

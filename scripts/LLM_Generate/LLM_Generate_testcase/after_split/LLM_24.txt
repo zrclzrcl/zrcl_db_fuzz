@@ -1,7 +1,0 @@
-CREATE TABLE Songs(Id INT, Title VARCHAR(255), Artist VARCHAR(255));
-INSERT INTO Songs(Id, Title, Artist) VALUES(1, 'In the End', 'Linkin Park');
-SELECT * FROM Songs WHERE Artist = 'Linkin Park';
-UPDATE Songs SET Artist = 'Chester Bennington' WHERE Id = 1;
-DELETE FROM Songs WHERE Id = 1;
-DROP TABLE Songs;
-

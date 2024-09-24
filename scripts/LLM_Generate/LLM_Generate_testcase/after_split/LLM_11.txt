@@ -1,8 +1,0 @@
-CREATE TABLE Employees(Id INT, Name VARCHAR(255), Organization VARCHAR(255));
-INSERT INTO Employees(Id, Name, Organization) VALUES(1, 'John', 'Google');
-INSERT INTO Employees(Id, Name, Organization) VALUES(2, 'Jack', 'Microsoft');
-SELECT * FROM Employees;
-UPDATE Employees SET Name = 'James' WHERE Id = 2;
-DELETE FROM Employees WHERE Id = 1;
-DROP TABLE Employees;
-

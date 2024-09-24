@@ -1,7 +1,0 @@
-CREATE TABLE Workers(Id INT, Name VARCHAR(255), Department VARCHAR(255));
-INSERT INTO Workers(Id, Name, Department) VALUES(1, 'Pete', 'Engineering');
-SELECT * FROM Workers WHERE Department = 'Engineering';
-UPDATE Workers SET Name = 'Peter', Department = 'Design' WHERE Id = 1;
-DELETE FROM Workers WHERE Id = 1;
-DROP TABLE Workers;
-
