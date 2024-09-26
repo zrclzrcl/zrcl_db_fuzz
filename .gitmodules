@@ -1,3 +1,6 @@
 [submodule "Squirrel"]
 	path = Squirrel
 	url = https://github.com/zrclzrcl/Squirrel.git
+[submodule "AdaptSQLess"]
+	path = AdaptSQLess
+	url = https://github.com/zrclzrcl/AdaptSQLess.git

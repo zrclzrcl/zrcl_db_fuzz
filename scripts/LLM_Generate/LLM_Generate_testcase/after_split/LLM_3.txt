@@ -1,0 +1,8 @@
+CREATE TABLE v8 (id INTEGER PRIMARY KEY, name TEXT, value REAL CHECK(value >= 0));
+CREATE TEMP TRIGGER trg9 AFTER INSERT ON v8 BEGIN 
+    INSERT INTO v8 (id, name, value) VALUES (NEW.id + 1, NEW.name || ' copy', NEW.value * 1.1);
+    DELETE FROM v8 WHERE value < 0;
+END;
+INSERT INTO v8 (id, name, value) VALUES (1, 'item1', 10.0), (2, 'item2', -5.0);
+UPDATE v8 SET value = (SELECT SUM(value) FROM v8 WHERE id <= NEW.id);
+SELECT * FROM v8 WHERE value > (SELECT AVG(value) FROM v8);
