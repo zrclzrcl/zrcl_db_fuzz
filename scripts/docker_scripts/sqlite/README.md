@@ -10,4 +10,7 @@
   第二个实验版本，删除原input，只采用LLM生成的测试用例
 - with_zrcl_mutator_0
   此版本是第一次添加了zrcl_mutator的版本的docker，内容进行了大概，不再clone Squirrel，而是直接clone zrcl_mutator
-  
+- just_zrcl_mutator_0
+  此版本为只有ZRCL_mutator的版本
+- with_LLM_Generate_showmap
+  使用showmap启动fuzz
