@@ -1,3 +1,4 @@
+#kmeans与dbscan聚类方法，产出结果
 import networkx as nx
 from gensim.models import Word2Vec
 from sklearn.cluster import KMeans, DBSCAN
@@ -143,7 +144,6 @@ def plot_knn_graph(all_root_embeddings, n_neighbors):
 def main():
     # 读取多个文件并构建大树
     file_paths = [f'F:\\Master\\DBMS_FUZZ\\after_parser\\{i}.txt' for i in range(100)]
-    all_root_embeddings = []  # 存储根节点嵌入
 
     # 进行20次聚类
     n_trials = 20
@@ -170,7 +170,7 @@ def main():
         all_root_embeddings = np.array(all_root_embeddings)  # 转换为 NumPy 数组
 
         # KMeans 聚类
-        kmeans_labels, kmeans_closest, kmeans_silhouette, kmeans_db_index = kmeans_clustering(all_root_embeddings, n_clusters=8)
+        kmeans_labels, kmeans_closest, kmeans_silhouette, kmeans_db_index = kmeans_clustering(all_root_embeddings, n_clusters=10)
         kmeans_results.append((kmeans_labels, kmeans_closest, kmeans_silhouette, kmeans_db_index))
 
         # DBSCAN 聚类
@@ -213,3 +213,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

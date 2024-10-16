@@ -116,11 +116,10 @@ def process_create_table(sql):
 def main(argv):
     #文件路径
     testcase_file_path = "I:\\Richard Zhang - zrcl\\BigLoong 备份\\2024-9-26\\Master\\DBMS_FUZZ\\实验数据\\变异生成文件保存\\docker_data_0_5"
-    out_parser_file_path = "F:\\Master\\DBMS_FUZZ\\after_parser"
+    out_parser_file_path = "F:\\Master\\DBMS_FUZZ\\after_parser\\test"
 
     #文件名开头：
     file_name_prefix = 'id_'
-    current = 0 #当前的文件id
     count = 0
     for current in range(0, 100):
         file_content = read_file_by_id(testcase_file_path, file_name_prefix, current)#读文件
