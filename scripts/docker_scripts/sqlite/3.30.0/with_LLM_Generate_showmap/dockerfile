@@ -119,7 +119,6 @@ RUN $CXX $CXXFLAGS \
     /home/sqlite3/test/ossfuzz.o /home/sqlite3/test/ossshell.o -o /home/ossfuzz \
    ./sqlite3.o -ldl -pthread
 #切换工作目录
-WORKDIR /home/Squirrel/scripts/utils
+WORKDIR /home
 #进入点 命令 指定docker启动时的主命令 这里启动了run.py脚本并传递了两个参数
 #第一个参数是数据库名 第二个参数为输入文件目录
-ENTRYPOINT python3 run_showmap.py sqlite ../../data/fuzz_root/input
