@@ -1,7 +1,159 @@
-CREATE TABLE v3 (v1 INTEGER PRIMARY KEY, v2 REAL, v3 TEXT UNIQUE);
-CREATE TEMP VIEW v_view2 AS SELECT v1, COUNT(v2) AS total FROM v3 GROUP BY v1 HAVING total > 0;
-CREATE TRIGGER trg4 BEFORE INSERT ON v3 BEGIN 
-    UPDATE v3 SET v2 = (SELECT MAX(v2) FROM v3) WHERE v1 = NEW.v1;
+
+CREATE TABLE parent_table (
+    parent_id INTEGER PRIMARY KEY,
+    parent_name TEXT UNIQUE NOT NULL,
+    parent_info TEXT DEFAULT 'DefaultInfo'
+);
+
+CREATE TABLE child_table (
+    child_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER NOT NULL,
+    child_name TEXT CHECK(length(child_name) > 2),
+    FOREIGN KEY (parent_id) REFERENCES parent_table(parent_id) ON DELETE SET NULL
+);
+
+CREATE TABLE composite_table (
+    col1 INTEGER NOT NULL,
+    col2 TEXT NOT NULL,
+    col3 REAL CHECK(col3 > 0),
+    PRIMARY KEY (col1, col2)
+);
+
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    description TEXT COLLATE NOCASE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+
+INSERT INTO parent_table (parent_name) VALUES ('Parent1');
+INSERT INTO parent_table (parent_name) VALUES ('Parent2');
+INSERT INTO child_table (parent_id, child_name) VALUES (1, 'Child1');
+INSERT INTO child_table (parent_id, child_name) VALUES (1, 'Child2');
+INSERT INTO child_table (parent_id, child_name) VALUES (NULL, 'NullChild');
+INSERT INTO composite_table (col1, col2, col3) VALUES (1, 'Row1', 10.5);
+INSERT INTO composite_table (col1, col2, col3) VALUES (2, 'Row2', -5); -- 违反CHECK约束
+INSERT INTO test_table (description) VALUES ('Test1');
+INSERT INTO test_table (description) VALUES ('Test2');
+
+
+WITH RECURSIVE sequence(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM sequence WHERE n < 10
+)
+SELECT * FROM sequence;
+
+
+SELECT 
+    parent_name,
+    ROW_NUMBER() OVER (ORDER BY parent_name) AS row_num
+FROM parent_table;
+
+
+SELECT child_name FROM child_table WHERE child_name IS NOT NULL
+UNION
+SELECT parent_name FROM parent_table;
+
+
+SELECT parent_name, 
+       (SELECT COUNT(*) FROM child_table WHERE child_table.parent_id = parent_table.parent_id) AS child_count
+FROM parent_table;
+
+
+SELECT parent_id, COUNT(*) AS child_count
+FROM child_table
+GROUP BY parent_id
+HAVING child_count > 1;
+
+
+ALTER TABLE parent_table ADD COLUMN extra_info TEXT DEFAULT 'ExtraDefault';
+SELECT * FROM parent_table;
+
+
+SELECT p.parent_name, c.child_name
+FROM parent_table p
+LEFT JOIN child_table c ON p.parent_id = c.parent_id
+WHERE c.child_name IS NOT NULL;
+
+SELECT p.parent_name, c.child_name
+FROM parent_table p
+RIGHT JOIN child_table c ON p.parent_id = c.parent_id;
+
+
+SELECT a.parent_name, b.parent_name
+FROM parent_table a, parent_table b
+WHERE a.parent_id < b.parent_id;
+
+
+BEGIN TRANSACTION;
+INSERT INTO test_table (description) VALUES ('Rollback Test');
+ROLLBACK;
+
+
+SELECT description
+FROM test_table
+WHERE description LIKE 'Test%' AND id < 3 OR description = 'Rollback Test';
+
+
+SELECT 
+    id,
+    CASE 
+        WHEN id = 1 THEN 'First'
+        WHEN id = 2 THEN 'Second'
+        ELSE 'Other'
+    END AS position
+FROM test_table;
+
+
+SELECT * FROM test_table
+ORDER BY id
+LIMIT 2 OFFSET 1;
+
+
+SELECT parent_name
+FROM parent_table
+WHERE EXISTS (
+    SELECT 1 
+    FROM child_table 
+    WHERE child_table.parent_id = parent_table.parent_id
+);
+
+
+CREATE VIEW test_view AS
+SELECT p.parent_name, c.child_name
+FROM parent_table p
+JOIN child_table c ON p.parent_id = c.parent_id;
+
+SELECT * FROM test_view;
+
+
+CREATE TRIGGER test_trigger
+AFTER INSERT ON child_table
+BEGIN
+    UPDATE parent_table SET extra_info = 'Updated by Trigger' WHERE parent_id = NEW.parent_id;
 END;
-INSERT INTO v3 (v1, v2, v3) VALUES (1, 1.0, 'unique1'), (2, 2.0, 'unique2');
-SELECT * FROM v_view2 WHERE total = (SELECT COUNT(*) FROM v3);
+
+
+INSERT INTO child_table (parent_id, child_name) VALUES (1, 'TriggeredChild');
+
+
+SELECT DISTINCT parent_name FROM parent_table;
+
+
+SELECT * 
+FROM parent_table 
+CROSS JOIN child_table;
+
+
+PRAGMA table_info(parent_table);
+PRAGMA database_list;
+
+
+SELECT child_name FROM child_table
+UNION ALL
+SELECT parent_name FROM parent_table;
+
+SELECT child_name FROM child_table
+INTERSECT
+SELECT parent_name FROM parent_table;

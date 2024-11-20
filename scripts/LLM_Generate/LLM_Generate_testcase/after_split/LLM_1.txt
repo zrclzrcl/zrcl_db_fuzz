@@ -1,8 +1,101 @@
-CREATE TABLE v0 ( v1 INTEGER PRIMARY KEY, v2 TEXT, v3 REAL, v4 TEXT );
-CREATE TEMP TRIGGER trg1 AFTER INSERT ON v0 BEGIN 
-    UPDATE v0 SET v3 = (SELECT MAX(v3) FROM v0) WHERE v1 = NEW.v1; 
-    INSERT INTO v0 (v2, v3) VALUES ('Test', (SELECT COUNT(*) FROM v0)); 
+CREATE TABLE IF NOT EXISTS parent (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT (DATETIME('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS child (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER NOT NULL,
+    description TEXT CHECK(LENGTH(description) > 10),
+    created_at TEXT DEFAULT (DATETIME('now', 'utc')),
+    FOREIGN KEY (parent_id) REFERENCES parent(id) ON DELETE CASCADE
+);
+
+
+CREATE VIRTUAL TABLE IF NOT EXISTS vtable USING fts5(content, tokenize='porter');
+
+
+CREATE TRIGGER IF NOT EXISTS update_timestamp
+AFTER UPDATE ON child
+BEGIN
+    UPDATE parent
+    SET created_at = DATETIME('now')
+    WHERE id = NEW.parent_id;
 END;
-CREATE INDEX idx_v2 ON v0(v2) WHERE v3 > 0;
-INSERT INTO v0 (v1, v2, v3) VALUES (1, 'abc', 0.5), (2, 'xyz', 1.5), (3, '123', 2.5);
-SELECT * FROM v0 WHERE v2 IN (SELECT v2 FROM v0 WHERE v1 > 1 UNION SELECT v2 FROM v0 WHERE v3 < 2);
+
+
+WITH RECURSIVE cnt(x) AS (
+    SELECT 1
+    UNION ALL
+    SELECT x + 1 FROM cnt
+    WHERE x < 10
+)
+SELECT x, x * x AS square
+FROM cnt;
+
+INSERT INTO parent (name) VALUES
+    ('Parent1'),
+    ('Parent2'),
+    ('Parent3');
+
+INSERT INTO child (parent_id, description) VALUES
+    (1, 'Description longer than 10'),
+    (2, 'Another description'),
+    (3, 'Yet another one');
+
+BEGIN TRANSACTION;
+INSERT INTO parent (name) VALUES ('Parent4');
+INSERT INTO child (parent_id, description) VALUES
+    (4, 'Description that will fail');
+ROLLBACK;
+
+
+SELECT
+    p.name AS parent_name,
+    c.description,
+    ROW_NUMBER() OVER (PARTITION BY c.parent_id ORDER BY c.created_at DESC) AS row_num,
+    COUNT(*) OVER (PARTITION BY c.parent_id) AS total_children
+FROM parent p
+LEFT JOIN child c ON p.id = c.parent_id;
+
+
+SELECT 
+    id,
+    SUM(LENGTH(description)) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS description_sum
+FROM child;
+
+
+CREATE TABLE IF NOT EXISTS json_table (
+    id INTEGER PRIMARY KEY,
+    json_data TEXT
+);
+
+INSERT INTO json_table (json_data) VALUES
+    ('{"key1": "value1", "key2": 42, "nested": {"key3": [1, 2, 3]}}');
+
+SELECT
+    json_extract(json_data, '$.key1') AS key1,
+    json_extract(json_data, '$.nested.key3[1]') AS second_value_in_key3
+FROM json_table;
+
+
+SELECT non_existent_function();
+
+
+INSERT INTO parent (id, name)
+VALUES (1, 'Parent1_Updated')
+ON CONFLICT (id)
+DO UPDATE SET name = excluded.name;
+
+
+SELECT id,
+    (SELECT COUNT(*) FROM child WHERE parent_id = p.id) AS child_count,
+    COALESCE(NULL, 'Fallback') AS coalesce_example
+FROM parent p;
+
+
+DELETE FROM parent WHERE id > 3;
+
+
+DELETE FROM vtable;

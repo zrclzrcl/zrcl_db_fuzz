@@ -1,8 +1,120 @@
-CREATE TABLE v1 (v1 INTEGER, v2 INTEGER, v3 REAL, v4 TEXT);
-CREATE TRIGGER trg2 BEFORE UPDATE ON v1 BEGIN 
-    UPDATE v1 SET v2 = v2 + 1 WHERE v3 = OLD.v3;
-    INSERT INTO v1 (v1, v2, v3, v4) VALUES (NULL, NEW.v2, NEW.v3 + 1, NEW.v4);
-END;
-INSERT INTO v1 (v1, v2, v3, v4) VALUES (1, 10, 2.5, 'foo'), (2, 20, 3.5, 'bar');
-UPDATE v1 SET v3 = v3 + 0.1 WHERE v2 IN (SELECT MAX(v2) FROM v1);
-SELECT v4 FROM v1 WHERE v1 = (SELECT MIN(v1) FROM v1);
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL CHECK(LENGTH(username) >= 3),
+    email TEXT NOT NULL CHECK(email LIKE '%@%'),
+    created_at TEXT DEFAULT (DATETIME('now'))
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    order_total REAL NOT NULL CHECK(order_total >= 0),
+    status TEXT CHECK(status IN ('Pending', 'Shipped', 'Cancelled')),
+    created_at TEXT DEFAULT (DATETIME('now')),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+
+INSERT INTO users (username, email) VALUES
+    ('Alice', 'alice@example.com'),
+    ('Bob', 'bob@example.com');
+
+INSERT INTO orders (user_id, order_total, status) VALUES
+    (1, 99.99, 'Pending'),
+    (1, 49.49, 'Shipped'),
+    (2, 19.99, 'Cancelled');
+
+
+WITH OrderSummary AS (
+    SELECT 
+        user_id,
+        COUNT(*) AS total_orders,
+        SUM(order_total) AS total_spent
+    FROM orders
+    GROUP BY user_id
+)
+SELECT 
+    u.username,
+    os.total_orders,
+    os.total_spent,
+    RANK() OVER (ORDER BY os.total_spent DESC) AS spending_rank
+FROM users u
+LEFT JOIN OrderSummary os ON u.user_id = os.user_id;
+
+
+SELECT 
+    username,
+    (SELECT COUNT(*) FROM orders WHERE user_id = u.user_id) AS order_count,
+    (SELECT MAX(order_total) FROM orders WHERE user_id = u.user_id) AS max_order_value
+FROM users u;
+
+
+BEGIN TRANSACTION;
+INSERT INTO users (username, email) VALUES ('Charlie', 'charlie@example.com');
+INSERT INTO orders (user_id, order_total, status) VALUES
+    (3, 200.00, 'Pending'),
+    (3, -10.00, 'Pending');
+ROLLBACK;
+
+
+INSERT INTO orders (user_id, order_total, status)
+VALUES (1, 10.00, 'Shipped'), (2, 15.00, 'Pending');
+
+
+SELECT 
+    created_at,
+    DATE(created_at, '+1 day') AS next_day,
+    TIME(created_at, 'localtime') AS local_time,
+    STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS current_time
+FROM orders;
+
+
+INSERT INTO users (user_id, username, email)
+VALUES (2, 'BobUpdated', 'bob_new@example.com')
+ON CONFLICT(user_id) 
+DO UPDATE SET username = excluded.username, email = excluded.email;
+
+
+SELECT username
+FROM users u
+WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id AND o.status = 'Shipped');
+
+SELECT username
+FROM users u
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id);
+
+
+SELECT username, 'Active' AS status
+FROM users
+WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = users.user_id AND status = 'Pending')
+UNION
+SELECT username, 'Inactive' AS status
+FROM users
+WHERE NOT EXISTS (SELECT 1 FROM orders WHERE user_id = users.user_id);
+
+
+SELECT username, email
+FROM users
+ORDER BY LENGTH(username) DESC, created_at ASC
+LIMIT 2;
+
+
+CREATE TEMP TABLE IF NOT EXISTS temp_orders AS
+SELECT * FROM orders WHERE order_total > 50;
+
+SELECT * FROM temp_orders;
+
+
+SELECT 
+    u.username,
+    o.order_id,
+    o.order_total,
+    o.status
+FROM users u
+INNER JOIN orders o ON u.user_id = o.user_id
+WHERE o.order_total > 20 AND u.username LIKE 'A%';
+
+
+DELETE FROM orders WHERE order_total < 20;
+
+VACUUM;

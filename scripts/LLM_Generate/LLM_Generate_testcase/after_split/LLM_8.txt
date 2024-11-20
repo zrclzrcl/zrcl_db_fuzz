@@ -1,7 +1,138 @@
-CREATE TABLE v6 (v1 INTEGER PRIMARY KEY, v2 REAL, v3 TEXT UNIQUE);
-CREATE VIEW v6_view AS SELECT v1, v2 FROM v6 WHERE v1 > 0;
-CREATE TRIGGER trg8 BEFORE UPDATE ON v6 BEGIN 
-    UPDATE v6 SET v2 = v2 + 1 WHERE v1 = OLD.v1;
+CREATE TABLE IF NOT EXISTS departments (
+    dept_id INTEGER PRIMARY KEY,
+    dept_name TEXT UNIQUE NOT NULL,
+    budget REAL CHECK(budget > 0),
+    established_date TEXT DEFAULT (DATE('now', '-10 years'))
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+    emp_id INTEGER,
+    dept_id INTEGER,
+    name TEXT NOT NULL,
+    role TEXT CHECK(role IN ('Manager', 'Developer', 'Analyst')),
+    join_date TEXT DEFAULT (DATE('now')),
+    salary REAL CHECK(salary > 0),
+    PRIMARY KEY (emp_id, dept_id),
+    FOREIGN KEY (dept_id) REFERENCES departments(dept_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bonuses (
+    bonus_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    emp_id INTEGER NOT NULL,
+    dept_id INTEGER NOT NULL,
+    bonus_amount REAL CHECK(bonus_amount >= 0),
+    grant_date TEXT DEFAULT (DATE('now')),
+    FOREIGN KEY (emp_id, dept_id) REFERENCES employees(emp_id, dept_id) ON DELETE CASCADE
+);
+
+
+INSERT OR IGNORE INTO departments (dept_name, budget) VALUES
+    ('IT', 1000000),
+    ('HR', 500000),
+    ('Sales', 750000);
+
+INSERT OR IGNORE INTO employees (emp_id, dept_id, name, role, salary) VALUES
+    (1, 1, 'Alice', 'Manager', 120000),
+    (2, 1, 'Bob', 'Developer', 80000),
+    (3, 2, 'Charlie', 'Analyst', 60000);
+
+
+INSERT INTO bonuses (emp_id, dept_id, bonus_amount)
+SELECT 
+    emp_id, 
+    dept_id, 
+    RANDOM() % 5000 + 1000
+FROM employees;
+
+
+SELECT 
+    e.name AS employee_name,
+    d.dept_name AS department,
+    e.salary,
+    COALESCE(SUM(b.bonus_amount), 0) AS total_bonus,
+    CASE 
+        WHEN e.salary > 100000 THEN 'High Earner'
+        WHEN e.salary > 70000 THEN 'Mid Earner'
+        ELSE 'Low Earner'
+    END AS earning_category
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN bonuses b ON e.emp_id = b.emp_id AND e.dept_id = b.dept_id
+GROUP BY e.emp_id, e.dept_id;
+
+
+WITH RECURSIVE salary_hierarchy(emp_id, dept_id, salary, level) AS (
+    SELECT emp_id, dept_id, salary, 1
+    FROM employees
+    WHERE role = 'Manager'
+    UNION ALL
+    SELECT e.emp_id, e.dept_id, e.salary, h.level + 1
+    FROM employees e
+    JOIN salary_hierarchy h ON e.dept_id = h.dept_id AND e.salary < h.salary
+)
+SELECT * FROM salary_hierarchy ORDER BY level;
+
+
+SELECT 
+    d.dept_name,
+    e.name AS employee_name,
+    e.salary,
+    AVG(e.salary) OVER (PARTITION BY d.dept_name) AS avg_dept_salary,
+    RANK() OVER (PARTITION BY d.dept_name ORDER BY e.salary DESC) AS rank_in_dept
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id;
+
+
+CREATE TRIGGER IF NOT EXISTS adjust_budget
+AFTER INSERT ON bonuses
+BEGIN
+    UPDATE departments
+    SET budget = budget - NEW.bonus_amount
+    WHERE dept_id = NEW.dept_id;
 END;
-INSERT INTO v6 (v1, v2, v3) VALUES (1, 2.5, 'unique1'), (2, 3.5, 'unique2');
-UPDATE v6 SET v2 = (SELECT AVG(v2) FROM v6);
+
+
+INSERT INTO bonuses (emp_id, dept_id, bonus_amount) VALUES (2, 1, 2000);
+
+
+DELETE FROM employees
+WHERE emp_id IN (
+    SELECT emp_id
+    FROM bonuses
+    WHERE bonus_amount > 4000
+);
+
+
+SELECT 
+    dept_id,
+    COUNT(*) AS employee_count,
+    MAX(salary) AS max_salary,
+    MIN(salary) AS min_salary
+FROM employees
+GROUP BY dept_id
+HAVING MAX(salary) > 80000;
+
+
+SELECT 
+    name,
+    salary * 1.1 AS adjusted_salary
+FROM employees
+ORDER BY adjusted_salary DESC
+LIMIT 2;
+
+
+SELECT 
+    dept_name,
+    (SELECT COUNT(*) FROM employees WHERE employees.dept_id = d.dept_id) AS employee_count
+FROM departments d
+WHERE budget > 600000;
+
+
+INSERT INTO employees (emp_id, dept_id, name, role, salary)
+VALUES (9999, 1, 'TestUser', 'Developer', 1.0); 
+
+DELETE FROM employees WHERE emp_id = 9999;
+
+
+DELETE FROM bonuses WHERE bonus_amount < 1500;
+DELETE FROM employees WHERE salary < 50000;

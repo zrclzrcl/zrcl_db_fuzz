@@ -1,7 +1,174 @@
-CREATE TABLE v0 (v1 INTEGER PRIMARY KEY, v2 TEXT CHECK(v1 IS NOT NULL), v3 REAL);
-CREATE TEMP TRIGGER trg1 AFTER INSERT ON v0 BEGIN 
-    INSERT INTO v0 (v1, v2, v3) VALUES (NEW.v1 + 1, 'inserted', (SELECT MAX(v3) FROM v0));
-    DELETE FROM v0 WHERE v1 = (SELECT MIN(v1) FROM v0);
-END;
-INSERT INTO v0 (v1, v2, v3) VALUES (1, 'test', 1.1), (2, 'example', 2.2);
-SELECT v2 FROM v0 WHERE v3 > (SELECT AVG(v3) FROM v0) AND v1 IN (SELECT v1 FROM v0 WHERE v2 LIKE 't%');
+CREATE TABLE IF NOT EXISTS table1 (
+    col1 INTEGER PRIMARY KEY AUTOINCREMENT,
+    col2 TEXT NOT NULL,
+    col3 REAL CHECK(col3 >= 0),
+    col4 BLOB
+);
+
+CREATE TABLE IF NOT EXISTS table2 (
+    col1 INTEGER PRIMARY KEY,
+    col2 INTEGER,
+    col3 TEXT,
+    col4 REAL DEFAULT 0.0,
+    col5 TEXT DEFAULT 'default_value'
+);
+
+CREATE TABLE IF NOT EXISTS table3 (
+    col1 INTEGER NOT NULL,
+    col2 INTEGER NOT NULL,
+    col3 TEXT,
+    PRIMARY KEY(col1, col2)
+);
+
+CREATE TABLE IF NOT EXISTS table4 (
+    col1 INTEGER,
+    col2 TEXT,
+    col3 INTEGER DEFAULT 0,
+    col4 REAL,
+    col5 INTEGER CHECK(col5 >= 0)
+);
+
+
+INSERT INTO table1 (col2, col3, col4) VALUES
+    ('Value1', 100.5, X'123456'),
+    ('Value2', 200.0, X'789ABC'),
+    ('Value3', -10.0, X'987654');
+
+INSERT INTO table2 (col1, col2, col3, col4, col5) VALUES
+    (1, 100, 'SomeText', 20.5, 'Text1'),
+    (2, 200, 'OtherText', 40.0, 'Text2');
+
+
+WITH RECURSIVE num_seq(x) AS (
+    VALUES(1)
+    UNION ALL
+    SELECT x + 1 FROM num_seq WHERE x < 10
+)
+SELECT x FROM num_seq;
+
+
+SELECT t1.col2, t2.col3, t1.col4 
+FROM table1 t1
+JOIN table2 t2 ON t1.col1 = t2.col2
+WHERE t1.col3 > 0;
+
+
+SELECT col2, 
+       (SELECT MAX(col3) FROM table1 WHERE table1.col1 = table2.col1) AS max_col3
+FROM table2;
+
+
+SELECT 
+    col2, 
+    ROW_NUMBER() OVER (PARTITION BY col3 ORDER BY col1 DESC) AS row_num
+FROM table2;
+
+
+SELECT col2, COUNT(*) AS count
+FROM table2
+GROUP BY col2
+HAVING COUNT(*) > 1;
+
+
+SELECT col2 
+FROM table2
+WHERE col2 = 'SomeText' OR col3 = 'OtherText';
+
+
+UPDATE table2
+SET col5 = (SELECT COUNT(*) FROM table1 WHERE col2 = 'Value1')
+WHERE col2 = 'SomeText';
+
+
+SELECT * FROM table1 WHERE col2 = ? AND col3 > ?;
+
+
+SELECT col2, col3 FROM table1
+ORDER BY col1 LIMIT 3 OFFSET 2;
+
+
+SELECT 
+    col1,
+    CASE 
+        WHEN col3 < 0 THEN 'Negative'
+        WHEN col3 = 0 THEN 'Zero'
+        ELSE 'Positive'
+    END AS col3_status
+FROM table1;
+
+
+DELETE FROM table2
+WHERE NOT EXISTS (SELECT 1 FROM table1 WHERE table1.col2 = table2.col2);
+
+
+SELECT t1.col2, t2.col3 
+FROM table1 t1
+JOIN table1 t2 ON t1.col1 = t2.col1
+WHERE t1.col3 = t2.col3;
+
+
+SELECT col2, col3 
+FROM table2
+CROSS JOIN table1;
+
+
+INSERT INTO table1 (col2, col3, col4) VALUES
+    ('Text1', 'NotANumber', X'ABC123'),
+    ('Text2', 123, X'DEF456');
+
+
+SELECT * FROM table1
+WHERE (col3 > 0 AND col2 = 'Value1') 
+OR (col4 IS NOT NULL AND col1 < 3);
+
+
+INSERT INTO table2 (col1, col2, col3, col4, col5) VALUES 
+    (1, 100, 'Duplicated', 20.5, 'Text1'),
+    (1, 100, 'Duplicated', 20.5, 'Text1');
+
+
+SELECT col2 FROM table1 WHERE col1 IN 
+    (SELECT col1 FROM table2 WHERE col3 = 'SomeText' 
+     AND col4 < 50);
+ 
+
+SELECT col2, 
+       (SELECT COUNT(*) FROM table1 WHERE table1.col2 = table2.col2) AS related_count
+FROM table2;
+
+
+CREATE INDEX IF NOT EXISTS idx_composite ON table2 (col2, col3);
+
+
+UPDATE table1 
+SET col2 = 'UpdatedValue', col3 = 
+    (SELECT MAX(col3) FROM table2 WHERE table2.col1 = table1.col1)
+WHERE col1 = 1;
+
+
+DELETE FROM table2 WHERE col1 IN (SELECT col1 FROM table1 WHERE col3 < 0);
+
+
+INSERT INTO table1 (col2, col3, col4) VALUES
+    ('NewEntry', 100.0, X'ABC123'),
+    ('AnotherEntry', 200.5, X'XYZ987');
+
+
+SELECT col2, col3 
+FROM table1 
+WHERE col3 > (SELECT AVG(col3) FROM table1);
+
+
+UPDATE table2 SET col5 = 
+    CASE WHEN col2 = 100 THEN 'UpdatedText' ELSE 'Default' END;
+
+
+SELECT col2, 
+    (SELECT MAX(col1) FROM table2 WHERE col2 = table1.col2) AS max_id
+FROM table1;
+
+
+CREATE TEMPORARY TABLE temp_table AS
+    SELECT col2, col3 FROM table1 WHERE col3 > 0;
+
+SELECT * FROM temp_table;

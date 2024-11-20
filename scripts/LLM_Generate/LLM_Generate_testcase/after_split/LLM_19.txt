@@ -1,7 +1,89 @@
-CREATE TABLE v7 (v1 INTEGER, v2 TEXT, v3 INTEGER);
-CREATE TEMP VIEW v_view4 AS SELECT v1, SUM(v3) AS total FROM v7 GROUP BY v1;
-CREATE TRIGGER trg8 BEFORE INSERT ON v7 BEGIN 
-    UPDATE v7 SET v3 = v3 + 1 WHERE v1 = NEW.v1;
+CREATE TABLE table_alpha (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    value INTEGER CHECK (value BETWEEN 1 AND 100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE table_beta (
+    id INTEGER PRIMARY KEY,
+    alpha_id INTEGER NOT NULL,
+    description TEXT,
+    flag BOOLEAN CHECK (flag IN (0, 1)),
+    FOREIGN KEY (alpha_id) REFERENCES table_alpha(id) ON DELETE CASCADE
+);
+
+CREATE TABLE table_gamma (
+    id INTEGER PRIMARY KEY,
+    category TEXT NOT NULL COLLATE NOCASE,
+    amount REAL DEFAULT 0.0
+);
+
+INSERT INTO table_alpha (name, value) VALUES ('Alpha1', 10);
+INSERT INTO table_alpha (name, value) VALUES ('Alpha2', 20);
+INSERT INTO table_alpha (name, value) VALUES ('Alpha3', 30);
+
+INSERT INTO table_beta (id, alpha_id, description, flag) VALUES (1, 1, 'Beta1', 1);
+INSERT INTO table_beta (id, alpha_id, description, flag) VALUES (2, 2, 'Beta2', 0);
+
+INSERT INTO table_gamma (id, category, amount) VALUES (1, 'CategoryA', 50.5);
+INSERT INTO table_gamma (id, category, amount) VALUES (2, 'CategoryB', 75.25);
+
+WITH RECURSIVE counter(x) AS (
+    SELECT 1
+    UNION ALL
+    SELECT x + 1 FROM counter WHERE x < 5
+)
+SELECT * FROM counter;
+
+SELECT 
+    a.name, 
+    b.description, 
+    g.amount 
+FROM table_alpha a
+LEFT JOIN table_beta b ON a.id = b.alpha_id
+LEFT JOIN table_gamma g ON b.id = g.id
+WHERE g.amount > 50;
+
+CREATE TRIGGER trigger_insert_alpha
+AFTER INSERT ON table_alpha
+BEGIN
+    INSERT INTO table_gamma (id, category, amount) VALUES (NEW.id, 'TriggeredCategory', NEW.value * 2);
 END;
-INSERT INTO v7 (v1, v2, v3) VALUES (1, 'row1', 1), (2, 'row2', 2);
-SELECT * FROM v_view4 WHERE total > 0;
+
+INSERT INTO table_alpha (name, value) VALUES ('Alpha4', 40);
+
+UPDATE table_beta SET flag = 1 WHERE id = 2;
+
+ALTER TABLE table_alpha ADD COLUMN extra_info TEXT DEFAULT 'ExtraData';
+
+INSERT INTO table_alpha (name, value, extra_info) VALUES ('Alpha5', 50, 'NewInfo');
+
+DELETE FROM table_gamma WHERE category = 'CategoryA';
+
+CREATE VIEW alpha_summary AS
+SELECT id, name, value FROM table_alpha WHERE value > 20;
+
+SELECT * FROM alpha_summary;
+
+SELECT name, 
+       (SELECT COUNT(*) FROM table_beta WHERE table_beta.alpha_id = table_alpha.id) AS related_count
+FROM table_alpha;
+
+CREATE INDEX idx_table_gamma_amount ON table_gamma(amount);
+
+SELECT * FROM table_gamma WHERE amount > 70;
+
+BEGIN TRANSACTION;
+INSERT INTO table_beta (id, alpha_id, description, flag) VALUES (3, 3, 'Beta3', 1);
+ROLLBACK;
+
+SELECT id, 
+       CASE WHEN value > 30 THEN 'High' ELSE 'Low' END AS value_category
+FROM table_alpha;
+
+SELECT a.name, g.category
+FROM table_alpha a
+CROSS JOIN table_gamma g;
+
+DROP TABLE table_beta;

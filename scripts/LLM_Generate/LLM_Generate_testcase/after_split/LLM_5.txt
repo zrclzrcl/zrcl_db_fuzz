@@ -1,7 +1,121 @@
-CREATE TABLE v2 (v1 INTEGER, v2 TEXT, v3 BLOB, v4 REAL);
-CREATE TEMP TRIGGER trg4 AFTER INSERT ON v2 BEGIN
-    DELETE FROM v2 WHERE v1 = (SELECT MAX(v1) FROM v2);
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_name TEXT NOT NULL,
+    order_date TEXT DEFAULT (DATE('now'))
+);
+
+CREATE TABLE IF NOT EXISTS order_details (
+    detail_id INTEGER PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    product_name TEXT NOT NULL,
+    quantity INTEGER CHECK(quantity > 0),
+    price REAL CHECK(price >= 0),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+);
+
+
+INSERT INTO orders (customer_name) VALUES ('John Doe'), ('Jane Smith');
+
+INSERT INTO order_details (order_id, product_name, quantity, price) VALUES
+    (1, 'Laptop', 2, 1200.00),
+    (1, 'Mouse', 1, 20.00),
+    (2, 'Book', 5, 15.99);
+
+
+SELECT 
+    o.customer_name,
+    COUNT(od.detail_id) AS total_items,
+    SUM(od.quantity * od.price) AS total_price
+FROM orders o
+JOIN order_details od ON o.order_id = od.order_id
+GROUP BY o.customer_name;
+
+
+CREATE TRIGGER IF NOT EXISTS update_order_date
+AFTER UPDATE OF quantity ON order_details
+BEGIN
+    UPDATE orders
+    SET order_date = DATE('now')
+    WHERE order_id = NEW.order_id;
 END;
-CREATE INDEX idx_v2 ON v2(v4) WHERE v1 > 10;
-INSERT INTO v2 (v1, v2, v3, v4) VALUES (1, 'text', X'001122', 0.5), (2, 'data', X'334455', 2.5);
-SELECT v2, LENGTH(v3) FROM v2 WHERE v4 > (SELECT AVG(v4) FROM v2);
+
+
+UPDATE order_details SET quantity = 3 WHERE detail_id = 2;
+
+
+SELECT 
+    o.customer_name,
+    (SELECT COUNT(*) FROM order_details WHERE order_id = o.order_id) AS item_count,
+    (SELECT SUM(price * quantity) FROM order_details WHERE order_id = o.order_id) AS order_total
+FROM orders o;
+
+
+DELETE FROM order_details
+WHERE order_id IN (
+    SELECT order_id
+    FROM orders
+    WHERE order_date < DATE('now', '-7 days')
+);
+
+
+SELECT 
+    product_name,
+    quantity,
+    SUM(quantity) OVER (PARTITION BY order_id) AS total_order_quantity,
+    ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY price DESC) AS rank_in_order
+FROM order_details;
+
+
+SELECT 
+    detail_id,
+    product_name,
+    CASE 
+        WHEN price > 100 THEN 'Expensive'
+        WHEN price BETWEEN 50 AND 100 THEN 'Moderate'
+        ELSE 'Cheap'
+    END AS price_category,
+    ROUND(price * quantity, 2) AS total_cost
+FROM order_details;
+
+
+SELECT 
+    o.customer_name,
+    d1.product_name AS product_1,
+    d2.product_name AS product_2
+FROM orders o
+JOIN order_details d1 ON o.order_id = d1.order_id
+JOIN order_details d2 ON o.order_id = d2.order_id
+WHERE d1.detail_id < d2.detail_id;
+
+
+SELECT * FROM order_details
+ORDER BY price DESC, quantity ASC
+LIMIT 3 OFFSET 1;
+
+
+SELECT 
+    order_id,
+    DATE(order_date, '+30 days') AS return_deadline,
+    TIME('now', '+2 hours') AS time_now_plus_2h
+FROM orders;
+
+
+INSERT INTO orders (customer_name)
+SELECT 'New Customer'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM orders
+    WHERE customer_name = 'New Customer'
+);
+
+
+SELECT 
+    order_id,
+    GROUP_CONCAT(product_name, ', ') AS products_list
+FROM order_details
+GROUP BY order_id;
+
+
+DELETE FROM order_details WHERE product_name = 'Mouse';
+DELETE FROM orders WHERE customer_name = 'New Customer';
+

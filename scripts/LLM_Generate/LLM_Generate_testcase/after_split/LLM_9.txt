@@ -1,7 +1,114 @@
-CREATE TABLE v7 (v1 INTEGER PRIMARY KEY, v2 TEXT, v3 TEXT);
-CREATE TEMP TRIGGER trg9 AFTER INSERT ON v7 BEGIN 
-    INSERT INTO v7 (v2, v3) VALUES ('abc', '123'), ('xyz', '789');
+CREATE TABLE test_table_1 (
+    col1 INTEGER PRIMARY KEY,
+    col2 TEXT UNIQUE,
+    col3 BLOB DEFAULT X'00FF',
+    col4 REAL CHECK(col4 > 0),
+    col5 NUMERIC DEFAULT 42
+);
+
+CREATE TABLE test_table_2 (
+    col1 INTEGER,
+    col2 TEXT CHECK(LENGTH(col2) < 10),
+    col3 TEXT COLLATE RTRIM,
+    col4 INTEGER DEFAULT (RANDOM() % 100),
+    FOREIGN KEY (col1) REFERENCES test_table_1(col1) ON DELETE SET NULL
+);
+
+
+INSERT INTO test_table_1 (col1, col2, col4) VALUES
+    (1, 'Alpha', 10.5),
+    (2, 'Beta', 20.3),
+    (3, 'Gamma', 30.7);
+
+INSERT INTO test_table_2 (col1, col2) VALUES
+    (1, 'Short'),
+    (2, 'TooLongStringShouldFail'),
+    (NULL, NULL);
+
+
+WITH RECURSIVE counter(x) AS (
+    SELECT 1
+    UNION ALL
+    SELECT x + 1 FROM counter WHERE x < 10
+)
+SELECT x, x * x AS squared FROM counter;
+
+
+SELECT 
+    col1, 
+    col4,
+    RANK() OVER (ORDER BY col4 DESC) AS rank_desc,
+    ROW_NUMBER() OVER (PARTITION BY col2 ORDER BY col1) AS row_number_partition
+FROM test_table_1;
+
+
+SELECT 
+    t1.col1 AS id1,
+    t2.col1 AS id2,
+    CASE 
+        WHEN t1.col4 > t2.col4 THEN 'T1 Greater'
+        WHEN t1.col4 < t2.col4 THEN 'T2 Greater'
+        ELSE 'Equal'
+    END AS comparison
+FROM test_table_1 t1
+LEFT JOIN test_table_2 t2 ON t1.col1 = t2.col1;
+
+
+SELECT col2
+FROM test_table_1
+WHERE col1 IN (
+    SELECT col1 
+    FROM test_table_2
+    WHERE col3 IS NULL
+    LIMIT 2 OFFSET 1
+);
+
+
+CREATE TRIGGER IF NOT EXISTS update_test_table_1
+AFTER INSERT ON test_table_2
+BEGIN
+    UPDATE test_table_1
+    SET col5 = col5 + 1
+    WHERE col1 = NEW.col1;
 END;
-CREATE INDEX idx_v7 ON v7(v2, v3);
-INSERT INTO v7 (v1, v2, v3) VALUES (1, 'first', '123'), (2, 'second', '456');
-SELECT * FROM v7 WHERE v3 = (SELECT MIN(v3) FROM v7);
+
+
+INSERT INTO test_table_2 (col1, col2) VALUES (1, 'TriggerTest');
+
+
+DELETE FROM test_table_1
+WHERE NOT EXISTS (
+    SELECT 1 
+    FROM test_table_2 
+    WHERE test_table_2.col1 = test_table_1.col1
+);
+
+
+SELECT 
+    t1.col1 AS t1_id,
+    t2.col1 AS t2_id,
+    t1.col4 + t2.col4 AS sum_col4
+FROM test_table_1 t1
+CROSS JOIN test_table_2 t2;
+
+
+UPDATE test_table_1
+SET col3 = RANDOMBLOB(16)
+WHERE col1 % 2 = 0;
+
+
+INSERT INTO test_table_1 (col1, col2, col4)
+SELECT 
+    x, 
+    'Generated_' || x, 
+    RANDOM() % 100 + 1
+FROM (WITH RECURSIVE gen(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM gen WHERE x <= 5) SELECT * FROM gen);
+
+
+BEGIN TRANSACTION;
+    INSERT INTO test_table_1 (col1, col2, col4) VALUES (999, 'TransactionTest', 99.9);
+    ROLLBACK;
+
+
+DROP TABLE IF EXISTS test_table_2;
+DROP TABLE IF EXISTS test_table_1;

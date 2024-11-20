@@ -1,8 +1,128 @@
-CREATE TABLE v3 (v1 INTEGER, v2 TEXT, v3 REAL CHECK(v1 > 0));
-CREATE TEMP VIEW v_view2 AS SELECT v1, SUM(v3) AS total FROM v3 GROUP BY v1;
-CREATE TRIGGER trg4 AFTER UPDATE ON v3 BEGIN 
-    INSERT INTO v3 (v1, v2, v3) VALUES (NEW.v1 + 1, NEW.v2 || ' updated', NEW.v3 * 2);
+CREATE TABLE employees (
+    emp_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    emp_name TEXT NOT NULL,
+    emp_salary REAL CHECK (emp_salary > 0),
+    emp_position TEXT CHECK (emp_position IN ('Manager', 'Developer', 'HR', 'Sales')),
+    emp_hire_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE departments (
+    dept_id INTEGER PRIMARY KEY,
+    dept_name TEXT NOT NULL,
+    dept_head INTEGER,
+    FOREIGN KEY (dept_head) REFERENCES employees(emp_id)
+);
+
+CREATE TABLE project_assignments (
+    assignment_id INTEGER PRIMARY KEY,
+    emp_id INTEGER NOT NULL,
+    project_name TEXT NOT NULL,
+    assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+);
+
+CREATE TABLE work_hours (
+    work_id INTEGER PRIMARY KEY,
+    emp_id INTEGER NOT NULL,
+    work_date TIMESTAMP NOT NULL,
+    hours_worked INTEGER CHECK (hours_worked >= 0),
+    FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+);
+
+CREATE TABLE performance_reviews (
+    review_id INTEGER PRIMARY KEY,
+    emp_id INTEGER NOT NULL,
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    score INTEGER CHECK (score BETWEEN 1 AND 5),
+    review_comments TEXT,
+    FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+);
+
+INSERT INTO employees (emp_name, emp_salary, emp_position) 
+VALUES ('John Doe', 80000, 'Manager'), 
+       ('Jane Smith', 60000, 'Developer'),
+       ('Mark Johnson', 55000, 'HR'),
+       ('Sarah Lee', 75000, 'Sales');
+
+INSERT INTO departments (dept_id, dept_name, dept_head) 
+VALUES (1, 'HR', 3), 
+       (2, 'Development', 2), 
+       (3, 'Sales', 4);
+
+INSERT INTO project_assignments (emp_id, project_name) 
+VALUES (1, 'ProjectA'),
+       (2, 'ProjectB'),
+       (4, 'ProjectC');
+
+INSERT INTO work_hours (emp_id, work_date, hours_worked) 
+VALUES (1, '2024-11-01', 8),
+       (2, '2024-11-01', 9),
+       (3, '2024-11-01', 7),
+       (4, '2024-11-01', 8);
+
+INSERT INTO performance_reviews (emp_id, score, review_comments) 
+VALUES (1, 4, 'Great leader with excellent management skills.'),
+       (2, 5, 'Exceptional performance and coding expertise.'),
+       (3, 3, 'Good communication but needs improvement in task management.'),
+       (4, 4, 'Good sales record, needs to focus more on customer relationships.');
+
+WITH RECURSIVE employee_hierarchy AS (
+    SELECT e.emp_id, e.emp_name, e.emp_position, e.emp_salary, e.emp_hire_date, 0 AS level
+    FROM employees e
+    WHERE e.emp_position = 'Manager'
+    UNION ALL
+    SELECT e.emp_id, e.emp_name, e.emp_position, e.emp_salary, e.emp_hire_date, eh.level + 1
+    FROM employees e
+    JOIN employee_hierarchy eh ON e.emp_position != 'Manager' AND eh.level = 0
+)
+SELECT * FROM employee_hierarchy;
+
+CREATE TRIGGER update_salary_on_promotion
+AFTER UPDATE ON employees
+BEGIN
+    UPDATE employees 
+    SET emp_salary = emp_salary * 1.1 
+    WHERE emp_id = NEW.emp_id AND NEW.emp_position = 'Manager';
 END;
-INSERT INTO v3 (v1, v2, v3) VALUES (1, 'data1', 1.1);
-UPDATE v3 SET v3 = (SELECT AVG(v3) FROM v3);
-SELECT * FROM v_view2 WHERE total > 0;
+
+CREATE VIEW department_summary AS
+SELECT d.dept_name, COUNT(e.emp_id) AS employee_count, AVG(e.emp_salary) AS avg_salary
+FROM departments d
+JOIN employees e ON e.emp_position IN (SELECT emp_position FROM employees WHERE emp_id = e.emp_id)
+GROUP BY d.dept_name;
+
+SELECT * FROM department_summary;
+
+UPDATE employees 
+SET emp_salary = emp_salary + 5000 
+WHERE emp_position = 'Developer';
+
+CREATE INDEX idx_emp_position ON employees(emp_position);
+CREATE INDEX idx_emp_name ON employees(emp_name);
+
+SELECT e.emp_name, e.emp_position, e.emp_salary
+FROM employees e
+LEFT JOIN performance_reviews pr ON e.emp_id = pr.emp_id
+WHERE pr.score >= 4;
+
+DELETE FROM performance_reviews WHERE review_date < '2024-01-01';
+
+BEGIN TRANSACTION;
+INSERT INTO employees (emp_name, emp_salary, emp_position) 
+VALUES ('Emily Green', 70000, 'Manager');
+UPDATE departments SET dept_head = (SELECT emp_id FROM employees WHERE emp_name = 'Emily Green') WHERE dept_id = 1;
+COMMIT;
+
+SELECT 
+    e.emp_name, 
+    e.emp_position, 
+    e.emp_salary,
+    CASE 
+        WHEN e.emp_salary >= 70000 THEN 'High Salary'
+        ELSE 'Average Salary'
+    END AS salary_level
+FROM employees e;
+
+DROP VIEW department_summary;
+DROP INDEX idx_emp_position;
+DROP TABLE performance_reviews;

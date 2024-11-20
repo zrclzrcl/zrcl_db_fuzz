@@ -1,7 +1,145 @@
-CREATE TABLE v5 (v1 INTEGER, v2 TEXT, v3 REAL CHECK(v3 > 0), v4 INTEGER);
-CREATE TRIGGER trg7 BEFORE DELETE ON v5 BEGIN
-    UPDATE v5 SET v4 = v4 + 1 WHERE v1 = OLD.v1;
-    DELETE FROM v5 WHERE v2 = (SELECT MIN(v2) FROM v5);
+
+PRAGMA page_size = 4096;
+
+
+CREATE TABLE IF NOT EXISTS employees (
+    emp_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    department TEXT CHECK(department IN ('HR', 'IT', 'Sales', 'Finance')),
+    hire_date TEXT DEFAULT (DATE('now')),
+    salary REAL NOT NULL CHECK(salary > 0),
+    UNIQUE(name, department)
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+    project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    emp_id INTEGER,
+    project_name TEXT,
+    start_date TEXT DEFAULT (DATE('now')),
+    deadline TEXT DEFAULT (DATE('now', '+30 days')),
+    FOREIGN KEY (emp_id) REFERENCES employees(emp_id) ON DELETE CASCADE
+);
+
+
+INSERT OR IGNORE INTO employees (name, department, salary) VALUES
+    ('Alice', 'IT', 75000.00),
+    ('Bob', 'HR', 50000.00),
+    ('Charlie', 'Sales', 65000.00),
+    ('Alice', 'Finance', 80000.00);
+
+
+CREATE TABLE IF NOT EXISTS random_data AS
+SELECT 
+    emp_id,
+    RANDOM() % 100 AS random_value
+FROM employees;
+
+
+INSERT INTO projects (emp_id, project_name)
+SELECT 
+    emp_id,
+    'Project_' || emp_id || '_' || RANDOM() % 100
+FROM employees
+WHERE department IN ('IT', 'Sales');
+
+
+WITH RECURSIVE date_series AS (
+    SELECT DATE('now') AS current_date
+    UNION ALL
+    SELECT DATE(current_date, '+1 day')
+    FROM date_series
+    WHERE current_date < DATE('now', '+7 days')
+)
+SELECT * FROM date_series;
+
+
+SELECT 
+    emp_id,
+    department,
+    salary,
+    AVG(salary) OVER (PARTITION BY department) AS avg_department_salary,
+    RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rank_in_department
+FROM employees;
+
+
+SELECT 
+    p.project_id,
+    e.name AS employee_name,
+    CASE 
+        WHEN p.deadline < DATE('now', '+10 days') THEN 'Critical'
+        WHEN p.deadline BETWEEN DATE('now', '+10 days') AND DATE('now', '+20 days') THEN 'Upcoming'
+        ELSE 'Safe'
+    END AS project_status
+FROM projects p
+JOIN employees e ON p.emp_id = e.emp_id;
+
+
+SELECT 
+    department,
+    COUNT(*) AS employee_count,
+    MAX(salary) AS highest_salary,
+    MIN(salary) AS lowest_salary
+FROM employees
+GROUP BY department
+HAVING COUNT(*) > 1;
+
+
+SELECT 
+    e1.name AS emp1,
+    e2.name AS emp2,
+    e1.department || '-' || e2.department AS department_pair
+FROM employees e1
+CROSS JOIN employees e2
+WHERE e1.emp_id < e2.emp_id;
+
+
+CREATE TRIGGER IF NOT EXISTS track_project_updates
+AFTER UPDATE ON projects
+BEGIN
+    UPDATE employees
+    SET salary = salary + 500
+    WHERE emp_id = NEW.emp_id AND OLD.deadline <> NEW.deadline;
 END;
-INSERT INTO v5 (v1, v2, v3, v4) VALUES (1, 'test1', 0.1, 10), (2, 'test2', 1.5, 20);
-DELETE FROM v5 WHERE v3 = (SELECT MIN(v3) FROM v5);
+
+
+UPDATE projects
+SET deadline = DATE('now', '+15 days')
+WHERE project_id = 1;
+
+
+DELETE FROM employees
+WHERE NOT EXISTS (
+    SELECT 1 FROM projects WHERE projects.emp_id = employees.emp_id
+);
+
+
+SELECT 
+    emp_id,
+    name,
+    salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 2;
+
+
+SELECT 
+    name,
+    department,
+    CASE 
+        WHEN salary > 70000 THEN 
+            CASE WHEN department = 'IT' THEN 'Top IT Earner' ELSE 'High Salary' END
+        ELSE 'Average'
+    END AS salary_category
+FROM employees;
+
+
+SELECT 
+    emp_id,
+    salary,
+    SUM(salary) OVER (ORDER BY salary ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_total
+FROM employees;
+
+
+DROP TABLE IF EXISTS random_data;
+DELETE FROM projects WHERE project_name LIKE 'Project_%';
+DELETE FROM employees WHERE department = 'HR';

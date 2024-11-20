@@ -1,7 +1,108 @@
-CREATE TABLE v9 (v1 INTEGER, v2 TEXT, v3 REAL);
-CREATE TEMP VIEW v_view5 AS SELECT v1, COUNT(v2) AS count FROM v9 GROUP BY v1 HAVING count > 0;
-CREATE TRIGGER trg10 AFTER INSERT ON v9 BEGIN 
-    INSERT INTO v9 (v1, v2, v3) VALUES (NEW.v1 + 1, 'next', NEW.v3 + 1);
+CREATE TABLE main_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    numeric_value REAL DEFAULT 0.0 CHECK (numeric_value >= 0),
+    flag BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE related_table (
+    rel_id INTEGER PRIMARY KEY,
+    main_id INTEGER NOT NULL,
+    description TEXT,
+    rel_status TEXT CHECK (rel_status IN ('pending', 'completed', 'failed')),
+    FOREIGN KEY (main_id) REFERENCES main_table(id) ON DELETE CASCADE
+);
+
+CREATE TABLE auxiliary_table (
+    aux_id INTEGER PRIMARY KEY,
+    category TEXT NOT NULL,
+    amount REAL DEFAULT 100.0,
+    metadata JSON DEFAULT '{}',
+    CHECK (amount >= 0)
+);
+
+CREATE TABLE lookup_table (
+    lookup_id INTEGER PRIMARY KEY,
+    key_name TEXT NOT NULL,
+    value_data TEXT,
+    UNIQUE(key_name)
+);
+
+INSERT INTO main_table (name, numeric_value, flag) VALUES ('Main1', 123.45, 1);
+INSERT INTO main_table (name, numeric_value, flag) VALUES ('Main2', 543.21, 0);
+INSERT INTO related_table (rel_id, main_id, description, rel_status) VALUES (1, 1, 'Related1', 'completed');
+INSERT INTO related_table (rel_id, main_id, description, rel_status) VALUES (2, 2, 'Related2', 'pending');
+INSERT INTO auxiliary_table (aux_id, category, amount) VALUES (1, 'CategoryX', 200.50);
+INSERT INTO lookup_table (lookup_id, key_name, value_data) VALUES (1, 'Key1', 'Value1');
+
+WITH RECURSIVE factorials(n, fact) AS (
+    SELECT 1, 1
+    UNION ALL
+    SELECT n + 1, (n + 1) * fact FROM factorials WHERE n < 10
+)
+SELECT * FROM factorials;
+
+SELECT 
+    m.name AS main_name, 
+    r.description AS related_description, 
+    a.category AS aux_category, 
+    l.value_data AS lookup_value
+FROM main_table m
+LEFT JOIN related_table r ON m.id = r.main_id
+LEFT JOIN auxiliary_table a ON r.rel_id = a.aux_id
+LEFT JOIN lookup_table l ON l.key_name = 'Key1';
+
+CREATE TRIGGER update_flag
+AFTER UPDATE ON main_table
+FOR EACH ROW
+BEGIN
+    UPDATE related_table SET rel_status = 'completed' WHERE main_id = NEW.id;
 END;
-INSERT INTO v9 (v1, v2, v3) VALUES (1, 'test', 1.1);
-SELECT * FROM v_view5 WHERE count > 0;
+
+CREATE TRIGGER delete_aux
+AFTER DELETE ON related_table
+FOR EACH ROW
+BEGIN
+    DELETE FROM auxiliary_table WHERE aux_id = OLD.rel_id;
+END;
+
+UPDATE main_table SET flag = 1 WHERE id = 2;
+
+ALTER TABLE auxiliary_table ADD COLUMN last_updated DATETIME DEFAULT CURRENT_TIMESTAMP;
+
+CREATE VIEW combined_view AS
+SELECT 
+    m.name, 
+    a.category, 
+    r.description, 
+    r.rel_status
+FROM main_table m
+JOIN related_table r ON m.id = r.main_id
+JOIN auxiliary_table a ON r.rel_id = a.aux_id;
+
+SELECT * FROM combined_view;
+
+DELETE FROM related_table WHERE rel_id = 2;
+
+SELECT m.name, 
+       CASE WHEN r.rel_status = 'completed' THEN 'Finalized' ELSE 'In Progress' END AS status_summary
+FROM main_table m
+LEFT JOIN related_table r ON m.id = r.main_id;
+
+CREATE INDEX idx_main_flag ON main_table(flag);
+CREATE INDEX idx_aux_amount ON auxiliary_table(amount);
+
+BEGIN TRANSACTION;
+INSERT INTO lookup_table (lookup_id, key_name, value_data) VALUES (2, 'Key2', 'Value2');
+ROLLBACK;
+
+SELECT 
+    m.name, 
+    MAX(a.amount) OVER (PARTITION BY a.category) AS max_amount
+FROM main_table m
+JOIN auxiliary_table a ON m.id = a.aux_id;
+
+DROP VIEW combined_view;
+
+DROP TABLE lookup_table;

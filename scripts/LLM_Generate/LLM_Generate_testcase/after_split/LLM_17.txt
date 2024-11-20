@@ -1,7 +1,155 @@
-CREATE TABLE v5 (v1 INTEGER PRIMARY KEY, v2 TEXT);
-CREATE TEMP VIEW v_view3 AS SELECT v1, COUNT(v2) AS count FROM v5 GROUP BY v1;
-CREATE TRIGGER trg6 AFTER INSERT ON v5 BEGIN 
-    DELETE FROM v5 WHERE v1 IN (SELECT v1 FROM v_view3 WHERE count > 1);
+
+CREATE TABLE alpha_table (
+    alpha_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alpha_name TEXT NOT NULL,
+    alpha_value REAL DEFAULT 1.23,
+    CONSTRAINT alpha_check CHECK(alpha_value > 0)
+);
+
+CREATE TABLE beta_table (
+    beta_id INTEGER PRIMARY KEY,
+    alpha_ref_id INTEGER NOT NULL,
+    beta_description TEXT DEFAULT 'Default Beta',
+    beta_flag BOOLEAN NOT NULL CHECK(beta_flag IN (0, 1)),
+    UNIQUE(alpha_ref_id, beta_description),
+    FOREIGN KEY (alpha_ref_id) REFERENCES alpha_table(alpha_id) ON DELETE CASCADE
+);
+
+CREATE TABLE gamma_table (
+    gamma_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gamma_name TEXT NOT NULL COLLATE RTRIM,
+    gamma_date DATE DEFAULT (DATE('now')),
+    gamma_status TEXT CHECK(gamma_status IN ('active', 'inactive', 'pending')),
+    UNIQUE(gamma_name)
+);
+
+
+INSERT INTO alpha_table (alpha_name, alpha_value) VALUES ('Alpha1', 3.14);
+INSERT INTO alpha_table (alpha_name) VALUES ('Alpha2');
+INSERT INTO beta_table (beta_id, alpha_ref_id, beta_flag) VALUES (1, 1, 1);
+INSERT INTO beta_table (beta_id, alpha_ref_id, beta_flag) VALUES (2, 1, 0);
+
+INSERT INTO gamma_table (gamma_name, gamma_status) VALUES ('Gamma1', 'active');
+INSERT INTO gamma_table (gamma_name, gamma_status) VALUES ('Gamma2', 'inactive');
+INSERT INTO gamma_table (gamma_name, gamma_status) VALUES ('Gamma3', 'pending');
+
+
+WITH RECURSIVE fib(n1, n2) AS (
+    SELECT 0, 1
+    UNION ALL
+    SELECT n2, n1 + n2 FROM fib WHERE n1 + n2 < 100
+)
+SELECT * FROM fib;
+
+
+SELECT 
+    alpha_id,
+    alpha_name,
+    ROW_NUMBER() OVER (ORDER BY alpha_value DESC) AS rank_desc,
+    SUM(alpha_value) OVER () AS total_value
+FROM alpha_table;
+
+
+SELECT 
+    a.alpha_name,
+    b.beta_description,
+    g.gamma_status
+FROM alpha_table a
+LEFT JOIN beta_table b ON a.alpha_id = b.alpha_ref_id
+LEFT JOIN gamma_table g ON b.beta_id = g.gamma_id
+WHERE g.gamma_status IS NOT NULL;
+
+
+ALTER TABLE alpha_table ADD COLUMN alpha_extra TEXT DEFAULT 'ExtraInfo';
+UPDATE alpha_table SET alpha_extra = 'UpdatedExtra' WHERE alpha_id = 1;
+
+
+SELECT 
+    beta_flag, 
+    COUNT(*) AS flag_count,
+    MAX(alpha_ref_id) AS max_ref
+FROM beta_table
+GROUP BY beta_flag;
+
+
+SELECT 
+    gamma_id,
+    CASE 
+        WHEN gamma_status = 'active' THEN 'In Progress'
+        WHEN gamma_status = 'inactive' THEN 'Completed'
+        ELSE 'Unknown'
+    END AS status_desc
+FROM gamma_table;
+
+
+SELECT * 
+FROM gamma_table
+ORDER BY gamma_date DESC
+LIMIT 2 OFFSET 1;
+
+
+SELECT alpha_name AS name FROM alpha_table
+UNION
+SELECT gamma_name AS name FROM gamma_table;
+
+
+SELECT 
+    a.alpha_name, 
+    g.gamma_name
+FROM alpha_table a
+CROSS JOIN gamma_table g;
+
+
+SELECT alpha_name
+FROM alpha_table
+WHERE EXISTS (
+    SELECT 1 
+    FROM beta_table 
+    WHERE beta_table.alpha_ref_id = alpha_table.alpha_id
+);
+
+
+CREATE TRIGGER gamma_insert_trigger
+AFTER INSERT ON gamma_table
+BEGIN
+    INSERT INTO alpha_table (alpha_name) VALUES ('Triggered Alpha');
 END;
-INSERT INTO v5 (v1, v2) VALUES (1, 'data1'), (2, 'data2');
-SELECT * FROM v_view3 WHERE count > 0;
+
+INSERT INTO gamma_table (gamma_name, gamma_status) VALUES ('TriggeredGamma', 'active');
+
+
+SELECT 
+    a1.alpha_name AS name1,
+    a2.alpha_name AS name2
+FROM alpha_table a1
+JOIN alpha_table a2 ON a1.alpha_id != a2.alpha_id;
+
+
+BEGIN TRANSACTION;
+INSERT INTO beta_table (beta_id, alpha_ref_id, beta_flag) VALUES (3, 2, 1);
+ROLLBACK;
+
+
+PRAGMA table_info('alpha_table');
+PRAGMA foreign_key_list('beta_table');
+
+
+SELECT 
+    alpha_name,
+    (SELECT COUNT(*) FROM beta_table WHERE beta_table.alpha_ref_id = alpha_table.alpha_id) AS beta_count
+FROM alpha_table;
+
+
+CREATE VIEW active_gamma_view AS
+SELECT gamma_id, gamma_name
+FROM gamma_table
+WHERE gamma_status = 'active';
+
+SELECT * FROM active_gamma_view;
+
+
+DELETE FROM beta_table WHERE beta_id = 1;
+
+
+CREATE INDEX idx_gamma_status ON gamma_table(gamma_status);
+SELECT * FROM gamma_table WHERE gamma_status = 'active';

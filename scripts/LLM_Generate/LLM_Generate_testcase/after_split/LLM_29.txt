@@ -1,6 +1,145 @@
-CREATE TABLE v6 (v1 INTEGER PRIMARY KEY, v2 TEXT CHECK(v1 IS NOT NULL), v3 REAL);
-CREATE TEMP TRIGGER trg7 AFTER INSERT ON v6 BEGIN 
-    INSERT INTO v6 (v1, v2, v3) VALUES (NEW.v1 + 1, NEW.v2 || ' added', NEW.v3 * 2);
+CREATE TABLE customers (
+    customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_name TEXT NOT NULL,
+    category TEXT,
+    price REAL CHECK (price > 0),
+    stock_quantity INTEGER CHECK (stock_quantity >= 0)
+);
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount REAL CHECK (total_amount >= 0),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE order_items (
+    order_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER CHECK (quantity > 0),
+    unit_price REAL CHECK (unit_price > 0),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE payment_methods (
+    payment_method_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    payment_method_name TEXT NOT NULL
+);
+
+CREATE TABLE payments (
+    payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    payment_method_id INTEGER NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    amount REAL CHECK (amount >= 0),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (payment_method_id) REFERENCES payment_methods(payment_method_id)
+);
+
+INSERT INTO customers (name, email, phone) 
+VALUES ('Alice Green', 'alice.green@example.com', '555-1234'),
+       ('Bob White', 'bob.white@example.com', '555-5678');
+
+INSERT INTO products (product_name, category, price, stock_quantity) 
+VALUES ('Laptop', 'Electronics', 799.99, 50),
+       ('Smartphone', 'Electronics', 499.99, 100),
+       ('Coffee Maker', 'Home Appliances', 89.99, 200);
+
+INSERT INTO orders (customer_id, total_amount) 
+VALUES (1, 899.98), 
+       (2, 499.99);
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
+VALUES (1, 1, 1, 799.99),
+       (1, 3, 1, 99.99),
+       (2, 2, 1, 499.99);
+
+INSERT INTO payment_methods (payment_method_name) 
+VALUES ('Credit Card'),
+       ('PayPal');
+
+INSERT INTO payments (order_id, payment_method_id, amount) 
+VALUES (1, 1, 899.98),
+       (2, 2, 499.99);
+
+WITH RECURSIVE order_summary AS (
+    SELECT o.order_id, o.order_date, o.total_amount, oi.product_id, oi.quantity, oi.unit_price
+    FROM orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    WHERE o.total_amount > 100
+    UNION ALL
+    SELECT o.order_id, o.order_date, o.total_amount, oi.product_id, oi.quantity, oi.unit_price
+    FROM orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+)
+SELECT * FROM order_summary;
+
+CREATE TRIGGER update_stock_on_order
+AFTER INSERT ON order_items
+BEGIN
+    UPDATE products SET stock_quantity = stock_quantity - NEW.quantity
+    WHERE product_id = NEW.product_id;
 END;
-INSERT INTO v6 (v1, v2, v3) VALUES (1, 'row1', 1.5);
-SELECT * FROM v6 WHERE v1 IN (SELECT v1 FROM v6 WHERE v3 > (SELECT AVG(v3) FROM v6));
+
+CREATE TRIGGER update_total_amount
+AFTER INSERT ON order_items
+BEGIN
+    UPDATE orders SET total_amount = (SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = NEW.order_id)
+    WHERE order_id = NEW.order_id;
+END;
+
+CREATE VIEW customer_order_summary AS
+SELECT c.name AS customer_name, COUNT(o.order_id) AS order_count, SUM(o.total_amount) AS total_spent
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id;
+
+SELECT * FROM customer_order_summary;
+
+UPDATE products SET price = price * 1.05 WHERE category = 'Electronics';
+
+CREATE INDEX idx_customer_name ON customers(name);
+CREATE INDEX idx_product_name ON products(product_name);
+
+SELECT p.product_name, SUM(oi.quantity) AS total_quantity_sold
+FROM products p
+JOIN order_items oi ON p.product_id = oi.product_id
+GROUP BY p.product_id;
+
+SELECT c.name, 
+       CASE 
+           WHEN EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id AND o.total_amount > 500) THEN 'VIP'
+           ELSE 'Regular'
+       END AS customer_type
+FROM customers c;
+
+BEGIN TRANSACTION;
+INSERT INTO products (product_name, category, price, stock_quantity) 
+VALUES ('Tablet', 'Electronics', 299.99, 150);
+UPDATE products SET stock_quantity = stock_quantity - 10 WHERE product_id = 1;
+COMMIT;
+
+SELECT 
+    o.order_id, 
+    CASE 
+        WHEN o.total_amount > 500 THEN 'Large Order'
+        ELSE 'Small Order'
+    END AS order_size
+FROM orders o;
+
+DELETE FROM products WHERE product_id = 3;
+
+DROP TRIGGER update_stock_on_order;
+DROP VIEW customer_order_summary;
+DROP TABLE payments;

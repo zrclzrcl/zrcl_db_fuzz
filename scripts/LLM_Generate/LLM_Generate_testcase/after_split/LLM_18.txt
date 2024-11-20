@@ -1,8 +1,90 @@
-CREATE TABLE v6 (v1 INTEGER, v2 REAL, v3 TEXT);
-CREATE INDEX idx_v6 ON v6(v2);
-CREATE TEMP TRIGGER trg7 AFTER DELETE ON v6 BEGIN 
-    INSERT INTO v6 (v1, v2, v3) VALUES (OLD.v1, OLD.v2, 'deleted');
+CREATE TABLE table_one (
+    col1 INTEGER PRIMARY KEY AUTOINCREMENT,
+    col2 TEXT UNIQUE NOT NULL,
+    col3 REAL CHECK (col3 > 0),
+    col4 DATE DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE table_two (
+    col1 INTEGER PRIMARY KEY,
+    col2 INTEGER NOT NULL,
+    col3 TEXT CHECK (LENGTH(col3) < 50),
+    col4 TEXT DEFAULT 'DefaultText',
+    FOREIGN KEY (col2) REFERENCES table_one(col1) ON DELETE SET NULL
+);
+
+CREATE TABLE table_three (
+    col1 INTEGER PRIMARY KEY,
+    col2 TEXT NOT NULL COLLATE NOCASE,
+    col3 INTEGER DEFAULT 42
+);
+
+INSERT INTO table_one (col2, col3) VALUES ('ItemA', 12.34);
+INSERT INTO table_one (col2, col3) VALUES ('ItemB', 56.78);
+INSERT INTO table_one (col2, col3) VALUES ('ItemC', 90.12);
+INSERT INTO table_two (col1, col2, col3) VALUES (1, 1, 'DetailA');
+INSERT INTO table_two (col1, col2, col3) VALUES (2, 1, 'DetailB');
+INSERT INTO table_three (col1, col2) VALUES (1, 'ExtraA');
+INSERT INTO table_three (col1, col2) VALUES (2, 'ExtraB');
+
+WITH RECURSIVE numbers(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM numbers WHERE n < 10
+)
+SELECT * FROM numbers;
+
+SELECT t1.col2, t2.col3 
+FROM table_one t1 
+JOIN table_two t2 ON t1.col1 = t2.col2 
+WHERE t2.col3 LIKE 'Detail%';
+
+SELECT col1, SUM(col3) OVER () AS total_sum 
+FROM table_one;
+
+CREATE TRIGGER update_trigger
+AFTER UPDATE ON table_one
+FOR EACH ROW
+BEGIN
+    UPDATE table_two SET col4 = 'Updated' WHERE col2 = NEW.col1;
 END;
-INSERT INTO v6 (v1, v2, v3) VALUES (1, 1.1, 'row1'), (2, 2.2, 'row2');
-DELETE FROM v6 WHERE v1 = 1;
-SELECT * FROM v6 WHERE v3 = 'deleted';
+
+UPDATE table_one SET col3 = col3 + 10 WHERE col1 = 1;
+
+ALTER TABLE table_three ADD COLUMN col4 REAL DEFAULT 3.14;
+INSERT INTO table_three (col1, col2, col4) VALUES (3, 'ExtraC', 6.28);
+
+DELETE FROM table_two WHERE col1 = 1;
+
+CREATE VIEW joined_view AS
+SELECT t1.col2 AS name, t3.col4 AS extra_value
+FROM table_one t1
+LEFT JOIN table_three t3 ON t1.col1 = t3.col1;
+
+SELECT * FROM joined_view;
+
+SELECT * 
+FROM table_one 
+WHERE col1 IN (SELECT col2 FROM table_two WHERE col3 = 'DetailA');
+
+SELECT t1.col2, CASE WHEN t2.col4 = 'DefaultText' THEN 'Unchanged' ELSE 'Changed' END AS text_status
+FROM table_one t1
+LEFT JOIN table_two t2 ON t1.col1 = t2.col2;
+
+CREATE INDEX idx_table_three_col2 ON table_three(col2);
+
+SELECT * FROM table_three WHERE col2 = 'ExtraA';
+
+BEGIN TRANSACTION;
+INSERT INTO table_two (col1, col2, col3) VALUES (3, 2, 'TransactionalTest');
+ROLLBACK;
+
+PRAGMA table_info('table_one');
+PRAGMA foreign_key_check;
+
+SELECT col1, MAX(col3) OVER (PARTITION BY col4) AS max_per_date 
+FROM table_one;
+
+DROP VIEW joined_view;
+
+DROP TABLE table_two;

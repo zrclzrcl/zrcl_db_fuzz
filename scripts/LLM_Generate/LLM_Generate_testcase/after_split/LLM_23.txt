@@ -1,8 +1,96 @@
-CREATE TABLE v0 (v1 INTEGER PRIMARY KEY, v2 TEXT, v3 REAL CHECK(v1 IS NOT NULL), v4 INTEGER);
-CREATE TEMP TRIGGER trg1 AFTER INSERT ON v0 BEGIN 
-    INSERT INTO v0 (v1, v2, v3, v4) VALUES (NEW.v1 + 1, 'trigger', NEW.v3 * 2, NEW.v4 + 1);
-    DELETE FROM v0 WHERE v4 < 0;
+CREATE TABLE parent_table (
+    parent_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_name TEXT UNIQUE NOT NULL,
+    parent_value INTEGER CHECK (parent_value >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE child_table (
+    child_id INTEGER PRIMARY KEY,
+    parent_ref INTEGER NOT NULL,
+    child_name TEXT NOT NULL,
+    child_status TEXT CHECK (child_status IN ('new', 'processing', 'completed')),
+    FOREIGN KEY (parent_ref) REFERENCES parent_table(parent_id) ON DELETE SET NULL
+);
+
+CREATE TABLE metadata_table (
+    meta_id INTEGER PRIMARY KEY,
+    meta_key TEXT NOT NULL,
+    meta_value TEXT,
+    UNIQUE(meta_key)
+);
+
+CREATE TABLE nested_table (
+    nested_id INTEGER PRIMARY KEY,
+    parent_id INTEGER NOT NULL,
+    data_blob BLOB DEFAULT NULL,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES parent_table(parent_id) ON DELETE CASCADE
+);
+
+INSERT INTO parent_table (parent_name, parent_value) VALUES ('Parent1', 50);
+INSERT INTO parent_table (parent_name, parent_value) VALUES ('Parent2', 150);
+
+INSERT INTO child_table (child_id, parent_ref, child_name, child_status) VALUES (1, 1, 'Child1', 'new');
+INSERT INTO child_table (child_id, parent_ref, child_name, child_status) VALUES (2, 2, 'Child2', 'processing');
+
+INSERT INTO metadata_table (meta_id, meta_key, meta_value) VALUES (1, 'MetaKey1', 'MetaValue1');
+INSERT INTO metadata_table (meta_id, meta_key, meta_value) VALUES (2, 'MetaKey2', 'MetaValue2');
+
+WITH RECURSIVE sequence(num) AS (
+    SELECT 1
+    UNION ALL
+    SELECT num + 1 FROM sequence WHERE num < 10
+)
+SELECT * FROM sequence;
+
+CREATE TRIGGER delete_parent_cascade
+AFTER DELETE ON parent_table
+BEGIN
+    DELETE FROM child_table WHERE parent_ref = OLD.parent_id;
 END;
-INSERT INTO v0 (v1, v2, v3, v4) VALUES (1, 'data1', 1.0, 0), (2, 'data2', 2.0, 1);
-UPDATE v0 SET v3 = (SELECT AVG(v3) FROM v0 WHERE v4 > 0);
-SELECT v2 FROM v0 WHERE v3 > (SELECT MAX(v3) FROM v0);
+
+CREATE TRIGGER auto_insert_metadata
+AFTER INSERT ON parent_table
+BEGIN
+    INSERT INTO metadata_table (meta_key, meta_value) VALUES ('ParentAdded', NEW.parent_name);
+END;
+
+CREATE VIEW summary_view AS
+SELECT 
+    p.parent_name, 
+    c.child_name, 
+    c.child_status
+FROM parent_table p
+LEFT JOIN child_table c ON p.parent_id = c.parent_ref;
+
+SELECT * FROM summary_view;
+
+INSERT INTO nested_table (parent_id, data_blob) 
+VALUES (1, X'48656C6C6F20776F726C64'); -- Hex for "Hello world"
+
+CREATE INDEX idx_parent_name ON parent_table(parent_name);
+CREATE INDEX idx_child_status ON child_table(child_status);
+
+UPDATE child_table SET child_status = 'completed' WHERE child_id = 1;
+
+DELETE FROM parent_table WHERE parent_id = 2;
+
+SELECT parent_name, 
+       CASE WHEN parent_value > 100 THEN 'High Value' ELSE 'Low Value' END AS value_category
+FROM parent_table;
+
+BEGIN TRANSACTION;
+INSERT INTO child_table (child_id, parent_ref, child_name, child_status) VALUES (3, 1, 'Child3', 'new');
+UPDATE parent_table SET parent_value = parent_value + 20 WHERE parent_id = 1;
+ROLLBACK;
+
+SELECT 
+    p.parent_name, 
+    COUNT(c.child_id) AS child_count 
+FROM parent_table p
+LEFT JOIN child_table c ON p.parent_id = c.parent_ref
+GROUP BY p.parent_name;
+
+DROP TABLE nested_table;
+DROP VIEW summary_view;

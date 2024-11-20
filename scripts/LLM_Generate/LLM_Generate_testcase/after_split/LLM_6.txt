@@ -1,8 +1,136 @@
-CREATE TABLE v4 (v1 TEXT, v2 REAL, v3 INTEGER);
-CREATE INDEX idx_v4 ON v4(v2, v3) WHERE v2 > 0;
-CREATE TEMP TRIGGER trg6 BEFORE INSERT ON v4 BEGIN 
-    UPDATE v4 SET v3 = v3 + 1 WHERE v1 LIKE '%test%';
-    INSERT INTO v4 (v1, v2, v3) VALUES ('new', NEW.v2 + 1, 0);
+CREATE TABLE IF NOT EXISTS accounts (
+    account_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL CHECK(LENGTH(username) > 4),
+    email TEXT NOT NULL CHECK(email LIKE '%@%'),
+    created_at TEXT DEFAULT (DATETIME('now'))
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id INTEGER PRIMARY KEY,
+    account_id INTEGER NOT NULL,
+    amount REAL NOT NULL CHECK(amount <> 0),
+    transaction_type TEXT CHECK(transaction_type IN ('credit', 'debit')),
+    transaction_date TEXT DEFAULT (DATE('now')),
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE SET NULL
+);
+
+INSERT OR IGNORE INTO accounts (username, email) VALUES
+    ('user123', 'user123@example.com'),
+    ('admin', 'admin@example.com'),
+    ('guest', 'guest@example.com');
+
+
+INSERT INTO transactions (account_id, amount, transaction_type)
+SELECT 
+    account_id, 
+    RANDOM() % 1000 - 500, 
+    CASE WHEN RANDOM() % 2 = 0 THEN 'credit' ELSE 'debit' END
+FROM accounts;
+
+
+SELECT 
+    t.transaction_id,
+    a.username,
+    t.amount,
+    t.transaction_date,
+    CASE 
+        WHEN t.amount > 0 THEN 'Profit'
+        ELSE 'Loss'
+    END AS transaction_outcome
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.account_id
+WHERE t.amount BETWEEN -250 AND 250 AND t.transaction_type = 'debit';
+
+
+SELECT 
+    account_id,
+    (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.account_id AND t.amount > 0) AS total_credits,
+    (SELECT MIN(amount) FROM transactions t WHERE t.account_id = a.account_id AND t.amount < 0) AS smallest_debit
+FROM accounts a
+WHERE EXISTS (
+    SELECT 1 FROM transactions t WHERE t.account_id = a.account_id
+);
+
+
+WITH RECURSIVE balance_tree AS (
+    SELECT 
+        account_id, 
+        SUM(amount) AS total_balance, 
+        1 AS level
+    FROM transactions
+    GROUP BY account_id
+    UNION ALL
+    SELECT 
+        b.account_id, 
+        b.total_balance + RANDOM() % 100 - 50, 
+        b.level + 1
+    FROM balance_tree b
+    WHERE b.level < 5
+)
+SELECT * FROM balance_tree ORDER BY account_id, level;
+
+UPDATE transactions
+SET amount = amount * 1.1
+WHERE transaction_date = DATE('now');
+
+
+SELECT 
+    t1.transaction_id AS t1_id,
+    t2.transaction_id AS t2_id,
+    ABS(t1.amount - t2.amount) AS difference
+FROM transactions t1
+INNER JOIN transactions t2 ON t1.account_id = t2.account_id
+WHERE t1.transaction_id < t2.transaction_id;
+
+
+SELECT 
+    account_id,
+    SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS total_credits,
+    SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) AS total_debits,
+    COUNT(CASE WHEN amount = 0 THEN 1 END) AS zero_transactions
+FROM transactions
+GROUP BY account_id;
+
+
+DELETE FROM accounts WHERE username = 'guest';
+
+
+SELECT 
+    transaction_type,
+    COUNT(*) AS transaction_count,
+    AVG(amount) AS average_amount
+FROM transactions
+GROUP BY transaction_type
+HAVING AVG(amount) IS NOT NULL;
+
+
+SELECT 
+    account_id,
+    transaction_id,
+    amount,
+    SUM(amount) OVER (PARTITION BY account_id ORDER BY transaction_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_balance
+FROM transactions;
+
+
+SELECT 
+    account_id, 
+    amount 
+FROM transactions
+ORDER BY ABS(amount) DESC
+LIMIT 5;
+
+
+CREATE TRIGGER IF NOT EXISTS log_insert
+AFTER INSERT ON transactions
+BEGIN
+    INSERT INTO transactions (account_id, amount, transaction_type)
+    VALUES (NEW.account_id, -NEW.amount, 'log');
 END;
-INSERT INTO v4 (v1, v2, v3) VALUES ('testcase', 2.5, 1), ('other', 1.0, 2);
-SELECT v1 FROM v4 WHERE v2 = (SELECT MAX(v2) FROM v4);
+
+
+INSERT INTO transactions (account_id, amount, transaction_type)
+VALUES (1, 500, 'credit');
+
+
+DELETE FROM transactions WHERE transaction_type = 'log';
+DELETE FROM accounts WHERE username LIKE 'user%';

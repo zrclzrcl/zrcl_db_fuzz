@@ -1,6 +1,107 @@
-CREATE TABLE v2 (v1 INTEGER PRIMARY KEY, v2 TEXT, v3 REAL);
-CREATE TEMP TRIGGER trg3 BEFORE INSERT ON v2 BEGIN 
-    UPDATE v2 SET v3 = v3 + 1 WHERE v1 = NEW.v1;
+CREATE TABLE customers (
+    customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    age INTEGER CHECK (age >= 18 AND age <= 120),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_status TEXT CHECK (order_status IN ('pending', 'shipped', 'delivered')),
+    total_amount REAL CHECK (total_amount >= 0),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+);
+
+CREATE TABLE products (
+    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_name TEXT NOT NULL,
+    price REAL CHECK (price >= 0),
+    stock_quantity INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    order_item_id INTEGER PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER CHECK (quantity > 0),
+    price_per_unit REAL NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE discounts (
+    discount_id INTEGER PRIMARY KEY,
+    product_id INTEGER NOT NULL,
+    discount_percentage INTEGER CHECK (discount_percentage BETWEEN 0 AND 100),
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+INSERT INTO customers (customer_name, email, age) VALUES ('Alice', 'alice@example.com', 30);
+INSERT INTO customers (customer_name, email, age) VALUES ('Bob', 'bob@example.com', 25);
+
+INSERT INTO products (product_name, price, stock_quantity) VALUES ('Laptop', 1200.00, 10);
+INSERT INTO products (product_name, price, stock_quantity) VALUES ('Smartphone', 800.00, 15);
+
+INSERT INTO orders (customer_id, order_status, total_amount) VALUES (1, 'pending', 2400.00);
+INSERT INTO orders (customer_id, order_status, total_amount) VALUES (2, 'shipped', 1600.00);
+
+INSERT INTO order_items (order_id, product_id, quantity, price_per_unit) VALUES (1, 1, 2, 1200.00);
+INSERT INTO order_items (order_id, product_id, quantity, price_per_unit) VALUES (2, 2, 2, 800.00);
+
+INSERT INTO discounts (product_id, discount_percentage, start_date, end_date) VALUES (1, 10, '2024-01-01', '2024-12-31');
+INSERT INTO discounts (product_id, discount_percentage, start_date, end_date) VALUES (2, 5, '2024-01-01', '2024-06-30');
+
+WITH RECURSIVE product_sales AS (
+    SELECT oi.product_id, SUM(oi.quantity * oi.price_per_unit) AS total_sales
+    FROM order_items oi
+    GROUP BY oi.product_id
+)
+SELECT p.product_name, ps.total_sales
+FROM products p
+JOIN product_sales ps ON p.product_id = ps.product_id;
+
+CREATE TRIGGER update_stock_after_order
+AFTER INSERT ON order_items
+BEGIN
+    UPDATE products SET stock_quantity = stock_quantity - NEW.quantity WHERE product_id = NEW.product_id;
 END;
-INSERT INTO v2 (v1, v2, v3) VALUES (1, 'test', 0.5), (2, 'example', 1.5);
-SELECT v1, v2 FROM v2 WHERE v3 = (SELECT MAX(v3) FROM v2);
+
+CREATE TRIGGER delete_discount_on_expiry
+AFTER UPDATE ON discounts
+FOR EACH ROW
+BEGIN
+    DELETE FROM discounts WHERE end_date < CURRENT_TIMESTAMP;
+END;
+
+SELECT o.order_id, c.customer_name, o.order_status, SUM(oi.quantity * oi.price_per_unit) AS total_order_value
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+GROUP BY o.order_id;
+
+BEGIN TRANSACTION;
+INSERT INTO orders (customer_id, order_status, total_amount) VALUES (1, 'shipped', 2200.00);
+UPDATE products SET stock_quantity = stock_quantity - 2 WHERE product_id = 1;
+ROLLBACK;
+
+CREATE INDEX idx_order_status ON orders(order_status);
+CREATE INDEX idx_product_name ON products(product_name);
+
+SELECT c.customer_name, COUNT(o.order_id) AS order_count
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_name;
+
+SELECT product_name, price, 
+       CASE WHEN stock_quantity < 5 THEN 'Low stock' ELSE 'In stock' END AS stock_status
+FROM products;
+
+DROP TABLE discounts;
+DROP INDEX idx_order_status;
+DROP VIEW product_sales;

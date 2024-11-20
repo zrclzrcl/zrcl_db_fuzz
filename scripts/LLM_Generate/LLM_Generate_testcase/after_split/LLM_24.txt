@@ -1,8 +1,104 @@
-CREATE TABLE v1 (v1 INTEGER, v2 REAL, v3 TEXT);
-CREATE TEMP VIEW v_view AS SELECT v1, COUNT(v2) AS count FROM v1 GROUP BY v1 HAVING count > 0;
-CREATE TRIGGER trg2 AFTER DELETE ON v1 BEGIN 
-    INSERT INTO v1 (v1, v2, v3) VALUES (OLD.v1 + 1, OLD.v2 * 2, 'deleted');
+CREATE TABLE primary_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    value REAL CHECK (value >= 0),
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE secondary_table (
+    sec_id INTEGER PRIMARY KEY,
+    primary_ref INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT CHECK (status IN ('active', 'inactive', 'archived')),
+    FOREIGN KEY (primary_ref) REFERENCES primary_table(id) ON DELETE CASCADE
+);
+
+CREATE TABLE configuration (
+    config_id INTEGER PRIMARY KEY,
+    config_key TEXT NOT NULL,
+    config_value TEXT,
+    UNIQUE(config_key)
+);
+
+CREATE TABLE recursive_data (
+    node_id INTEGER PRIMARY KEY,
+    parent_id INTEGER REFERENCES recursive_data(node_id) ON DELETE CASCADE,
+    node_name TEXT NOT NULL,
+    depth INTEGER DEFAULT 0
+);
+
+INSERT INTO primary_table (name, value) VALUES ('ItemA', 25.50);
+INSERT INTO primary_table (name, value) VALUES ('ItemB', 100.75);
+
+INSERT INTO secondary_table (sec_id, primary_ref, description, status) VALUES (1, 1, 'Desc1', 'active');
+INSERT INTO secondary_table (sec_id, primary_ref, description, status) VALUES (2, 2, 'Desc2', 'inactive');
+
+INSERT INTO configuration (config_id, config_key, config_value) VALUES (1, 'FeatureFlag', 'Enabled');
+INSERT INTO configuration (config_id, config_key, config_value) VALUES (2, 'MaxRetries', '5');
+
+INSERT INTO recursive_data (node_id, parent_id, node_name, depth) VALUES (1, NULL, 'Root', 0);
+INSERT INTO recursive_data (node_id, parent_id, node_name, depth) VALUES (2, 1, 'Child1', 1);
+INSERT INTO recursive_data (node_id, parent_id, node_name, depth) VALUES (3, 1, 'Child2', 1);
+INSERT INTO recursive_data (node_id, parent_id, node_name, depth) VALUES (4, 2, 'Grandchild', 2);
+
+WITH RECURSIVE hierarchy AS (
+    SELECT node_id, node_name, depth, parent_id
+    FROM recursive_data
+    WHERE parent_id IS NULL
+    UNION ALL
+    SELECT r.node_id, r.node_name, r.depth, r.parent_id
+    FROM recursive_data r
+    INNER JOIN hierarchy h ON r.parent_id = h.node_id
+)
+SELECT * FROM hierarchy;
+
+CREATE TRIGGER cascade_delete_secondary
+AFTER DELETE ON primary_table
+BEGIN
+    DELETE FROM secondary_table WHERE primary_ref = OLD.id;
 END;
-INSERT INTO v1 (v1, v2, v3) VALUES (1, 1.5, 'row1'), (2, 2.5, 'row2');
-DELETE FROM v1 WHERE v1 = 1;
-SELECT * FROM v_view WHERE count > 0;
+
+CREATE TRIGGER update_config_on_change
+AFTER UPDATE ON primary_table
+BEGIN
+    INSERT OR IGNORE INTO configuration (config_key, config_value) VALUES ('LastUpdatedItem', NEW.name);
+    UPDATE configuration SET config_value = NEW.value WHERE config_key = 'LastUpdatedItem';
+END;
+
+CREATE VIEW detailed_view AS
+SELECT 
+    p.name AS primary_name,
+    s.description AS secondary_description,
+    s.status AS secondary_status
+FROM primary_table p
+LEFT JOIN secondary_table s ON p.id = s.primary_ref;
+
+SELECT * FROM detailed_view;
+
+UPDATE primary_table SET value = value * 1.1 WHERE id = 1;
+
+CREATE INDEX idx_primary_value ON primary_table(value);
+CREATE INDEX idx_secondary_status ON secondary_table(status);
+
+SELECT 
+    r.node_name, 
+    MAX(r.depth) OVER (PARTITION BY r.parent_id) AS max_depth
+FROM recursive_data r;
+
+DELETE FROM recursive_data WHERE node_id = 4;
+
+BEGIN TRANSACTION;
+INSERT INTO secondary_table (sec_id, primary_ref, description, status) VALUES (3, 1, 'Desc3', 'active');
+DELETE FROM primary_table WHERE id = 2;
+ROLLBACK;
+
+SELECT name, 
+       CASE 
+           WHEN value > 50 THEN 'High' 
+           WHEN value BETWEEN 10 AND 50 THEN 'Medium' 
+           ELSE 'Low' 
+       END AS value_category
+FROM primary_table;
+
+DROP VIEW detailed_view;
+DROP TABLE configuration;

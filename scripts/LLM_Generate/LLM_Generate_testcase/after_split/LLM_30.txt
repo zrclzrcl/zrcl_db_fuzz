@@ -1,8 +1,146 @@
-CREATE TABLE v7 (v1 INTEGER, v2 TEXT, v3 REAL);
-CREATE TEMP VIEW v_view4 AS SELECT v1, COUNT(v3) AS total FROM v7 GROUP BY v1;
-CREATE TRIGGER trg8 BEFORE UPDATE ON v7 BEGIN 
-    DELETE FROM v7 WHERE v3 < OLD.v3;
+CREATE TABLE employees (
+    employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    department TEXT,
+    hire_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    salary REAL CHECK (salary >= 0)
+);
+
+CREATE TABLE departments (
+    department_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    department_name TEXT NOT NULL
+);
+
+CREATE TABLE projects (
+    project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT NOT NULL,
+    department_id INTEGER NOT NULL,
+    start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
+    FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+
+CREATE TABLE employee_projects (
+    employee_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    role TEXT,
+    PRIMARY KEY (employee_id, project_id),
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE TABLE timesheets (
+    timesheet_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    hours_worked REAL CHECK (hours_worked >= 0),
+    date_worked DATE DEFAULT CURRENT_DATE,
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE TABLE bonuses (
+    bonus_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    bonus_amount REAL CHECK (bonus_amount >= 0),
+    bonus_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+);
+
+INSERT INTO departments (department_name) 
+VALUES ('Engineering'),
+       ('Marketing'),
+       ('HR');
+
+INSERT INTO employees (first_name, last_name, department, salary) 
+VALUES ('John', 'Doe', 'Engineering', 75000),
+       ('Jane', 'Smith', 'Marketing', 60000),
+       ('Bob', 'Johnson', 'HR', 50000);
+
+INSERT INTO projects (project_name, department_id) 
+VALUES ('Project X', 1),
+       ('Project Y', 2);
+
+INSERT INTO employee_projects (employee_id, project_id, role) 
+VALUES (1, 1, 'Lead Developer'),
+       (2, 2, 'Marketing Manager'),
+       (1, 2, 'Consultant');
+
+INSERT INTO timesheets (employee_id, project_id, hours_worked) 
+VALUES (1, 1, 8),
+       (2, 2, 7),
+       (1, 2, 5);
+
+INSERT INTO bonuses (employee_id, bonus_amount) 
+VALUES (1, 1500),
+       (2, 1000);
+
+WITH RECURSIVE project_hierarchy AS (
+    SELECT p.project_id, p.project_name, p.department_id, 0 AS level
+    FROM projects p
+    WHERE p.department_id = 1
+    UNION ALL
+    SELECT p.project_id, p.project_name, p.department_id, ph.level + 1
+    FROM projects p
+    JOIN project_hierarchy ph ON p.department_id != ph.department_id
+)
+SELECT * FROM project_hierarchy;
+
+CREATE TRIGGER update_salary_on_bonus
+AFTER INSERT ON bonuses
+BEGIN
+    UPDATE employees SET salary = salary + NEW.bonus_amount WHERE employee_id = NEW.employee_id;
 END;
-INSERT INTO v7 (v1, v2, v3) VALUES (1, 'data1', 2.0), (2, 'data2', 3.0);
-UPDATE v7 SET v3 = (SELECT MAX(v3) FROM v7);
-SELECT * FROM v_view4 WHERE total > 0;
+
+CREATE TRIGGER delete_employee_projects
+AFTER DELETE ON employees
+BEGIN
+    DELETE FROM employee_projects WHERE employee_id = OLD.employee_id;
+END;
+
+CREATE VIEW department_summary AS
+SELECT d.department_name, COUNT(e.employee_id) AS employee_count, AVG(e.salary) AS avg_salary
+FROM departments d
+LEFT JOIN employees e ON d.department_id = e.department
+GROUP BY d.department_name;
+
+SELECT * FROM department_summary;
+
+UPDATE employees SET salary = salary * 1.05 WHERE department = 'Engineering';
+
+CREATE INDEX idx_employee_name ON employees(last_name, first_name);
+CREATE INDEX idx_project_name ON projects(project_name);
+
+SELECT p.project_name, SUM(t.hours_worked) AS total_hours
+FROM projects p
+JOIN timesheets t ON p.project_id = t.project_id
+GROUP BY p.project_id;
+
+SELECT e.first_name, e.last_name, 
+       CASE 
+           WHEN EXISTS (SELECT 1 FROM timesheets t WHERE t.employee_id = e.employee_id AND t.hours_worked > 8) 
+           THEN 'Overtime'
+           ELSE 'Regular'
+       END AS work_status
+FROM employees e;
+
+BEGIN TRANSACTION;
+INSERT INTO projects (project_name, department_id) 
+VALUES ('Project Z', 1);
+UPDATE employees SET salary = salary + 2000 WHERE department = 'Marketing';
+COMMIT;
+
+SELECT 
+    e.first_name || ' ' || e.last_name AS employee_name,
+    CASE 
+        WHEN e.salary >= 70000 THEN 'High Salary'
+        ELSE 'Low Salary'
+    END AS salary_category
+FROM employees e;
+
+DELETE FROM projects WHERE project_id = 2;
+
+DROP TRIGGER update_salary_on_bonus;
+DROP VIEW department_summary;
+DROP TABLE bonuses;

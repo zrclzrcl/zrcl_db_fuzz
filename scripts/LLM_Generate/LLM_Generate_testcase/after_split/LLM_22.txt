@@ -1,7 +1,96 @@
-CREATE TABLE v10 (v1 INTEGER PRIMARY KEY, v2 TEXT);
-CREATE TEMP TRIGGER trg11 AFTER DELETE ON v10 BEGIN 
-    INSERT INTO v10 (v1, v2) VALUES (OLD.v1 + 1, OLD.v2 || ' deleted');
+CREATE TABLE base_table (
+    base_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    base_name TEXT UNIQUE NOT NULL,
+    base_value INTEGER DEFAULT 10 CHECK (base_value >= 0),
+    base_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dependent_table (
+    dep_id INTEGER PRIMARY KEY,
+    base_ref INTEGER NOT NULL,
+    dep_description TEXT COLLATE BINARY,
+    dep_status TEXT CHECK (dep_status IN ('active', 'inactive', 'archived')),
+    FOREIGN KEY (base_ref) REFERENCES base_table(base_id) ON DELETE SET NULL
+);
+
+CREATE TABLE auxiliary_data (
+    aux_id INTEGER PRIMARY KEY,
+    aux_category TEXT NOT NULL,
+    aux_details TEXT,
+    aux_flag BOOLEAN DEFAULT 0
+);
+
+CREATE TABLE hierarchical_data (
+    node_id INTEGER PRIMARY KEY,
+    parent_id INTEGER REFERENCES hierarchical_data(node_id) ON DELETE CASCADE,
+    node_name TEXT NOT NULL UNIQUE,
+    node_depth INTEGER DEFAULT 0
+);
+
+INSERT INTO base_table (base_name, base_value) VALUES ('Base1', 100);
+INSERT INTO base_table (base_name, base_value) VALUES ('Base2', 200);
+INSERT INTO dependent_table (dep_id, base_ref, dep_description, dep_status) VALUES (1, 1, 'Dep1', 'active');
+INSERT INTO dependent_table (dep_id, base_ref, dep_description, dep_status) VALUES (2, 2, 'Dep2', 'inactive');
+INSERT INTO auxiliary_data (aux_id, aux_category, aux_details, aux_flag) VALUES (1, 'AuxA', 'DetailsA', 1);
+INSERT INTO auxiliary_data (aux_id, aux_category, aux_details, aux_flag) VALUES (2, 'AuxB', 'DetailsB', 0);
+
+INSERT INTO hierarchical_data (node_id, parent_id, node_name, node_depth) VALUES (1, NULL, 'Root', 0);
+INSERT INTO hierarchical_data (node_id, parent_id, node_name, node_depth) VALUES (2, 1, 'Child1', 1);
+INSERT INTO hierarchical_data (node_id, parent_id, node_name, node_depth) VALUES (3, 1, 'Child2', 1);
+
+WITH RECURSIVE node_hierarchy AS (
+    SELECT node_id, node_name, node_depth, parent_id
+    FROM hierarchical_data
+    WHERE parent_id IS NULL
+    UNION ALL
+    SELECT h.node_id, h.node_name, h.node_depth, h.parent_id
+    FROM hierarchical_data h
+    INNER JOIN node_hierarchy nh ON h.parent_id = nh.node_id
+)
+SELECT * FROM node_hierarchy;
+
+CREATE TRIGGER auto_update_depth
+AFTER INSERT ON hierarchical_data
+BEGIN
+    UPDATE hierarchical_data
+    SET node_depth = (SELECT node_depth + 1 FROM hierarchical_data WHERE node_id = NEW.parent_id)
+    WHERE node_id = NEW.node_id;
 END;
-INSERT INTO v10 (v1, v2) VALUES (1, 'entry1');
-DELETE FROM v10 WHERE v1 = 1;
-SELECT * FROM v10 WHERE v1 = 2;
+
+CREATE TRIGGER on_base_delete
+BEFORE DELETE ON base_table
+FOR EACH ROW
+BEGIN
+    INSERT INTO auxiliary_data (aux_category, aux_details, aux_flag) 
+    VALUES ('DeletedBase', OLD.base_name, 1);
+END;
+
+UPDATE dependent_table SET dep_status = 'archived' WHERE dep_id = 1;
+
+CREATE VIEW combined_view AS
+SELECT 
+    b.base_name,
+    d.dep_description,
+    a.aux_details
+FROM base_table b
+LEFT JOIN dependent_table d ON b.base_id = d.base_ref
+LEFT JOIN auxiliary_data a ON d.dep_id = a.aux_id;
+
+SELECT * FROM combined_view;
+
+DELETE FROM hierarchical_data WHERE node_id = 3;
+
+CREATE INDEX idx_aux_category ON auxiliary_data(aux_category);
+CREATE INDEX idx_dep_status ON dependent_table(dep_status);
+
+BEGIN TRANSACTION;
+INSERT INTO dependent_table (dep_id, base_ref, dep_description, dep_status) VALUES (3, 1, 'Dep3', 'active');
+ROLLBACK;
+
+SELECT b.base_name, 
+       MAX(h.node_depth) OVER () AS max_depth 
+FROM base_table b
+LEFT JOIN hierarchical_data h ON b.base_id = h.node_id;
+
+DROP TABLE auxiliary_data;
+DROP VIEW combined_view;

@@ -1,7 +1,139 @@
-CREATE TABLE v8 (v1 INTEGER, v2 REAL, v3 TEXT, v4 INTEGER UNIQUE);
-CREATE TRIGGER trg10 BEFORE INSERT ON v8 BEGIN 
-    UPDATE v8 SET v4 = v4 + 1 WHERE v1 = NEW.v1;
-    INSERT INTO v8 (v1, v2, v3) VALUES (NEW.v1 + 1, NEW.v2 + 1, 'new_text');
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER,
+    order_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    status TEXT CHECK(status IN ('Pending', 'Completed', 'Cancelled')),
+    total REAL CHECK(total >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    registration_date TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    payment_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    amount REAL CHECK(amount > 0),
+    payment_method TEXT CHECK(payment_method IN ('Credit Card', 'PayPal', 'Bank Transfer')),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+);
+
+
+INSERT INTO customers (name, email) VALUES
+    ('John Doe', 'john.doe@example.com'),
+    ('Jane Smith', 'jane.smith@example.com'),
+    ('Test User', 'test.user@example.com');
+
+INSERT INTO orders (customer_id, status, total) VALUES
+    (1, 'Pending', 100.5),
+    (2, 'Completed', 200.75),
+    (3, 'Cancelled', 50.0);
+
+
+INSERT INTO payments (order_id, amount, payment_method) VALUES
+    (1, 100.5, 'Credit Card'),
+    (2, 200.75, 'PayPal'),
+    (3, 50.0, 'Bank Transfer');
+
+
+UPDATE orders
+SET status = (SELECT CASE WHEN total > 150 THEN 'Completed' ELSE 'Pending' END FROM orders WHERE order_id = 2)
+WHERE order_id = 2;
+
+
+SELECT 
+    c.name AS customer_name, 
+    o.order_id,
+    o.status,
+    o.total,
+    p.amount AS payment_amount,
+    CASE 
+        WHEN o.status = 'Completed' THEN 'Paid'
+        WHEN o.status = 'Pending' THEN 'Awaiting Payment'
+        ELSE 'Order Cancelled'
+    END AS order_status
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+LEFT JOIN payments p ON o.order_id = p.order_id;
+
+
+WITH RECURSIVE order_hierarchy(order_id, total, level) AS (
+    SELECT order_id, total, 1 FROM orders WHERE customer_id = 1
+    UNION ALL
+    SELECT o.order_id, o.total, oh.level + 1
+    FROM orders o
+    JOIN order_hierarchy oh ON o.customer_id = 1 AND o.total < oh.total
+)
+SELECT order_id, total, level FROM order_hierarchy;
+
+
+SELECT 
+    customer_id, 
+    SUM(total) OVER (PARTITION BY customer_id ORDER BY order_date) AS cumulative_order_total,
+    RANK() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rank_within_customer
+FROM orders;
+
+
+SELECT 
+    o.order_id,
+    o.total
+FROM orders o
+WHERE EXISTS (
+    SELECT 1 
+    FROM payments p 
+    WHERE p.order_id = o.order_id AND p.amount = o.total
+);
+
+
+CREATE TRIGGER IF NOT EXISTS update_total_after_payment
+AFTER INSERT ON payments
+BEGIN
+    UPDATE orders
+    SET total = total - NEW.amount
+    WHERE order_id = NEW.order_id;
 END;
-INSERT INTO v8 (v1, v2, v3, v4) VALUES (1, 0.5, 'test', 10);
-SELECT v3 FROM v8 WHERE v1 IN (SELECT v1 FROM v8 WHERE v4 = 10);
+
+
+INSERT INTO payments (order_id, amount, payment_method) VALUES (2, 50, 'Credit Card');
+
+
+SELECT * FROM orders ORDER BY order_id LIMIT 2 OFFSET 1;
+
+
+DELETE FROM customers
+WHERE NOT EXISTS (
+    SELECT 1 FROM orders WHERE orders.customer_id = customers.customer_id
+);
+
+
+INSERT INTO orders (customer_id, status, total)
+SELECT customer_id, 'Pending', RANDOM() % 100 + 1 FROM customers;
+
+
+SELECT * FROM orders
+WHERE (status = 'Pending' OR status = 'Completed')
+AND total > 50;
+
+
+SELECT 
+    o.order_id,
+    c.name AS customer_name,
+    o.total + (SELECT SUM(amount) FROM payments WHERE order_id = o.order_id) AS final_total
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id;
+
+
+DELETE FROM payments WHERE payment_date < '2023-01-01';
+
+
+SELECT 
+    o.order_id,
+    c.name AS customer_name,
+    p.amount AS payment_amount
+FROM orders o
+CROSS JOIN customers c
+LEFT JOIN payments p ON o.order_id = p.order_id;

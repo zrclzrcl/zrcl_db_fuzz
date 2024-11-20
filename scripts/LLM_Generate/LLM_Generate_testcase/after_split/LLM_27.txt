@@ -1,6 +1,129 @@
-CREATE TABLE v4 (v1 INTEGER, v2 TEXT, v3 INTEGER);
-CREATE TEMP TRIGGER trg5 AFTER INSERT ON v4 BEGIN 
-    DELETE FROM v4 WHERE v1 IN (SELECT v1 FROM v4 WHERE v3 < NEW.v3);
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    email TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+CREATE TABLE posts (
+    post_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE comments (
+    comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(post_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE tags (
+    tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tag_name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE post_tags (
+    post_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (post_id, tag_id),
+    FOREIGN KEY (post_id) REFERENCES posts(post_id),
+    FOREIGN KEY (tag_id) REFERENCES tags(tag_id)
+);
+
+INSERT INTO users (username, password, email) 
+VALUES ('john_doe', 'password123', 'john@example.com'),
+       ('jane_smith', 'password456', 'jane@example.com');
+
+INSERT INTO posts (user_id, title, content) 
+VALUES (1, 'Post 1', 'Content for the first post'),
+       (2, 'Post 2', 'Content for the second post');
+
+INSERT INTO comments (post_id, user_id, comment) 
+VALUES (1, 2, 'This is a comment on post 1'),
+       (2, 1, 'This is a comment on post 2');
+
+INSERT INTO tags (tag_name) 
+VALUES ('Technology'),
+       ('Science');
+
+INSERT INTO post_tags (post_id, tag_id) 
+VALUES (1, 1),
+       (2, 2);
+
+WITH RECURSIVE user_posts AS (
+    SELECT u.user_id, u.username, p.post_id, p.title, p.created_at
+    FROM users u
+    LEFT JOIN posts p ON u.user_id = p.user_id
+    UNION ALL
+    SELECT u.user_id, u.username, p.post_id, p.title, p.created_at
+    FROM users u
+    LEFT JOIN posts p ON u.user_id = p.user_id
+)
+SELECT * FROM user_posts;
+
+CREATE TRIGGER update_last_login
+AFTER UPDATE ON users
+BEGIN
+    UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
 END;
-INSERT INTO v4 (v1, v2, v3) VALUES (1, 'row1', 10), (2, 'row2', 20);
-SELECT * FROM v4 WHERE v3 > (SELECT AVG(v3) FROM v4);
+
+CREATE TRIGGER delete_post_comments
+AFTER DELETE ON posts
+BEGIN
+    DELETE FROM comments WHERE post_id = OLD.post_id;
+END;
+
+CREATE VIEW user_activity AS
+SELECT u.username, COUNT(p.post_id) AS post_count, COUNT(c.comment_id) AS comment_count
+FROM users u
+LEFT JOIN posts p ON u.user_id = p.user_id
+LEFT JOIN comments c ON p.post_id = c.post_id
+GROUP BY u.user_id;
+
+SELECT * FROM user_activity;
+
+UPDATE posts SET title = 'Updated Post 1' WHERE post_id = 1;
+
+CREATE INDEX idx_user_username ON users(username);
+CREATE INDEX idx_post_title ON posts(title);
+
+SELECT p.title, t.tag_name
+FROM posts p
+JOIN post_tags pt ON p.post_id = pt.post_id
+JOIN tags t ON pt.tag_id = t.tag_id;
+
+SELECT username, CASE 
+    WHEN last_login IS NULL THEN 'Never logged in' 
+    ELSE 'Last logged in: ' || last_login
+END AS login_status
+FROM users;
+
+BEGIN TRANSACTION;
+INSERT INTO posts (user_id, title, content) 
+VALUES (1, 'Transaction Post', 'This post will be rolled back.');
+ROLLBACK;
+
+SELECT 
+    p.title, 
+    CASE 
+        WHEN length(p.content) > 50 THEN 'Long post'
+        ELSE 'Short post'
+    END AS post_length
+FROM posts p;
+
+DELETE FROM posts WHERE post_id = 2;
+
+DROP TRIGGER update_last_login;
+DROP VIEW user_activity;
+DROP TABLE post_tags;
+DROP TABLE tags;
