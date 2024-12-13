@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 import multiprocessing
 from openai import OpenAI
+from colorama import Fore, Style,init
 
 # class test_stdscr:
 #     def __init__(self):
@@ -57,7 +58,7 @@ def get_prompt(samples):
     Fourth, is the generated SQL complex enough, at least it's more complex than the structure of the sample I gave you.
     Fifth, check whether the SQL is semantically correct, and whether there is corresponding data in it to be manipulated, and if not, then create the insert data statement first to ensure that the statement can be successfully executed.
     Note that the generated statements must be very complex. Include multiple nesting with the use of functions, you can also create functions for testing!
-    Based on the above description, you can start generating 3 test cases and start them with
+    Based on the above description, you can start generating 1 test cases and start them with
     ```sql
     ```
     Separate the generated test cases. Now start generating sql testcase! Each testcase need have multiple sql. And just return the testcase!"""
@@ -201,52 +202,31 @@ def get_file_by_id(path, filename_prefix, current):
 #@testcase_path 测试用例所在的路径
 #@showmap_path showmap工具所在的路径
 #@showmap_out_path showmap输出结果保存的路径
-def to_showmap(out_queue, testcase_path, showmap_path, showmap_out_path, stdscr):
+def to_showmap(out_queue, testcase_path, showmap_path, showmap_out_path):
     # ===================定义区===================
     current_id = 0  #记录当前的id
     cmd = ''    #保存需要执行的cmd
     showmap_stop_time = 0
     showmap_stop_num = 0
+    first_time = True
     # ===================定义区===================
     while True:
         try:    #尝试读取文件
             full_testcase_path, testcase_content = get_file_by_id(testcase_path,'id:',current_id)
 
         except FileNotFoundError as e:  #若目标文件还没有被生成
-            stdscr.addstr(10, 10, f"showmap handling info: num {current_id} testcase are not ready be generate")
-            stdscr.refresh()
+            if first_time:
+                print(Fore.YELLOW + f"showmap子线程: 当前目标队列文件 {current_id} 还未被生成" + Style.RESET_ALL)
+                first_time = False
             continue
-
-        stdscr.addstr(10, 10, f"showmap handling info: num {current_id} are be reading")
-        stdscr.refresh()
+        print(Fore.YELLOW+f"showmap子线程: 正在处理 {current_id} 文件"+Style.RESET_ALL)
         #得到cmd路径
         cmd = get_showmap_cmd(showmap_path, showmap_out_path, current_id, full_testcase_path)
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         showmap_content = get_showmap_content(showmap_out_path, current_id)
         testcase_now = ZrclTestcase(current_id, testcase_content, showmap_content)
-        try:
-            out_queue.put_nowait(testcase_now)
-        except queue.Full:
-            start_time = time.time()
-            stdscr.addstr(8, 10, "showmap process state: stop")
-            stdscr.addstr(9, 10, "showmap process info: showmap stop - showmap formation full")
-            stdscr.refresh()
-            while True:
-                try:
-                    out_queue.put_nowait(testcase_now)
-                    end_time = time.time()
-                    showmap_stop_time += end_time - start_time
-                    showmap_stop_num += 1
-                    stdscr.addstr(7, 10, f"showmap process stop time sum: {showmap_stop_time:.2f}s - stop num: {showmap_stop_num}")
-                    stdscr.addstr(8, 10, "showmap process stats: doing")
-                    stdscr.addstr(9, 10, f"showmap process info: showmap doing now, last stop: {end_time - start_time:.2f}s")
-                    stdscr.refresh()
-                    start_time = None
-                    end_time = None
-                    break
-                except queue.Full:
-                    continue
-
+        out_queue.put(testcase_now)
+        print(Fore.YELLOW + f"showmap子线程: {current_id} 文件的showmap结果已放入队列" + Style.RESET_ALL)
         current_id += 1
 
 
@@ -292,37 +272,20 @@ def passively_llm_worker(selection_queue, api_key, base_url, model, stdscr, save
         save_queue.put(llm_response.choices[0].message.content)
         i += 1
 
-def save_testcase(testcase_queue,stdscr,save_path):
+def save_testcase(testcase_queue,save_path):
     #首先从队列获取测试用例
     #拿到测试用例并分割
     #保存分割后的测试用例进入目标文件夹
-    need_slice_testcase = None  # 定义的需要切割的测试用例
     testcase_now = 1  # 定义当前生成的测试用例id
     while True:
-        try:
-            # 首先从队列获取测试用例
-            need_slice_testcase = testcase_queue.get_nowait()
-        except queue.Empty:
-            start_time = time.time()
-            stdscr.addstr(13 ,10,f"testcase saver: stop - none testcase need save - next save: {testcase_now}")
-            stdscr.refresh()
-            while True:
-                try:
-                    need_slice_testcase = testcase_queue.get_nowait()
-                    end_time = time.time()
-                    stdscr.addstr(13, 10, f"testcase saver: doing - last stop {end_time - start_time:.2f}s")
-                    stdscr.refresh()
-                    break
-                except queue.Empty:
-                    continue
+        need_slice_testcase = testcase_queue.get()
 
-            # 拿到测试用例并分割
-            sql_cases = re.findall(r'```sql(.*?)```', need_slice_testcase, re.DOTALL)
-            for testcase in sql_cases:
-                with open(f'{save_path}LLM_G_{testcase_now}.txt', 'w') as file:
-                    file.write(testcase.strip())
-                    stdscr.addstr(14, 10, f"testcase saver now: {testcase_now}")
-                    stdscr.refresh()
+        # 拿到测试用例并分割
+        sql_cases = re.findall(r'```sql(.*?)```', need_slice_testcase, re.DOTALL)
+        for testcase in sql_cases:
+            with open(f'{save_path}LLM_G_{testcase_now}.txt', 'w') as file:
+                file.write(testcase.strip())
+                print(Fore.CYAN + f"保存子线程:当前第 {testcase_now} 个LLM测试用例已生成" + Style.RESET_ALL)
                 testcase_now += 1
 
 
@@ -352,9 +315,15 @@ def main(stdscr):
     main_all_stop_time = 0  #主进程的阻塞总时间
     main_all_stop_num = 0   #主进程的阻塞总次数
     refresh_countdown = time.time() #记录上次发送时间
+
+    main_log_path = '/home/main_log/log.txt'
+    main_count = 0
     #===================定义区===================
 
     #===================主过程区===================
+
+    init()
+
     #初始化，判断各路径是否存在，若不存在则创建文件夹
     if not Path(generate_testcase_save_path).exists():
         Path(generate_testcase_save_path).mkdir(parents=True)
@@ -363,33 +332,13 @@ def main(stdscr):
         Path(showmap_out_path).mkdir(parents=True)
 
     #初始化，输出区域
-    curses.curs_set(0)  # 隐藏光标
-    stdscr.nodelay(1)  # 设置为非阻塞模式
-    stdscr.clear()
-    height, width = stdscr.getmaxyx()  # 获取窗口的高度和宽度
-    stdscr.addstr(1, 10, "cov_LLM generate info:")
-    stdscr.addstr(2, 10, "="*20)
-    stdscr.addstr(3, 10, "main process stop time sum:0s — stop num: 0")
-    stdscr.addstr(4, 10, "main process stats: doing")
-    stdscr.addstr(5, 10, "main process info: none")
-    stdscr.addstr(6, 10, "=" * 20)
-    stdscr.addstr(7, 10, "showmap process stop time sum: 0s — stop num: 0")
-    stdscr.addstr(8, 10, "showmap process stats: doing")
-    stdscr.addstr(9, 10, "showmap process info: doing")
-    stdscr.addstr(10, 10, "showmap handling info: none")
-    stdscr.addstr(11, 10, "=" * 20)
-    stdscr.addstr(12, 10, "llm passively worker: doing")
-    stdscr.addstr(13, 10, "testcase saver: stop")
-    stdscr.addstr(14, 10, "testcase saver now: none")
-    for i in range(0,max_llm_workers):
-        stdscr.addstr(15 + i, 10, f"llm process_{i}: stop")
-    stdscr.refresh()
 
-    saver_thread = multiprocessing.Process(target=save_testcase, args=(save_queue, stdscr, generate_testcase_save_path), daemon=True)
+
+    saver_thread = multiprocessing.Process(target=save_testcase, args=(save_queue, generate_testcase_save_path), daemon=True)
     saver_thread.start()  # 保存子线程启动
 
     #showmap子线程配置
-    showmap_thread = multiprocessing.Process(target=to_showmap, args=(testcase_queue, testcase_path, showmap_path, showmap_out_path,stdscr), daemon=True)
+    showmap_thread = multiprocessing.Process(target=to_showmap, args=(testcase_queue, testcase_path, showmap_path, showmap_out_path), daemon=True)
     showmap_thread.start()  #showmap子线程启动
 
     pa_llm_thread = threading.Thread(target=passively_llm_worker, args=(
@@ -400,38 +349,12 @@ def main(stdscr):
 
     while True:
         #1.不断的取出队列中的测试用例进行处理
-        try:
-            process_now = testcase_queue.get_nowait()
-        except queue.Empty:
-            i = 0
-            start_time = time.time()
-            stdscr.addstr(4, 10, "main process stats: stop")
-            stdscr.addstr(5, 10, "main process info: stop by showmap — showmap formation null")
-            stdscr.refresh()
-            while True:
-                try:
-
-                    process_now = testcase_queue.get_nowait()  # 尝试非阻塞地获取
-                    end_time = time.time()
-                    main_all_stop_time += end_time - start_time
-                    main_all_stop_num += 1
-                    stdscr.refresh()
-                    stdscr.addstr(3, 10, f"main process stop time sum: {main_all_stop_time:.2f}s — stop num: {main_all_stop_num}")
-                    stdscr.addstr(4, 10, "main process stats: doing ")
-                    stdscr.addstr(5, 10, f"main process info: main doing now, last stop: {end_time - start_time:.2f}s")
-                    stdscr.refresh()
-                    start_time = None
-                    end_time = None
-                    break
-                except queue.Empty:
-                    stdscr.addstr(4, 10, f"main process stats: stop_{i}")
-                    stdscr.refresh()
-                    i += 1
-                    continue
-
+        process_now = testcase_queue.get()
+        print(f"主程序:正在处理新的showmap数据 第 {main_count} 个")
         showmap.from_zrclTestcase_get_vectorNow(process_now)
         #2.对新的覆盖向量计算覆盖率得分,并尝试加入选择队列
         now_point = showmap.calculate_now_cov_get_point()
+        print(f"主程序:第 {main_count} 个的得分为{now_point}")
         select_testcase.append_in(process_now, now_point)
         #3.更新覆盖率向量
         showmap.recalculate_each_edgeCovPoint()
@@ -447,26 +370,6 @@ def main(stdscr):
             llm_count += 1
         process_count += 1
 
-        if time.time() - refresh_countdown >= 60:   #每60s刷新一次完整屏幕避免乱码
-            stdscr.clear()
-            stdscr.refresh()
-            stdscr.addstr(1, 10, "cov_LLM generate info:")
-            stdscr.addstr(2, 10, "=" * 20)
-            stdscr.addstr(3, 10, "main process stop time sum:0s — stop num: 0")
-            stdscr.addstr(4, 10, "main process stats: doing")
-            stdscr.addstr(5, 10, "main process info: none")
-            stdscr.addstr(6, 10, "=" * 20)
-            stdscr.addstr(7, 10, "showmap process stop time sum: 0s — stop num: 0")
-            stdscr.addstr(8, 10, "showmap process stats: doing")
-            stdscr.addstr(9, 10, "showmap process info: doing")
-            stdscr.addstr(10, 10, "showmap handling info: none")
-            stdscr.addstr(11, 10, "=" * 20)
-            stdscr.addstr(12, 10, "llm passively worker: doing")
-            stdscr.addstr(13, 10, "testcase saver: stop")
-            stdscr.addstr(14, 10, "testcase saver now: none")
-            for i in range(0, max_llm_workers):
-                stdscr.addstr(15 + i, 10, f"llm process_{i}: stop")
-            stdscr.refresh()
     #===================主过程区===================
 
 if __name__ == '__main__':

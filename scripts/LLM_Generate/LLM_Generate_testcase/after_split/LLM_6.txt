@@ -1,136 +1,57 @@
-CREATE TABLE IF NOT EXISTS accounts (
-    account_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL CHECK(LENGTH(username) > 4),
-    email TEXT NOT NULL CHECK(email LIKE '%@%'),
-    created_at TEXT DEFAULT (DATETIME('now'))
-);
+-- 设置临时存储为内存
+PRAGMA temp_store = MEMORY;
 
-CREATE TABLE IF NOT EXISTS transactions (
-    transaction_id INTEGER PRIMARY KEY,
-    account_id INTEGER NOT NULL,
-    amount REAL NOT NULL CHECK(amount <> 0),
-    transaction_type TEXT CHECK(transaction_type IN ('credit', 'debit')),
-    transaction_date TEXT DEFAULT (DATE('now')),
-    FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE SET NULL
-);
+-- 创建临时表，增加更多复杂约束和逻辑
+CREATE TEMP TABLE t1(
+    c0 TEXT,
+    c1 AS (c0 || '_suffix') UNIQUE NOT NULL CHECK(c0 != ''),
+    c2 REAL CHECK(c2 > 0) PRIMARY KEY,
+    c3 BLOB DEFAULT x'00'
+) WITHOUT ROWID;
 
-INSERT OR IGNORE INTO accounts (username, email) VALUES
-    ('user123', 'user123@example.com'),
-    ('admin', 'admin@example.com'),
-    ('guest', 'guest@example.com');
+-- 创建索引，增加条件和类型转换
+CREATE UNIQUE INDEX idx_t1 ON t1(CAST(c2 AS INT)) WHERE c2 < 10;
 
+-- 对所有索引重新编排
+REINDEX;
 
-INSERT INTO transactions (account_id, amount, transaction_type)
-SELECT 
-    account_id, 
-    RANDOM() % 1000 - 500, 
-    CASE WHEN RANDOM() % 2 = 0 THEN 'credit' ELSE 'debit' END
-FROM accounts;
+-- 插入数据到临时表，测试生成列、默认值和主键约束
+INSERT INTO t1(c0, c2) VALUES 
+    ('row1', 1.0), 
+    ('row2', 2.0), 
+    (NULL, 3.0); -- NULL 值测试生成列约束
 
+-- 测试替换操作，覆盖多种约束
+REPLACE INTO t1(c2, c0, c3) VALUES 
+    (1.0, 'replace_row', x'9b'), 
+    (2.0, 'replace_row2', NULL);
 
-SELECT 
-    t.transaction_id,
-    a.username,
-    t.amount,
-    t.transaction_date,
-    CASE 
-        WHEN t.amount > 0 THEN 'Profit'
-        ELSE 'Loss'
-    END AS transaction_outcome
-FROM transactions t
-LEFT JOIN accounts a ON t.account_id = a.account_id
-WHERE t.amount BETWEEN -250 AND 250 AND t.transaction_type = 'debit';
+-- 更新表中的数据，触发生成列和约束逻辑
+UPDATE t1 SET c2 = c2 * 2 WHERE c0 = 'row1';
 
-
-SELECT 
-    account_id,
-    (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.account_id AND t.amount > 0) AS total_credits,
-    (SELECT MIN(amount) FROM transactions t WHERE t.account_id = a.account_id AND t.amount < 0) AS smallest_debit
-FROM accounts a
-WHERE EXISTS (
-    SELECT 1 FROM transactions t WHERE t.account_id = a.account_id
-);
-
-
-WITH RECURSIVE balance_tree AS (
-    SELECT 
-        account_id, 
-        SUM(amount) AS total_balance, 
-        1 AS level
-    FROM transactions
-    GROUP BY account_id
-    UNION ALL
-    SELECT 
-        b.account_id, 
-        b.total_balance + RANDOM() % 100 - 50, 
-        b.level + 1
-    FROM balance_tree b
-    WHERE b.level < 5
-)
-SELECT * FROM balance_tree ORDER BY account_id, level;
-
-UPDATE transactions
-SET amount = amount * 1.1
-WHERE transaction_date = DATE('now');
-
-
-SELECT 
-    t1.transaction_id AS t1_id,
-    t2.transaction_id AS t2_id,
-    ABS(t1.amount - t2.amount) AS difference
-FROM transactions t1
-INNER JOIN transactions t2 ON t1.account_id = t2.account_id
-WHERE t1.transaction_id < t2.transaction_id;
-
-
-SELECT 
-    account_id,
-    SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS total_credits,
-    SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) AS total_debits,
-    COUNT(CASE WHEN amount = 0 THEN 1 END) AS zero_transactions
-FROM transactions
-GROUP BY account_id;
-
-
-DELETE FROM accounts WHERE username = 'guest';
-
-
-SELECT 
-    transaction_type,
-    COUNT(*) AS transaction_count,
-    AVG(amount) AS average_amount
-FROM transactions
-GROUP BY transaction_type
-HAVING AVG(amount) IS NOT NULL;
-
-
-SELECT 
-    account_id,
-    transaction_id,
-    amount,
-    SUM(amount) OVER (PARTITION BY account_id ORDER BY transaction_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_balance
-FROM transactions;
-
-
-SELECT 
-    account_id, 
-    amount 
-FROM transactions
-ORDER BY ABS(amount) DESC
-LIMIT 5;
-
-
-CREATE TRIGGER IF NOT EXISTS log_insert
-AFTER INSERT ON transactions
+-- 创建触发器，测试插入操作后执行的逻辑
+CREATE TRIGGER trg_t1_insert
+AFTER INSERT ON t1
 BEGIN
-    INSERT INTO transactions (account_id, amount, transaction_type)
-    VALUES (NEW.account_id, -NEW.amount, 'log');
+    INSERT INTO t1(c0, c2) VALUES ('trigger_insert', NEW.c2 + 1);
 END;
 
+-- 测试事务管理
+BEGIN TRANSACTION;
+INSERT INTO t1(c0, c2) VALUES ('transaction_test', 5.0);
+ROLLBACK;
 
-INSERT INTO transactions (account_id, amount, transaction_type)
-VALUES (1, 500, 'credit');
+-- 测试递归查询，结合多种数据结构
+WITH RECURSIVE cte(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 5
+)
+SELECT c0, c2, n FROM t1, cte WHERE c2 = n;
 
+-- 测试数据完整性
+PRAGMA integrity_check;
 
-DELETE FROM transactions WHERE transaction_type = 'log';
-DELETE FROM accounts WHERE username LIKE 'user%';
+-- 删除索引和触发器，释放资源
+DROP INDEX idx_t1;
+DROP TRIGGER trg_t1_insert;

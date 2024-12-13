@@ -1,120 +1,86 @@
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL CHECK(LENGTH(username) >= 3),
-    email TEXT NOT NULL CHECK(email LIKE '%@%'),
-    created_at TEXT DEFAULT (DATETIME('now'))
+-- 创建一个复杂的表，测试生成列、检查约束和默认值
+CREATE TABLE t1(
+    c0 AS (c1 + c2) STORED,
+    c1 INTEGER DEFAULT 5 NOT NULL,
+    c2 TEXT CHECK(length(c2) > 1),
+    c3 BLOB UNIQUE,
+    c4 REAL DEFAULT(3.14)
 );
 
-CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    order_total REAL NOT NULL CHECK(order_total >= 0),
-    status TEXT CHECK(status IN ('Pending', 'Shipped', 'Cancelled')),
-    created_at TEXT DEFAULT (DATETIME('now')),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-
-
-INSERT INTO users (username, email) VALUES
-    ('Alice', 'alice@example.com'),
-    ('Bob', 'bob@example.com');
-
-INSERT INTO orders (user_id, order_total, status) VALUES
-    (1, 99.99, 'Pending'),
-    (1, 49.49, 'Shipped'),
-    (2, 19.99, 'Cancelled');
-
-
-WITH OrderSummary AS (
-    SELECT 
-        user_id,
-        COUNT(*) AS total_orders,
-        SUM(order_total) AS total_spent
-    FROM orders
-    GROUP BY user_id
+-- 测试WITH子句和递归查询
+WITH RECURSIVE cte(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 5
 )
+SELECT * FROM cte;
+
+-- 插入多种数据以测试类型和约束
+INSERT INTO t1 (c1, c2, c3) VALUES 
+    (10, 'text', x'53514c697465'), -- BLOB数据
+    (NULL, 'too_short', NULL),     -- 测试检查约束失败
+    (20, 'valid_text', NULL);      -- 测试NULL和默认值
+
+-- 更新表中部分值，触发生成列更新
+UPDATE t1 SET c1 = c1 * 2 WHERE c0 < 15;
+
+-- 删除部分数据，测试约束传播
+DELETE FROM t1 WHERE c1 = 20;
+
+-- 测试复杂的窗口函数
 SELECT 
-    u.username,
-    os.total_orders,
-    os.total_spent,
-    RANK() OVER (ORDER BY os.total_spent DESC) AS spending_rank
-FROM users u
-LEFT JOIN OrderSummary os ON u.user_id = os.user_id;
+    c1, 
+    c2, 
+    ROW_NUMBER() OVER (PARTITION BY c2 ORDER BY c1) AS row_num,
+    RANK() OVER (ORDER BY c1) AS rank_val
+FROM t1;
 
+-- 创建触发器来测试表操作后的自动逻辑
+CREATE TRIGGER trg_after_update_t1
+AFTER UPDATE ON t1
+WHEN NEW.c1 > 10
+BEGIN
+    INSERT INTO t1 (c1, c2, c3) VALUES (NEW.c1 + 1, 'triggered', x'00');
+END;
 
-SELECT 
-    username,
-    (SELECT COUNT(*) FROM orders WHERE user_id = u.user_id) AS order_count,
-    (SELECT MAX(order_total) FROM orders WHERE user_id = u.user_id) AS max_order_value
-FROM users u;
-
-
+-- 测试事务行为，回滚和提交
 BEGIN TRANSACTION;
-INSERT INTO users (username, email) VALUES ('Charlie', 'charlie@example.com');
-INSERT INTO orders (user_id, order_total, status) VALUES
-    (3, 200.00, 'Pending'),
-    (3, -10.00, 'Pending');
-ROLLBACK;
+INSERT INTO t1 (c1, c2) VALUES (100, 'in_transaction');
+ROLLBACK; -- 回滚事务
 
-
-INSERT INTO orders (user_id, order_total, status)
-VALUES (1, 10.00, 'Shipped'), (2, 15.00, 'Pending');
-
-
+-- 测试带有函数的表达式
 SELECT 
-    created_at,
-    DATE(created_at, '+1 day') AS next_day,
-    TIME(created_at, 'localtime') AS local_time,
-    STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS current_time
-FROM orders;
+    c1, 
+    printf('%s is a text', c2) AS formatted_text
+FROM t1
+WHERE c4 > 2;
 
+-- 创建索引并测试优化路径
+CREATE INDEX idx_c1 ON t1(c1);
 
-INSERT INTO users (user_id, username, email)
-VALUES (2, 'BobUpdated', 'bob_new@example.com')
-ON CONFLICT(user_id) 
-DO UPDATE SET username = excluded.username, email = excluded.email;
+-- 测试PRAGMA语句，验证数据库的完整性
+PRAGMA integrity_check;
 
+-- 创建带有联合键的表以测试复杂性
+CREATE TABLE t2(
+    c0 INTEGER PRIMARY KEY,
+    c1 INTEGER NOT NULL,
+    c2 TEXT NOT NULL,
+    FOREIGN KEY(c1) REFERENCES t1(c1)
+);
 
-SELECT username
-FROM users u
-WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id AND o.status = 'Shipped');
+-- 插入数据并测试多表操作
+INSERT INTO t2 (c0, c1, c2) VALUES 
+    (1, 10, 'related'), 
+    (2, 15, 'more_data');
 
-SELECT username
-FROM users u
-WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id);
+SELECT t1.c1, t2.c2 
+FROM t1 
+JOIN t2 ON t1.c1 = t2.c1
+WHERE t2.c0 < 2;
 
+-- 删除触发器
+DROP TRIGGER trg_after_update_t1;
 
-SELECT username, 'Active' AS status
-FROM users
-WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = users.user_id AND status = 'Pending')
-UNION
-SELECT username, 'Inactive' AS status
-FROM users
-WHERE NOT EXISTS (SELECT 1 FROM orders WHERE user_id = users.user_id);
-
-
-SELECT username, email
-FROM users
-ORDER BY LENGTH(username) DESC, created_at ASC
-LIMIT 2;
-
-
-CREATE TEMP TABLE IF NOT EXISTS temp_orders AS
-SELECT * FROM orders WHERE order_total > 50;
-
-SELECT * FROM temp_orders;
-
-
-SELECT 
-    u.username,
-    o.order_id,
-    o.order_total,
-    o.status
-FROM users u
-INNER JOIN orders o ON u.user_id = o.user_id
-WHERE o.order_total > 20 AND u.username LIKE 'A%';
-
-
-DELETE FROM orders WHERE order_total < 20;
-
-VACUUM;
+-- 删除表
+DROP TABLE t2;

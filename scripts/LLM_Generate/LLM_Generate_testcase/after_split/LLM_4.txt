@@ -1,133 +1,93 @@
-
-CREATE TABLE IF NOT EXISTS product_categories (
-    category_id INTEGER NOT NULL,
-    sub_category_id INTEGER NOT NULL,
-    category_name TEXT NOT NULL,
-    PRIMARY KEY (category_id, sub_category_id),
-    UNIQUE (category_name)
+-- 创建一个表，包含生成列、多列主键和外键约束
+CREATE TABLE t1(
+    c0 INTEGER PRIMARY KEY AUTOINCREMENT,
+    c1 TEXT NOT NULL UNIQUE,
+    c2 AS(c0 + 1) STORED,
+    c3 REAL DEFAULT 3.14 CHECK(c3 > 0),
+    c4 TEXT REFERENCES t1(c1) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS products (
-    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    category_id INTEGER NOT NULL,
-    sub_category_id INTEGER NOT NULL,
-    product_name TEXT NOT NULL,
-    price REAL CHECK(price >= 0),
-    stock INTEGER DEFAULT 0 CHECK(stock >= 0),
-    FOREIGN KEY (category_id, sub_category_id) REFERENCES product_categories(category_id, sub_category_id) ON DELETE CASCADE
+-- 创建虚拟表，使用 FTS5 测试全文索引功能
+CREATE VIRTUAL TABLE vt1 USING fts5(c1, c2, c3);
+
+-- 插入数据到表中
+INSERT INTO t1(c1, c3) VALUES 
+    ('row1', 4.2), 
+    ('row2', NULL), 
+    ('row3', 5.6);
+
+-- 测试虚拟表中的全文检索
+INSERT INTO vt1(c1, c2, c3) VALUES 
+    ('text1', 'additional', 'example'), 
+    ('text2', 'fts', 'testing');
+
+-- 创建复杂索引
+CREATE INDEX idx_t1 ON t1(
+    c3 DESC, 
+    CASE c1 WHEN 'row1' THEN 1 ELSE 0 END
 );
 
+-- 设置数据库属性并验证外键约束
+PRAGMA foreign_keys = ON;
+PRAGMA integrity_check;
 
-INSERT INTO product_categories (category_id, sub_category_id, category_name) VALUES
-    (1, 1, 'Electronics'),
-    (1, 2, 'Home Appliances'),
-    (2, 1, 'Books'),
-    (2, 2, 'Stationery');
+-- 执行数据分析
+ANALYZE;
 
-INSERT INTO products (category_id, sub_category_id, product_name, price, stock) VALUES
-    (1, 1, 'Smartphone', 699.99, 50),
-    (1, 2, 'Microwave', 89.99, 10),
-    (2, 1, 'Fiction Novel', 15.99, 0),
-    (2, 2, 'Notebook', 3.49, 200);
-
-
+-- 测试复杂查询，包括窗口函数和条件表达式
 SELECT 
-    p1.product_name AS product_1,
-    p2.product_name AS product_2,
-    ABS(p1.price - p2.price) AS price_difference
-FROM products p1
-JOIN products p2 ON p1.category_id = p2.category_id AND p1.product_id < p2.product_id;
+    c1, 
+    c3, 
+    RANK() OVER (ORDER BY c3) AS rank_val,
+    CASE WHEN c3 > 4 THEN 'High' ELSE 'Low' END AS category
+FROM t1;
 
+-- 更新表中的数据以触发生成列和外键约束
+UPDATE t1 SET c3 = c3 * 2 WHERE c1 = 'row2';
 
-INSERT INTO products (category_id, sub_category_id, product_name, price, stock)
-SELECT 1, 2, 'Oven', 120.00, 5
-WHERE NOT EXISTS (
-    SELECT 1 FROM products WHERE product_name = 'Oven'
-);
+-- 删除部分数据并验证外键的行为
+DELETE FROM t1 WHERE c1 = 'row3';
 
-
-CREATE TRIGGER IF NOT EXISTS update_stock_trigger
-AFTER UPDATE ON products
-FOR EACH ROW
+-- 创建触发器，测试事件响应
+CREATE TRIGGER trg_insert_t1
+AFTER INSERT ON t1
 BEGIN
-    INSERT INTO products (category_id, sub_category_id, product_name, price, stock)
-    VALUES (NEW.category_id, NEW.sub_category_id, 'Restocked: ' || NEW.product_name, NEW.price, NEW.stock + 10)
-    WHERE NEW.stock = 0;
+    INSERT INTO t1(c1, c3) VALUES ('triggered_row', 1.23);
 END;
 
-
-UPDATE products SET stock = 0 WHERE product_name = 'Microwave';
-
-
-SELECT 
-    pc.category_name,
-    p.product_name,
-    CASE
-        WHEN p.stock > 100 THEN 'Overstocked'
-        WHEN p.stock BETWEEN 1 AND 100 THEN 'In Stock'
-        ELSE 'Out of Stock'
-    END AS stock_status
-FROM products p
-JOIN product_categories pc ON p.category_id = pc.category_id AND p.sub_category_id = pc.sub_category_id;
-
-
-UPDATE products
-SET stock = stock + 10
-WHERE product_id IN (
-    SELECT product_id
-    FROM products
-    WHERE price > 50 AND stock < 100
+-- 创建新表，测试递归查询和多表操作
+CREATE TABLE t2(
+    id INTEGER PRIMARY KEY,
+    t1_id INTEGER NOT NULL REFERENCES t1(c0),
+    description TEXT CHECK(length(description) > 3)
 );
 
+-- 插入数据到多表
+INSERT INTO t2(t1_id, description) VALUES 
+    (1, 'Linked Data'), 
+    (2, 'Extra Info');
 
-DELETE FROM products
-WHERE product_id IN (
-    SELECT p.product_id
-    FROM products p
-    LEFT JOIN product_categories pc ON p.category_id = pc.category_id
-    WHERE p.stock = 0
-);
-
-
-WITH RECURSIVE product_combinations AS (
-    SELECT product_id, product_name, 1 AS level
-    FROM products
+-- 测试递归查询
+WITH RECURSIVE cte(n) AS (
+    SELECT 1
     UNION ALL
-    SELECT p.product_id, p.product_name, pc.level + 1
-    FROM products p
-    JOIN product_combinations pc ON p.product_id > pc.product_id
+    SELECT n + 1 FROM cte WHERE n < 3
 )
-SELECT * FROM product_combinations LIMIT 10;
+SELECT * FROM cte;
 
+-- 联合查询，测试多表操作
+SELECT t1.c1, t2.description 
+FROM t1 
+JOIN t2 ON t1.c0 = t2.t1_id;
 
-CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(product_name, tokenize = 'porter');
-INSERT INTO search_index (product_name) SELECT product_name FROM products;
+-- 测试事务管理
+BEGIN TRANSACTION;
+INSERT INTO t1(c1, c3) VALUES ('temp_row', 3.3);
+ROLLBACK;
 
-SELECT * FROM search_index WHERE product_name MATCH 'Smart*';
+-- 删除触发器
+DROP TRIGGER trg_insert_t1;
 
-
-SELECT 
-    product_name,
-    price,
-    RANK() OVER (PARTITION BY category_id ORDER BY price DESC) AS price_rank
-FROM products;
-
-
-SELECT 
-    DATE('now', '+7 days') AS next_week,
-    TIME('now', '-3 hours') AS earlier_today,
-    STRFTIME('%W', 'now') AS current_week_number;
-
-
-EXPLAIN QUERY PLAN
-SELECT 
-    pc.category_name, 
-    p.product_name, 
-    p.price
-FROM product_categories pc
-JOIN products p ON pc.category_id = p.category_id
-WHERE p.price > 50
-ORDER BY p.stock DESC;
-
-
-DELETE FROM products WHERE product_name LIKE 'Restocked:%';
+-- 删除虚拟表和索引
+DROP INDEX idx_t1;
+DROP TABLE vt1;

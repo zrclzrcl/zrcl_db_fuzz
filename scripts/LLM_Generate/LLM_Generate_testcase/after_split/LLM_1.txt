@@ -1,101 +1,66 @@
-CREATE TABLE IF NOT EXISTS parent (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    created_at TEXT DEFAULT (DATETIME('now', 'localtime'))
+-- 创建一个复杂的表，包含生成列、默认值和检查约束
+CREATE TABLE t1(
+    c0 INTEGER PRIMARY KEY,
+    c1 TEXT DEFAULT 'default',
+    c2 REAL GENERATED ALWAYS AS (c0 * 1.5) VIRTUAL,
+    c3 BLOB,
+    c4 INTEGER CHECK(c4 > 0)
 );
 
-CREATE TABLE IF NOT EXISTS child (
+-- 创建带唯一约束和外键的表
+CREATE TABLE t2(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    parent_id INTEGER NOT NULL,
-    description TEXT CHECK(LENGTH(description) > 10),
-    created_at TEXT DEFAULT (DATETIME('now', 'utc')),
-    FOREIGN KEY (parent_id) REFERENCES parent(id) ON DELETE CASCADE
+    t1_id INTEGER NOT NULL,
+    c0 TEXT UNIQUE,
+    FOREIGN KEY(t1_id) REFERENCES t1(c0) ON DELETE CASCADE
 );
 
+-- 创建一个表和索引
+CREATE TABLE t3(
+    c0 INTEGER,
+    c1 TEXT,
+    c2 REAL,
+    UNIQUE(c0, c1)
+);
+CREATE INDEX idx_c2 ON t3(c2);
 
-CREATE VIRTUAL TABLE IF NOT EXISTS vtable USING fts5(content, tokenize='porter');
+-- 插入多行数据
+INSERT INTO t1 (c0, c4) VALUES (1, 10), (2, 20);
+INSERT INTO t2 (t1_id, c0) VALUES (1, 'unique_val'), (2, 'another_val');
+INSERT INTO t3 (c0, c1, c2) VALUES (1, 'text1', 0.1), (2, 'text2', 0.2);
 
+-- 使用更新和删除
+UPDATE t1 SET c1 = 'updated_value' WHERE c0 = 1;
+DELETE FROM t2 WHERE c0 = 'unique_val';
 
-CREATE TRIGGER IF NOT EXISTS update_timestamp
-AFTER UPDATE ON child
-BEGIN
-    UPDATE parent
-    SET created_at = DATETIME('now')
-    WHERE id = NEW.parent_id;
-END;
+-- 测试复杂查询
+SELECT t1.c0, t2.c0 FROM t1 JOIN t2 ON t1.c0 = t2.t1_id WHERE t1.c4 > 15;
 
-
-WITH RECURSIVE cnt(x) AS (
-    SELECT 1
-    UNION ALL
-    SELECT x + 1 FROM cnt
-    WHERE x < 10
-)
-SELECT x, x * x AS square
-FROM cnt;
-
-INSERT INTO parent (name) VALUES
-    ('Parent1'),
-    ('Parent2'),
-    ('Parent3');
-
-INSERT INTO child (parent_id, description) VALUES
-    (1, 'Description longer than 10'),
-    (2, 'Another description'),
-    (3, 'Yet another one');
-
+-- 事务操作
 BEGIN TRANSACTION;
-INSERT INTO parent (name) VALUES ('Parent4');
-INSERT INTO child (parent_id, description) VALUES
-    (4, 'Description that will fail');
+INSERT INTO t1 (c0, c4) VALUES (3, 30);
 ROLLBACK;
 
+-- 创建触发器
+CREATE TRIGGER trg_after_insert_t1
+AFTER INSERT ON t1
+BEGIN
+    UPDATE t1 SET c1 = 'triggered' WHERE c0 = NEW.c0;
+END;
 
-SELECT
-    p.name AS parent_name,
-    c.description,
-    ROW_NUMBER() OVER (PARTITION BY c.parent_id ORDER BY c.created_at DESC) AS row_num,
-    COUNT(*) OVER (PARTITION BY c.parent_id) AS total_children
-FROM parent p
-LEFT JOIN child c ON p.id = c.parent_id;
+-- 测试窗口函数
+SELECT c0, ROW_NUMBER() OVER (ORDER BY c0) AS row_num FROM t3;
 
+-- 测试递归查询
+WITH RECURSIVE cte_recursive(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte_recursive WHERE n < 10
+)
+SELECT * FROM cte_recursive;
 
-SELECT 
-    id,
-    SUM(LENGTH(description)) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS description_sum
-FROM child;
+-- 删除触发器
+DROP TRIGGER trg_after_insert_t1;
 
-
-CREATE TABLE IF NOT EXISTS json_table (
-    id INTEGER PRIMARY KEY,
-    json_data TEXT
-);
-
-INSERT INTO json_table (json_data) VALUES
-    ('{"key1": "value1", "key2": 42, "nested": {"key3": [1, 2, 3]}}');
-
-SELECT
-    json_extract(json_data, '$.key1') AS key1,
-    json_extract(json_data, '$.nested.key3[1]') AS second_value_in_key3
-FROM json_table;
-
-
-SELECT non_existent_function();
-
-
-INSERT INTO parent (id, name)
-VALUES (1, 'Parent1_Updated')
-ON CONFLICT (id)
-DO UPDATE SET name = excluded.name;
-
-
-SELECT id,
-    (SELECT COUNT(*) FROM child WHERE parent_id = p.id) AS child_count,
-    COALESCE(NULL, 'Fallback') AS coalesce_example
-FROM parent p;
-
-
-DELETE FROM parent WHERE id > 3;
-
-
-DELETE FROM vtable;
+-- 删除表
+DROP TABLE t3;

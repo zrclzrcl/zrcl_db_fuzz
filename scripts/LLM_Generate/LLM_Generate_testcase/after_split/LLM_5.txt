@@ -1,121 +1,55 @@
-CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY,
-    customer_name TEXT NOT NULL,
-    order_date TEXT DEFAULT (DATE('now'))
+-- 创建扩展表结构，包含更多约束和生成列逻辑
+CREATE TABLE t1(
+    c0 INTEGER PRIMARY KEY,                -- 主键约束
+    c1 AS (c0 * 2) UNIQUE,                 -- 生成列和唯一约束
+    c2 TEXT DEFAULT 'default',             -- 默认值约束
+    c3 INTEGER NOT NULL,                   -- 非空约束
+    FOREIGN KEY(c3) REFERENCES t1(c0)      -- 外键约束
 );
 
-CREATE TABLE IF NOT EXISTS order_details (
-    detail_id INTEGER PRIMARY KEY,
-    order_id INTEGER NOT NULL,
-    product_name TEXT NOT NULL,
-    quantity INTEGER CHECK(quantity > 0),
-    price REAL CHECK(price >= 0),
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
-);
+-- 创建虚拟表，测试 fts5 功能
+CREATE VIRTUAL TABLE vt1 USING fts5(c0, c1, tokenize='porter');
 
+-- 启用外键支持
+PRAGMA foreign_keys = ON;
 
-INSERT INTO orders (customer_name) VALUES ('John Doe'), ('Jane Smith');
+-- 创建索引，测试复杂索引逻辑
+CREATE INDEX idx_t1_c1 ON t1(c1) WHERE c1 > 10;
 
-INSERT INTO order_details (order_id, product_name, quantity, price) VALUES
-    (1, 'Laptop', 2, 1200.00),
-    (1, 'Mouse', 1, 20.00),
-    (2, 'Book', 5, 15.99);
+-- 插入数据，触发默认值、生成列和外键逻辑
+INSERT INTO t1(c0, c3) VALUES 
+    (1, 1), 
+    (2, 1), 
+    (3, 2);
 
+-- 测试虚拟表的插入和全文检索
+INSERT INTO vt1(c0, c1) VALUES 
+    ('hello', 'world'), 
+    ('sqlite', 'fts5');
 
-SELECT 
-    o.customer_name,
-    COUNT(od.detail_id) AS total_items,
-    SUM(od.quantity * od.price) AS total_price
-FROM orders o
-JOIN order_details od ON o.order_id = od.order_id
-GROUP BY o.customer_name;
-
-
-CREATE TRIGGER IF NOT EXISTS update_order_date
-AFTER UPDATE OF quantity ON order_details
+-- 测试 REPLACE 和触发器行为
+CREATE TRIGGER trg_t1_replace
+AFTER REPLACE ON t1
 BEGIN
-    UPDATE orders
-    SET order_date = DATE('now')
-    WHERE order_id = NEW.order_id;
+    INSERT INTO t1(c0, c3) VALUES (NEW.c0 + 1, NEW.c3);
 END;
 
+REPLACE INTO t1(c0, c3) VALUES 
+    (4, 1), 
+    (5, 3);
 
-UPDATE order_details SET quantity = 3 WHERE detail_id = 2;
-
-
-SELECT 
-    o.customer_name,
-    (SELECT COUNT(*) FROM order_details WHERE order_id = o.order_id) AS item_count,
-    (SELECT SUM(price * quantity) FROM order_details WHERE order_id = o.order_id) AS order_total
-FROM orders o;
-
-
-DELETE FROM order_details
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders
-    WHERE order_date < DATE('now', '-7 days')
-);
-
-
-SELECT 
-    product_name,
-    quantity,
-    SUM(quantity) OVER (PARTITION BY order_id) AS total_order_quantity,
-    ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY price DESC) AS rank_in_order
-FROM order_details;
-
-
-SELECT 
-    detail_id,
-    product_name,
-    CASE 
-        WHEN price > 100 THEN 'Expensive'
-        WHEN price BETWEEN 50 AND 100 THEN 'Moderate'
-        ELSE 'Cheap'
-    END AS price_category,
-    ROUND(price * quantity, 2) AS total_cost
-FROM order_details;
-
-
-SELECT 
-    o.customer_name,
-    d1.product_name AS product_1,
-    d2.product_name AS product_2
-FROM orders o
-JOIN order_details d1 ON o.order_id = d1.order_id
-JOIN order_details d2 ON o.order_id = d2.order_id
-WHERE d1.detail_id < d2.detail_id;
-
-
-SELECT * FROM order_details
-ORDER BY price DESC, quantity ASC
-LIMIT 3 OFFSET 1;
-
-
-SELECT 
-    order_id,
-    DATE(order_date, '+30 days') AS return_deadline,
-    TIME('now', '+2 hours') AS time_now_plus_2h
-FROM orders;
-
-
-INSERT INTO orders (customer_name)
-SELECT 'New Customer'
-WHERE NOT EXISTS (
+-- 测试复杂查询，结合递归和窗口函数
+WITH RECURSIVE cte(n) AS (
     SELECT 1
-    FROM orders
-    WHERE customer_name = 'New Customer'
-);
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 3
+)
+SELECT c1, ROW_NUMBER() OVER (ORDER BY c0) AS row_num 
+FROM t1 JOIN cte ON t1.c0 = cte.n;
 
+-- 测试数据一致性和完整性
+PRAGMA integrity_check;
 
-SELECT 
-    order_id,
-    GROUP_CONCAT(product_name, ', ') AS products_list
-FROM order_details
-GROUP BY order_id;
-
-
-DELETE FROM order_details WHERE product_name = 'Mouse';
-DELETE FROM orders WHERE customer_name = 'New Customer';
-
+-- 删除表和触发器
+DROP TRIGGER trg_t1_replace;
+DROP TABLE vt1;

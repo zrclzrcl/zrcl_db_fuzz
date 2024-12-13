@@ -1,130 +1,90 @@
-CREATE TABLE IF NOT EXISTS departments (
-    dept_id INTEGER PRIMARY KEY,
-    dept_name TEXT NOT NULL UNIQUE
+-- 创建具有生成列、约束和默认值的表
+CREATE TABLE t1(
+    c0 INTEGER NOT NULL AS (c1 + 1) UNIQUE, -- 生成列依赖其他列
+    c1 INTEGER DEFAULT 5,                  -- 默认值
+    c2 TEXT CHECK(c2 IN ('valid', 'test')),-- 检查约束
+    c3 BLOB UNIQUE                         -- 唯一约束
 );
 
-CREATE TABLE IF NOT EXISTS employees (
-    emp_id INTEGER PRIMARY KEY,
-    emp_name TEXT NOT NULL,
-    dept_id INTEGER,
-    hire_date TEXT DEFAULT (DATE('now')),
-    salary REAL CHECK(salary >= 0),
-    FOREIGN KEY (dept_id) REFERENCES departments(dept_id) ON DELETE SET NULL
+-- 插入数据以触发约束和默认值
+INSERT INTO t1(c1, c2, c3) VALUES 
+    (10, 'valid', x'53514c697465'), 
+    (20, 'test', NULL), 
+    (NULL, 'valid', x'1234'); -- 测试默认值的应用
+
+-- 测试替换操作符，插入并替换冲突记录
+REPLACE INTO t1(c1, c2) VALUES 
+    (10, 'conflict'), 
+    (30, 'valid');
+
+-- 创建一个复杂表，测试生成列的嵌套
+CREATE TABLE t2(
+    c0 AS (c1 * 2), 
+    c1 INTEGER NOT NULL, 
+    c2 AS (c0 + c1) STORED, 
+    c3 CHECK(c2 < 100)
 );
 
-CREATE TABLE IF NOT EXISTS projects (
-    proj_id INTEGER PRIMARY KEY,
-    proj_name TEXT NOT NULL,
-    dept_id INTEGER,
-    FOREIGN KEY (dept_id) REFERENCES departments(dept_id) ON DELETE CASCADE
-);
+-- 插入数据到复杂表中
+INSERT INTO t2(c1) VALUES 
+    (10), 
+    (20), 
+    (NULL); -- 测试生成列的错误行为
 
-
-INSERT INTO departments (dept_name) VALUES
-    ('Engineering'),
-    ('HR'),
-    ('Marketing');
-
-INSERT INTO employees (emp_name, dept_id, salary) VALUES
-    ('Alice', 1, 75000),
-    ('Bob', 1, 80000),
-    ('Charlie', 2, NULL);
-
-INSERT INTO projects (proj_name, dept_id) VALUES
-    ('Project A', 1),
-    ('Project B', 2);
-
-
+-- 测试窗口函数的高级查询
 SELECT 
-    d.dept_name,
-    COUNT(e.emp_id) AS total_employees,
-    SUM(e.salary) AS total_salary,
-    COUNT(p.proj_id) AS total_projects
-FROM departments d
-LEFT JOIN employees e ON d.dept_id = e.dept_id
-LEFT JOIN projects p ON d.dept_id = p.dept_id
-GROUP BY d.dept_name;
+    c1, 
+    ROW_NUMBER() OVER (ORDER BY c1) AS row_num,
+    RANK() OVER (PARTITION BY c2 ORDER BY c1) AS rank_val
+FROM t1;
 
-
-WITH RECURSIVE hierarchy AS (
-    SELECT emp_id, emp_name, dept_id, 1 AS level
-    FROM employees
-    WHERE dept_id = 1
-    UNION ALL
-    SELECT e.emp_id, e.emp_name, e.dept_id, h.level + 1
-    FROM employees e
-    JOIN hierarchy h ON e.dept_id = h.emp_id
-)
-SELECT * FROM hierarchy;
-
-
-CREATE TABLE IF NOT EXISTS custom_sort (
-    value TEXT COLLATE NOCASE
-);
-
-INSERT INTO custom_sort (value) VALUES ('Apple'), ('apple'), ('Banana'), ('banana');
-
-SELECT * FROM custom_sort ORDER BY value;
-
-
-SELECT 
-    emp_name,
-    CASE 
-        WHEN salary > 70000 THEN 'High Salary'
-        WHEN salary > 50000 THEN 'Medium Salary'
-        ELSE 'Low Salary'
-    END AS salary_category
-FROM employees;
-
-
-CREATE TRIGGER IF NOT EXISTS update_salary_trigger
-AFTER UPDATE OF salary ON employees
-FOR EACH ROW
+-- 创建触发器以测试事件处理
+CREATE TRIGGER trg_replace_t1
+AFTER REPLACE ON t1
+WHEN NEW.c1 > 15
 BEGIN
-    INSERT INTO projects (proj_name, dept_id) VALUES ('Bonus Adjustment', NEW.dept_id);
+    INSERT INTO t1(c1, c2) VALUES (NEW.c1 + 1, 'triggered');
 END;
 
+-- 测试事务操作，检查回滚逻辑
+BEGIN TRANSACTION;
+INSERT INTO t1(c1, c2) VALUES (50, 'rollback_test');
+ROLLBACK;
 
-UPDATE employees SET salary = salary + 5000 WHERE emp_id = 1;
+-- 测试复杂的递归查询
+WITH RECURSIVE cte(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 5
+)
+SELECT * FROM cte;
 
+-- 创建索引并测试优化路径
+CREATE INDEX idx_c1 ON t1(c1);
 
-SELECT 
-    dept_id,
-    MAX(salary) AS max_salary,
-    AVG(salary) AS avg_salary,
-    GROUP_CONCAT(emp_name, ', ') AS employee_list
-FROM employees
-GROUP BY dept_id;
+-- 测试数据完整性
+PRAGMA integrity_check;
 
-
-CREATE TABLE IF NOT EXISTS json_simulation (
+-- 测试外键约束和联合表操作
+CREATE TABLE t3(
     id INTEGER PRIMARY KEY,
-    json_data TEXT
+    t1_id INTEGER NOT NULL,
+    description TEXT,
+    FOREIGN KEY(t1_id) REFERENCES t1(c1) ON DELETE CASCADE
 );
+INSERT INTO t3(t1_id, description) VALUES 
+    (10, 'linked_record'), 
+    (20, 'another_record');
 
-INSERT INTO json_simulation (json_data) VALUES
-    ('{"name": "Department A", "employees": [{"name": "Alice", "role": "Engineer"}]}');
+-- 测试多表查询
+SELECT t1.c1, t3.description 
+FROM t1 
+JOIN t3 ON t1.c1 = t3.t1_id 
+WHERE t1.c2 = 'valid';
 
-SELECT json_data FROM json_simulation;
+-- 删除触发器
+DROP TRIGGER trg_replace_t1;
 
-
-SELECT 
-    emp_name,
-    (SELECT COUNT(*) FROM projects WHERE dept_id = e.dept_id) AS project_count
-FROM employees e
-WHERE salary > (SELECT AVG(salary) FROM employees);
-
-
-EXPLAIN QUERY PLAN
-SELECT * 
-FROM employees
-WHERE dept_id = 1 AND salary > 60000;
-
-
-SELECT emp_name, salary
-FROM employees
-ORDER BY salary DESC
-LIMIT 2 OFFSET 1;
-
-
-DELETE FROM projects WHERE proj_name = 'Bonus Adjustment';
+-- 删除表
+DROP TABLE t2;
+DROP TABLE t3;
