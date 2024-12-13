@@ -4,3 +4,6 @@
 [submodule "AdaptSQLess"]
 	path = AdaptSQLess
 	url = https://github.com/zrclzrcl/AdaptSQLess.git
+[submodule "BuzzBee"]
+	path = BuzzBee
+	url = https://github.com/zrclzrcl/BuzzBee.git
