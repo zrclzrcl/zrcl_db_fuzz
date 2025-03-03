@@ -1,0 +1,17 @@
+BEGIN;
+      PRAGMA cache_size = 10;
+      INSERT INTO t3 VALUES( randstr(100, 100), randstr(100, 100) );
+      UPDATE t3 SET a = b;
+    COMMIT;
+
+pragma writable_schema = true;
+        UPDATE sqlite_master 
+          SET rootpage = $pending_byte_page
+          WHERE type = 'table' AND name = 't3';
+
+CREATE TABLE abc(a PRIMARY KEY, b, c);
+
+CREATE TABLE t1(x, y);
+    INSERT INTO t1 VALUES(1, 2);
+
+SELECT * FROM t1;

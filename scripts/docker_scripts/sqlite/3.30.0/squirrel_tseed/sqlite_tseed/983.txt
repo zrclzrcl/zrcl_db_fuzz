@@ -1,0 +1,13 @@
+select rootpage from sqlite_master where name = 't1'
+
+select rootpage from sqlite_master where name = 't1'
+
+select rootpage from sqlite_master where name = 't2'
+
+select rootpage from sqlite_master where name = 't2'
+
+select rootpage from sqlite_master where name = 't3'
+
+select rootpage from sqlite_master where name = 't4'
+
+select rootpage from sqlite_master where name = 't4'

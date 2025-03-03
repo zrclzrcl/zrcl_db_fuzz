@@ -1,0 +1,53 @@
+CREATE VIRTUAL TABLE t1 USING fts4(words, tokenize porter);
+
+SELECT docid FROM t1 WHERE words MATCH $q ORDER BY docid
+
+SELECT docid FROM t1 EXCEPT SELECT docid FROM t1_docsize
+
+SELECT docid FROM t1_docsize EXCEPT SELECT docid FROM t1
+
+SELECT docid, mit(matchinfo(t1, 'pcxnal')) FROM t1 WHERE t1 MATCH 'melchizedek';
+
+SELECT docid, mit(matchinfo(t1, 'pcxnal')) FROM t1
+     WHERE t1 MATCH 'spake hebrew'
+     ORDER BY docid;
+
+SELECT docid, mit(matchinfo(t1, 'pcxnal')) FROM t1
+     WHERE t1 MATCH 'laban overtook jacob'
+     ORDER BY docid;
+
+DELETE FROM t1 WHERE docid!=1050026;
+    SELECT hex(size) FROM t1_docsize;
+    SELECT hex(value) FROM t1_stat;
+
+SELECT docid FROM t1 EXCEPT SELECT docid FROM t1_docsize
+
+SELECT docid FROM t1_docsize EXCEPT SELECT docid FROM t1
+
+SELECT docid, mit(matchinfo(t1, 'pcxnal')) FROM t1
+       WHERE t1 MATCH 'joseph died in egypt'
+       ORDER BY docid;
+
+DROP TABLE t1;
+    CREATE VIRTUAL TABLE t1 USING fts3(words, tokenize porter);
+
+SELECT docid FROM t1 WHERE words MATCH $::q ORDER BY docid
+
+PRAGMA page_size=65536;
+    CREATE VIRTUAL TABLE t1 USING fts4(words, tokenize porter);
+
+SELECT docid FROM t1 WHERE words MATCH $::q ORDER BY docid
+
+DROP TABLE t1;
+    CREATE VIRTUAL TABLE t1 USING fts4(words, tokenize porter);
+
+SELECT docid FROM t1 WHERE words MATCH $::q ORDER BY docid
+
+CREATE VIRTUAL TABLE t1 USING fts4(a, b, c, d, e,f,g,h,i,j,k,l,m,n,o,p,q,r);
+  INSERT INTO t1 VALUES('X Y', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+                        'a','b','c','d','e','f','g','h');
+  UPDATE t1_docsize SET size=x'88' WHERE docid=1;
+
+DROP TABLE t1;
+  CREATE VIRTUAL TABLE t1 USING fts4(a,b,c,d);
+  INSERT INTO t1 VALUES('one two','three four','five six','seven eight');

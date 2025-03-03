@@ -1,0 +1,2 @@
+PRAGMA main.integrity_check;
+    PRAGMA aux.integrity_check;

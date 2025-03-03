@@ -1,0 +1,190 @@
+CREATE TABLE x1(a, b, c);
+
+INSERT INTO x1 VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3), (4, 4, 4);
+
+SELECT * FROM x1;
+
+DELETE FROM x1
+
+INSERT INTO x1 VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3) UNION ALL SELECT 4, 4, 4;
+  SELECT * FROM x1;
+
+DELETE FROM x1;
+  INSERT INTO x1 
+  VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5) 
+  UNION ALL SELECT 6, 6, 6;
+  SELECT * FROM x1;
+
+DELETE FROM x1;
+  INSERT INTO x1 
+  VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3), (4, 4, 4)
+  UNION ALL SELECT 6, 6, 6;
+  SELECT * FROM x1;
+
+DELETE FROM x1;
+  INSERT INTO x1 VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3) UNION ALL SELECT 6, 6, 6;
+  SELECT * FROM x1;
+
+DELETE FROM x1;
+  INSERT INTO x1 
+  VALUES(1, 1, 1), (2, 2, 2), (3, 3, 3), 
+        (4, 4, $a), (5, 5, $b), (6, 6, $c)
+
+SELECT * FROM x1;
+
+CREATE TABLE x1(a, b, c);
+
+INSERT INTO x1 VALUES
+      (1, 1, 1), 
+      (2, 2, 2), 
+      (3, 3, 3), 
+      (4, 4, 4), 
+      (5, 5, 5), 
+      (6, 6, 6), 
+      (7, 7, 7), 
+      (8, 8, 8), 
+      (9, 9, 9), 
+      (10, 10, 10)
+
+INSERT INTO x1 VALUES
+      (1, 1, 1), 
+      (2, 2, 2), 
+      (3, 3, 3), 
+      (4, 4, 4), 
+      (5, 5, 5), 
+      (6, 6, 6), 
+      (7, 7, 7), 
+      (8, 8, 8), 
+      (9, 9, 9), 
+      (10, 10, 10)
+      UNION ALL 
+      SELECT 5, 12, 12
+      ORDER BY 1
+
+CREATE TABLE y1(x, y);
+
+DELETE FROM y1;
+  INSERT INTO y1 VALUES(1, 2), (3, 4), (row_number() OVER (), 5);
+
+SELECT * FROM y1;
+
+DELETE FROM y1;
+  INSERT INTO y1 VALUES(1, 2), (3, 4), (row_number() OVER (), 6)
+    , (row_number() OVER (), 7)
+
+SELECT * FROM y1;
+
+CREATE TABLE x1(a PRIMARY KEY, b) WITHOUT ROWID;
+
+DELETE FROM x1;
+    INSERT INTO x1 VALUES
+        (1, 1),
+        (2, (SELECT * FROM  (VALUES('a'), ('b'), ('c'), ('d')) ))
+
+SELECT * FROM x1
+
+DELETE FROM x1;
+    INSERT INTO x1 VALUES
+        (1, 1),
+        (2, 2),
+        (3, 3),
+        (4, 4),
+        (5, (SELECT * FROM  (VALUES('a'), ('b'), ('c'), ('d')) ))
+
+SELECT * FROM x1
+
+DELETE FROM x1;
+    INSERT INTO x1 VALUES
+        (1, (SELECT * FROM  (VALUES('a'), ('b'), ('c'), ('d'), ('e')) ))
+
+SELECT * FROM x1
+
+CREATE VIEW v1 AS VALUES(1, 2, 3), (4, 5, 6), (7, 8, 9);
+
+SELECT * FROM v1
+
+CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES(1), (2);
+
+SELECT ( VALUES( x ), ( x ) ) FROM t1;
+
+CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES('x'), ('y');
+
+SELECT * FROM t1, (VALUES(1), (2))
+
+CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES('d'), (NULL), (123)
+
+CREATE TABLE a2(a, b, c DEFAULT 'xyz');
+
+INSERT INTO a2(a) VALUES(3),(4);
+
+CREATE VIRTUAL TABLE ft USING fts3(x);
+
+INSERT INTO ft VALUES('one'), ('two');
+
+CREATE TABLE t1(a, b);
+
+INSERT INTO t1 SELECT 1, 2 UNION ALL VALUES(3, 4), (5, 6);
+
+SELECT * FROM t1
+
+CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES('xyz');
+
+  SELECT (
+      VALUES( (max(substr('abc', 1, 1), x)) ),
+      (123),
+      (456)
+      )
+  FROM t1;
+
+PRAGMA encoding = utf16;
+  CREATE TABLE t1(a, b);
+
+INSERT INTO t1 VALUES
+    (17, 'craft'),
+    (16, 'urtlek' IN(1,2,3));
+
+CREATE TABLE t1(a,b);
+
+CREATE TABLE t2(x,y);
+
+CREATE TABLE t1(a,b);
+
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1 AS SELECT * FROM (VALUES(1,2), (3,4 IN (1,2,3)));
+
+SELECT * FROM t1
+
+SELECT * FROM t1;
+
+SELECT * FROM t1;
+
+CREATE TABLE t1(a INT, b INT);
+  INSERT INTO t1 VALUES(11,22);
+  SELECT * FROM t1 LEFT JOIN (VALUES(33,44),(55,66)) AS t2 ON a=b;
+
+SELECT * FROM (VALUES(33,44),(55,66)) AS t2 RIGHT JOIN t1 ON a=b;
+
+SELECT *, '|' FROM t1 FULL JOIN (VALUES(33,44),(55,66)) AS t2 ON a=b
+  ORDER BY +column1
+
+SELECT *, '|' FROM (VALUES(33,44),(55,66)) AS t2 FULL JOIN t1 ON a=b
+  ORDER BY +column1
+
+DROP TABLE IF EXISTS t1;
+  DROP TABLE IF EXISTS t2;
+  DROP TABLE IF EXISTS t3;
+  CREATE TABLE t1(a,b);              INSERT INTO t1 VALUES(1,2);
+  CREATE TABLE t2(column1,column2);  INSERT INTO t2 VALUES(11,22),(33,44);
+  CREATE TABLE t3(d,e);              INSERT INTO t3 VALUES(3,4);
+
+SELECT *
+    FROM t1 CROSS JOIN (VALUES(11,22),(33,44)) FULL JOIN t3 ON a=d
+   ORDER BY +d, +column1;
+
+SELECT *
+    FROM t1 CROSS JOIN (VALUES(11,22),(33,44)) FULL JOIN t3 ON a=d
+   WHERE column1 IS NULL;

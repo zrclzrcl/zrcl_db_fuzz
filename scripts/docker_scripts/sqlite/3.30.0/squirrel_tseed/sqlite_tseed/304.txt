@@ -1,0 +1,32 @@
+CREATE VIRTUAL TABLE t1 USING fts3(c);
+  INSERT INTO t1 (c) VALUES('this is a test');
+  INSERT INTO t1 (c) VALUES('that was a test');
+  INSERT INTO t1 (c) VALUES('this is fun');
+  DELETE FROM t1 WHERE c = 'that was a test';
+
+VACUUM
+
+CREATE VIRTUAL TABLE t2 USING fts3(c)
+
+BEGIN
+
+INSERT INTO t2 (c) VALUES ($text)
+
+COMMIT;
+      BEGIN;
+
+COMMIT
+
+VACUUM
+
+CREATE VIRTUAL TABLE t3 USING fts3(c);
+  INSERT INTO t3 (c) VALUES('this is a test');
+  INSERT INTO t3 (c) VALUES('that was a test');
+  INSERT INTO t3 (c) VALUES('this is fun');
+  DELETE FROM t3 WHERE c = 'that was a test';
+
+CREATE VIRTUAL TABLE t4 USING fts3(c);
+  INSERT INTO t4 (c) VALUES('this is a test');
+  INSERT INTO t4 (c) VALUES('that was a test');
+  INSERT INTO t4 (c) VALUES('this is fun');
+  DELETE FROM t4 WHERE c = 'that was a test';

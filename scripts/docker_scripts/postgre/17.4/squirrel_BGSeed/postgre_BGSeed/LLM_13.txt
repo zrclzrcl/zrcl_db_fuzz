@@ -1,0 +1,71 @@
+-- 创建一个测试数据库
+CREATE DATABASE test_db;
+
+\c test_db;
+
+-- 创建多个相关的表，并插入一些示例数据
+CREATE TABLE employees (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    age integer CHECK (age >= 0),
+    department_id integer REFERENCES departments(id)
+);
+
+CREATE TABLE departments (
+    id serial PRIMARY KEY,
+    name text UNIQUE,
+    manager_id integer REFERENCES employees(id)
+);
+
+CREATE TABLE projects (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    start_date timestamp DEFAULT CURRENT_TIMESTAMP,
+    end_date timestamp
+);
+
+-- 插入一些示例数据，包括边界情况的数据
+INSERT INTO departments (name, manager_id) VALUES ('Engineering', 1);
+INSERT INTO employees (name, age, department_id) VALUES ('John Doe', 30, 1), ('Jane Smith', NULL, 2);
+INSERT INTO projects (name, start_date, end_date) VALUES ('Project Alpha', '2024-01-01 00:00:00', '2024-06-30 23:59:59'), ('Project Beta', CURRENT_TIMESTAMP, NULL);
+
+-- 复杂查询，包括各种边界情况和边缘条件
+SELECT e.name AS employee_name, d.name AS department_name, p.name AS project_name 
+FROM employees e 
+JOIN departments d ON e.department_id = d.id 
+LEFT JOIN projects p ON p.id = (SELECT id FROM projects ORDER BY random() LIMIT 1)
+WHERE e.age > 25 AND (d.manager_id IS NOT NULL OR p.start_date < CURRENT_TIMESTAMP)
+ORDER BY e.age DESC, d.name ASC;
+
+-- 使用窗口函数和分组
+SELECT name, age, RANK() OVER (ORDER BY salary DESC) AS salary_rank,
+       ROW_NUMBER() OVER (PARTITION BY department_id ORDER BY age ASC) AS dept_row_num
+FROM employees 
+JOIN (
+    SELECT employee_id, SUM(amount) AS salary 
+    FROM salaries 
+    GROUP BY employee_id
+) s ON employees.id = s.employee_id;
+
+-- 测试事务控制和锁机制
+BEGIN;
+    INSERT INTO departments (name, manager_id) VALUES ('QA', 3);
+    UPDATE employees SET department_id = 2 WHERE name = 'Jane Smith';
+COMMIT;
+
+-- 包含一些可能触发漏洞或边界条件的复杂查询
+SELECT e.*, d.name AS dept_name 
+FROM employees e 
+JOIN departments d ON e.department_id = d.id 
+WHERE e.age IN (NULL, 0, 150) OR d.manager_id IS NULL 
+ORDER BY e.age DESC NULLS FIRST;
+
+-- 使用复杂的聚合和窗口函数
+SELECT 
+    department_id,
+    COUNT(*) AS total_employees,
+    AVG(age) AS avg_age,
+    RANK() OVER (ORDER BY COUNT(*) DESC) AS dept_rank
+FROM employees 
+GROUP BY department_id 
+HAVING COUNT(*) > 0;

@@ -1,0 +1,75 @@
+-- 创建一个测试数据库
+CREATE DATABASE test_fuzz;
+
+-- 连接到新创建的数据库
+\c test_fuzz;
+
+-- 创建用户并赋予权限
+CREATE USER fuzz_user WITH PASSWORD 'fuzz123';
+GRANT ALL PRIVILEGES ON DATABASE test_fuzz TO fuzz_user;
+
+-- 创建表结构，包含多种数据类型和约束
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    email TEXT UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    score DECIMAL(5,2),
+    description TEXT
+);
+
+-- 创建索引以测试查询性能和优化器行为
+CREATE INDEX idx_name ON test_table (name);
+CREATE INDEX idx_age_score ON test_table (age, score DESC);
+
+-- 创建视图，用于测试复杂查询和数据展示
+CREATE VIEW test_view AS
+SELECT id, name, age, email, created_at, updated_at, is_active, score
+FROM test_table
+WHERE is_active = TRUE;
+
+-- 插入测试数据
+INSERT INTO test_table (name, age, email, updated_at)
+VALUES ('Alice', 30, 'alice@example.com', CURRENT_TIMESTAMP),
+       ('Bob', 25, 'bob@example.com', CURRENT_TIMESTAMP - INTERVAL '1 day'),
+       ('Charlie', 40, 'charlie@example.com', NULL);
+
+-- 创建触发器和函数，用于测试数据库响应
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.age < 0 THEN
+        NEW.age = 0;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER age_trigger BEFORE INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_function();
+
+-- 测试事务控制
+BEGIN;
+INSERT INTO test_table (name, age) VALUES ('Test Transaction', 50);
+SAVEPOINT sp1;
+UPDATE test_table SET age = -1 WHERE name = 'Test Transaction';
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 测试复杂查询，包含JOIN、子查询和窗口函数
+SELECT t1.name, t2.description,
+       (SELECT COUNT(*) FROM test_table WHERE is_active = TRUE) AS active_count,
+       RANK() OVER (ORDER BY score DESC)
+FROM test_table t1
+LEFT JOIN test_table t2 ON t1.id = t2.id;
+
+-- 清理测试环境
+DROP TABLE IF EXISTS test_table;
+DROP VIEW IF EXISTS test_view;
+DROP INDEX IF EXISTS idx_name, idx_age_score;
+REVOKE ALL PRIVILEGES ON DATABASE test_fuzz FROM fuzz_user;
+DROP USER IF EXISTS fuzz_user;
+\c template1;
+DROP DATABASE IF EXISTS test_fuzz;

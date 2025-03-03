@@ -1,0 +1,95 @@
+-- 创建一个内存中的示例数据库连接
+sqlite3 :memory:
+
+-- 创建多个不同类型的表以覆盖不同的数据类型和约束条件
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT CHECK (email LIKE '%@%.%'),
+    age INTEGER DEFAULT 18,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    amount REAL NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'shipped', 'delivered')),
+    UNIQUE (user_id, order_id)
+);
+
+-- 创建索引以测试查询优化
+CREATE INDEX idx_user_email ON users(email);
+CREATE INDEX idx_order_status ON orders(status);
+CREATE INDEX idx_order_amount ON orders(amount DESC);
+CREATE UNIQUE INDEX idx_unique_order ON orders(user_id, order_id);
+
+-- 插入示例数据以覆盖不同的边界条件和特殊值
+INSERT INTO users (username, email, age, is_active) VALUES 
+('admin', 'admin@example.com', 30, TRUE),
+('user1', 'user1@example.com', NULL, FALSE),
+('', '', 0, TRUE);
+
+-- 创建视图以测试复杂的查询逻辑
+CREATE VIEW active_users AS
+SELECT username, email, age FROM users WHERE is_active = TRUE;
+
+-- 创建触发器以测试数据变化时的行为
+CREATE TRIGGER after_user_update AFTER UPDATE ON users 
+FOR EACH ROW WHEN old.is_active != new.is_active
+BEGIN
+    INSERT INTO user_activity (username, action, timestamp)
+    VALUES (new.username, 'status_updated', CURRENT_TIMESTAMP);
+END;
+
+-- 授权语句以覆盖不同的权限场景
+GRANT SELECT ON users TO public;
+REVOKE INSERT ON orders FROM anon_user;
+
+-- 测试事务处理能力
+BEGIN TRANSACTION;
+INSERT INTO users (username, email) VALUES ('test1', 'test1@example.com');
+SAVEPOINT sp1;
+INSERT INTO users (username, email) VALUES ('test2', 'test2@example.com');
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 复杂查询以覆盖不同的 SQL 功能
+SELECT 
+    u.username,
+    o.order_id,
+    o.amount,
+    CASE WHEN o.status = 'pending' THEN '未完成' ELSE '已完成' END AS order_status,
+    COUNT(*) OVER (PARTITION BY u.id) as total_orders
+FROM users u
+JOIN orders o ON u.id = o.user_id
+WHERE o.amount > 100
+GROUP BY u.username, o.order_id
+HAVING COUNT(*) > 1
+ORDER BY u.age DESC;
+
+-- 测试边界条件和特殊值
+SELECT 
+    NULL AS null_value,
+    '' AS empty_string,
+    0 AS zero,
+    -2147483648 AS int_min,
+    2147483647 AS int_max,
+    CAST('2023-01-01' AS DATE) AS date_value,
+    X'53746F72696E67' AS blob_value,
+    TRUE AS boolean_true,
+    FALSE AS boolean_false;
+
+-- 测试不同的数据类型和计算字段
+SELECT 
+    1 + 2 AS addition,
+    3 - 2 AS subtraction,
+    4 * 5 AS multiplication,
+    10 / 3 AS division,
+    2 % 3 AS modulo,
+    2 ^ 3 AS exponentiation,
+    'Hello' || ' World' AS string_concatenation,
+    LENGTH('test') AS string_length,
+    LOWER('TEST') AS lower_case,
+    UPPER('test') AS upper_case;

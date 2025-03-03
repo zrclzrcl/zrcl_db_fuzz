@@ -1,0 +1,180 @@
+SELECT * FROM t1
+
+SELECT * FROM t2
+
+SELECT * FROM t1
+
+SELECT * FROM t1
+
+SELECT a FROM t3
+
+SELECT * FROM t1
+
+SELECT * FROM t1
+
+SELECT * FROM t1
+
+SELECT * FROM t1
+
+SELECT * FROM t1 WHERE b IS NULL
+
+SELECT concat('a', b, 'z') FROM t1 WHERE b is NULL
+
+SELECT * FROM t1 WHERE b IS NULL
+
+SELECT concat('a', b, 'z') FROM t1 WHERE b is NULL
+
+SELECT r1($nm1)
+
+CREATE TABLE t4(x)
+
+INSERT INTO t4 VALUES(1)
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES(2)
+
+INSERT INTO t4 VALUES(3)
+
+INSERT INTO t4 VALUES(4)
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES(2)
+
+INSERT INTO t4 VALUES(3)
+
+INSERT INTO t4 VALUES(4)
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES(5)
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES(6)
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES(7)
+
+SELECT * FROM t4
+
+DELETE FROM t4;
+      INSERT INTO t4 VALUES('one');
+
+INSERT INTO t4 VALUES('two')
+
+INSERT INTO t4 VALUES('three')
+
+SELECT * FROM t4
+
+BEGIN ; COMMIT
+
+INSERT INTO t4 VALUES('two');
+
+INSERT INTO t4 VALUES('three')
+
+INSERT INTO t4 VALUES('four')
+
+SELECT * FROM t4
+
+INSERT INTO t4 VALUES('A');
+
+INSERT INTO t4 VALUES('B')
+
+INSERT INTO t4 VALUES('C')
+
+SELECT * FROM t4
+
+BEGIN ; COMMIT
+
+INSERT INTO t4 VALUES('five')
+
+BEGIN ; COMMIT
+
+INSERT INTO t4 VALUES('five')
+
+BEGIN ; COMMIT
+
+INSERT INTO t4 VALUES(6)
+
+CREATE TABLE t5(x BLOB)
+
+INSERT INTO t5 VALUES($x)
+
+SELECT typeof(x) FROM t5
+
+DELETE FROM t5;
+      INSERT INTO t5 VALUES($x);
+      SELECT typeof(x) FROM t5;
+
+DELETE FROM t5;
+      INSERT INTO t5 VALUES(@x);
+      SELECT typeof(x) FROM t5;
+
+DELETE FROM t5;
+      INSERT INTO t5 VALUES(@y);
+      SELECT hex(x), typeof(x) FROM t5
+
+CREATE TABLE t1(a); INSERT INTO t1 VALUES(1),(2),(3);
+
+SELECT * FROM t1
+
+SELECT $abc, typeof($abc), $def, typeof($def), $ghi, typeof($ghi)
+
+SELECT quote(@def), typeof(@def)
+
+SELECT $abc, typeof($abc), $def, typeof($def), $ghi, typeof($ghi)
+
+SELECT $abc, @def, $ghi(123), :mno
+
+SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+
+SELECT closedb(),func1() UNION ALL SELECT 20,30 UNION ALL SELECT 30,40
+
+SELECT 1 2 3;
+
+CREATE TABLE t6(x);
+  INSERT INTO t6 VALUES(1);
+
+CREATE TABLE t1(a,b);
+  INSERT INTO t1 VALUES(1,2),(2,NULL),(3,'xyz');
+
+SELECT quote( add_i(2, 3) );
+  SELECT quote( add_r(2, 3) ); 
+  SELECT quote( add_t(2, 3) ); 
+  SELECT quote( add_b(2, 3) ); 
+  SELECT quote( add_a(2, 3) );
+
+SELECT quote( add_i(2.2, 3.3) );
+  SELECT quote( add_r(2.2, 3.3) ); 
+  SELECT quote( add_t(2.2, 3.3) ); 
+  SELECT quote( add_b(2.2, 3.3) ); 
+  SELECT quote( add_a(2.2, 3.3) );
+
+SELECT quote( ret_i(2.5) );
+  SELECT quote( ret_r(2.5) ); 
+  SELECT quote( ret_t(2.5) ); 
+  SELECT quote( ret_b(2.5) ); 
+  SELECT quote( ret_a(2.5) );
+
+SELECT quote( ret_i('2.5') );
+  SELECT quote( ret_r('2.5') ); 
+  SELECT quote( ret_t('2.5') ); 
+  SELECT quote( ret_b('2.5') ); 
+  SELECT quote( ret_a('2.5') );
+
+SELECT quote( ret_i('abc') );
+  SELECT quote( ret_r('abc') ); 
+  SELECT quote( ret_t('abc') ); 
+  SELECT quote( ret_b('abc') ); 
+  SELECT quote( ret_a('abc') );
+
+SELECT quote( ret_i(X'616263') );
+  SELECT quote( ret_r(X'616263') ); 
+  SELECT quote( ret_t(X'616263') ); 
+  SELECT quote( ret_b(X'616263') ); 
+  SELECT quote( ret_a(X'616263') );
+
+SELECT typeof($mno);

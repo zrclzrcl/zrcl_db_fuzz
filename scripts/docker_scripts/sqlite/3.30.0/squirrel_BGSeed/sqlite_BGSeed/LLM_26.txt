@@ -1,0 +1,48 @@
+CREATE DATABASE test_db;
+USE test_db;
+
+-- 创建表
+CREATE TABLE table1 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(50) NOT NULL,
+    age INTEGER CHECK(age >= 0),
+    email TEXT UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入数据
+INSERT INTO table1 (name, age, email) VALUES ('Alice', 30, 'alice@example.com');
+INSERT INTO table1 (name, age, email) VALUES ('Bob', 25, 'bob@example.com');
+INSERT INTO table1 (name, age, email) VALUES ('Charlie', 40, 'charlie@example.com');
+
+-- 测试边界条件
+INSERT INTO table1 (id, name, age, email) VALUES (999999999, 'BoundaryTest', -1, '');
+INSERT INTO table1 (name, age, email) VALUES ('MaxInt', 2147483647, 'maxint@example.com');
+
+-- 授权测试
+GRANT SELECT, INSERT ON table1 TO user;
+REVOKE UPDATE ON table1 FROM user;
+
+-- 事务控制
+BEGIN TRANSACTION;
+    UPDATE table1 SET age = 35 WHERE name = 'Alice';
+    SAVEPOINT sp1;
+    DELETE FROM table1 WHERE name = 'Bob';
+    ROLLBACK TO sp1;
+COMMIT;
+
+-- 复杂查询测试
+WITH temp AS (
+    SELECT id, name, age 
+    FROM table1 
+    WHERE age > 30
+)
+SELECT * FROM temp 
+WHERE name LIKE '%li%'
+UNION 
+SELECT * FROM table1 
+WHERE email IS NULL;
+
+-- 索引和约束测试
+CREATE UNIQUE INDEX idx_email ON table1(email);
+ALTER TABLE table1 ADD CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES table2(id) ON UPDATE CASCADE;

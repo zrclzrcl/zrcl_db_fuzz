@@ -1,0 +1,5 @@
+PRAGMA compile_options
+
+PRAGMA threads=5
+
+PRAGMA threads

@@ -1,0 +1,42 @@
+PRAGMA main.journal_mode = WAL
+
+DELETE FROM abc;
+    PRAGMA wal_checkpoint;
+
+ROLLBACK TO spoint
+
+COMMIT
+
+ROLLBACK
+
+SELECT count(*), sum(length(zzz)) FROM z
+
+SELECT count(*) FROM abc
+
+SELECT * FROM sqlite_master
+
+PRAGMA locking_mode = exclusive
+
+SELECT count(*) FROM abc
+
+PRAGMA locking_mode = exclusive
+
+PRAGMA journal_mode = delete
+
+PRAGMA locking_mode = exclusive;
+    PRAGMA journal_mode = WAL;
+    INSERT INTO abc VALUES(randomblob(1500));
+
+SELECT count(*) FROM abc
+
+PRAGMA wal_checkpoint = full;
+    INSERT INTO abc VALUES(randomblob(1500));
+
+SELECT count(*) FROM abc
+
+PRAGMA locking_mode = normal;
+    BEGIN;
+      INSERT INTO abc VALUES(randomblob(1500));
+    COMMIT;
+
+SELECT count(*) FROM abc

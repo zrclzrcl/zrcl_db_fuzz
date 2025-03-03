@@ -1,0 +1,10 @@
+CREATE TABLE t1(a, j);
+  INSERT INTO t1 VALUES(1, '{x:"one"}');
+  INSERT INTO t1 VALUES(2, '{x:"two"}');
+  INSERT INTO t1 VALUES(3, '{x:"three"}');
+
+  CREATE INDEX i1 ON t1( json_extract(j, '$.x') );
+  CREATE INDEX i2 ON t1( a, json_extract(j, '$.x') );
+
+CREATE TABLE t1(a, b, j);
+  CREATE INDEX i1 ON t1( a, json_extract(j, '$.x') );

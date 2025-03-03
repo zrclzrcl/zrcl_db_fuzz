@@ -1,0 +1,86 @@
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    email TEXT UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME,
+    is_active BOOLEAN DEFAULT 1,
+    user_role TEXT CHECK(user_role IN ('admin', 'user', 'guest'))
+);
+
+INSERT INTO users (username, password_hash, email, last_login, user_role)
+VALUES 
+('admin', 'pbkdf2:sha256:1000$random_salt$', 'admin@example.com', CURRENT_TIMESTAMP, 'admin'),
+('test_user_1', 'hashed_password_1', 'user1@example.com', '2023-01-01 12:00:00', 'user'),
+('guest_123', 'guest_password', 'guest@example.org', NULL, 'guest');
+
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_name TEXT NOT NULL,
+    price REAL DEFAULT 0.0,
+    quantity INTEGER DEFAULT 0 CHECK(quantity >= 0),
+    description TEXT,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO products (product_name, price, quantity, description, created_by)
+VALUES 
+('Laptop', 999.99, 10, 'High performance laptop with 8GB RAM', 2),
+('Smartphone', 699.99, 50, 'Latest model smartphone with 4G support', 3),
+('Tablet', 299.99, 20, 'Lightweight tablet for daily use', NULL);
+
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    quantity INTEGER DEFAULT 1 CHECK(quantity > 0),
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount REAL NOT NULL,
+    status TEXT CHECK(status IN ('pending', 'shipped', 'delivered', 'cancelled'))
+);
+
+INSERT INTO orders (user_id, product_id, quantity, total_amount, status)
+VALUES 
+(2, 1, 1, 999.99, 'shipped'),
+(3, 2, 2, 1399.98, 'pending'),
+(3, 3, 5, 1499.95, 'delivered');
+
+CREATE TABLE inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    location TEXT NOT NULL,
+    stock_level INTEGER DEFAULT 0 CHECK(stock_level >= 0),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO inventory (product_id, location, stock_level)
+VALUES 
+(1, 'Warehouse A', 5),
+(2, 'Warehouse B', 45),
+(3, 'Warehouse C', 15);
+
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_products_price ON products(price);
+CREATE INDEX idx_orders_status ON orders(status);
+
+BEGIN TRANSACTION;
+    UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = 2;
+    UPDATE products SET quantity = quantity - 1 WHERE id = 1;
+    INSERT INTO inventory (product_id, location, stock_level) VALUES (4, 'Warehouse D', 0);
+COMMIT;
+
+CREATE VIEW user_orders AS
+SELECT u.username, p.product_name, o.quantity, o.status 
+FROM orders o
+JOIN users u ON o.user_id = u.id
+JOIN products p ON o.product_id = p.id;
+
+CREATE TRIGGER update_inventory AFTER INSERT ON orders
+FOR EACH ROW
+BEGIN
+    UPDATE inventory SET stock_level = stock_level - NEW.quantity WHERE product_id = NEW.product_id;
+END;
+
+SELECT * FROM user_orders WHERE status = 'pending';

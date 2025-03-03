@@ -1,0 +1,51 @@
+-- 创建一个带有各种数据类型的表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    value FLOAT DEFAULT 0.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    UNIQUE (name),
+    FOREIGN KEY (status) REFERENCES status_table(id)
+);
+
+-- 插入一些测试数据
+INSERT INTO test_table(name, value, created_at, status) VALUES
+('test1', 123.45, '2023-10-01 12:34:56', TRUE),
+('test2', NULL, '2023-10-02 09:10:11', FALSE),
+('test3', 789.01, CURRENT_TIMESTAMP, TRUE);
+
+-- 更新操作
+UPDATE test_table SET value = value * 2 WHERE name LIKE 'test%';
+
+-- 删除操作
+DELETE FROM test_table WHERE status = FALSE;
+
+-- 复杂查询
+SELECT 
+    id,
+    name,
+    value,
+    created_at,
+    status,
+    CASE 
+        WHEN value > 500 THEN 'High'
+        ELSE 'Low'
+    END AS value_category
+FROM test_table
+WHERE created_at >= DATE('now', '-7 days')
+ORDER BY value DESC
+LIMIT 10;
+
+-- 创建索引和删除索引
+CREATE INDEX idx_name ON test_table(name);
+DROP INDEX idx_name;
+
+-- 事务控制
+BEGIN TRANSACTION;
+INSERT INTO test_table(name, value) VALUES ('test4', 456.00);
+COMMIT;
+
+-- 异常处理测试
+INSERT OR IGNORE INTO test_table(name, value) VALUES ('test1', 123.45); -- 测试重复插入
+SELECT * FROM non_existent_table; -- 测试不存在的表

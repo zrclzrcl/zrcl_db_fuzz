@@ -1,0 +1,77 @@
+-- 创建一个包含各种数据类型的表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT 'unknown',
+    value REAL CHECK (value >= 0),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+-- 创建另一个用于外键约束的表
+CREATE TABLE related_table (
+    id INTEGER PRIMARY KEY,
+    test_id INTEGER REFERENCES test_table(id) ON DELETE CASCADE,
+    data TEXT
+);
+
+-- 插入一些测试数据
+INSERT INTO test_table (id, name, value, created_at, is_active)
+VALUES 
+(1, 'test1', 100.5, '2023-01-01 12:00:00', TRUE),
+(2, 'test2', -50.7, '2023-01-02 13:00:00', FALSE),
+(3, 'test3', 0, CURRENT_TIMESTAMP, NULL);
+
+-- 插入外键约束数据
+INSERT INTO related_table (id, test_id, data)
+VALUES 
+(1, 1, 'related_data_1'),
+(2, 2, 'related_data_2');
+
+-- 创建索引以测试性能和覆盖率
+CREATE INDEX idx_name ON test_table(name);
+CREATE UNIQUE INDEX idx_unique_value ON test_table(value);
+
+-- 测试边界条件和异常情况
+SELECT 
+    id,
+    name || ' ' || 'test' AS concatenated_name,
+    value * 100 AS scaled_value,
+    strftime('%Y-%m-%d', created_at) AS formatted_date,
+    CASE WHEN is_active THEN 'active' ELSE 'inactive' END AS status
+FROM test_table
+WHERE value > 50 AND name LIKE 't%';
+
+-- 测试复杂查询和聚合函数
+SELECT 
+    COUNT(*) AS total_records,
+    AVG(value) AS average_value,
+    MAX(id) AS max_id,
+    MIN(created_at) AS earliest_date,
+    SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count
+FROM test_table;
+
+-- 测试JOIN和子查询
+SELECT 
+    t.id, 
+    t.name, 
+    r.data
+FROM test_table t
+LEFT JOIN related_table r ON t.id = r.test_id
+WHERE t.value > (SELECT AVG(value) FROM test_table);
+
+-- 测试边界条件和异常情况
+SELECT 
+    id,
+    name,
+    value / 0 AS division_by_zero,
+    CASE WHEN value < 0 THEN 'negative' ELSE 'positive' END AS sign
+FROM test_table;
+
+-- 插入重复主键测试唯一性约束
+INSERT INTO test_table (id, name) VALUES (1, 'duplicate_test');
+
+-- 测试大数据量和大文本
+INSERT INTO test_table (name, value)
+VALUES 
+('test_large_text', 999.9),
+('very_long_string_' || substr(repeat('a', 500), 1, 500), 42.0);

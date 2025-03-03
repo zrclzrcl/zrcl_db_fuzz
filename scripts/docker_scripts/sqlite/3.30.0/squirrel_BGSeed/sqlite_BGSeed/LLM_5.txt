@@ -1,0 +1,101 @@
+-- 创建数据库（如果尚未存在）
+CREATE DATABASE IF NOT EXISTS testdb;
+
+-- 使用数据库
+USE testdb;
+
+-- 创建一个包含各种数据类型的表
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT,
+    age INTEGER CHECK(age >= 0),
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN
+);
+
+-- 创建另一个表用于测试外键和关联查询
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    product_name TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    price DECIMAL(10, 2),
+    order_date TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- 插入一些测试数据
+INSERT INTO users (username, email, age, status)
+VALUES 
+    ('user1', 'user1@example.com', 30, TRUE),
+    ('user2', 'user2@example.com', NULL, FALSE),
+    ('admin', 'admin@admin.com', 25, TRUE);
+
+-- 插入更多边缘条件数据
+INSERT INTO users (username, email, age)
+VALUES 
+    ('edge_user1', '', 0), -- 测试空字符串和最小年龄值
+    ('edge_user2', NULL, 999); -- 测试NULL值和大年龄值
+
+-- 插入订单记录
+INSERT INTO orders (user_id, product_name, quantity, price)
+VALUES 
+    (1, 'Product A', 2, 100.5),
+    (1, 'Product B', NULL, 50.75), -- 测试NULL数量
+    (3, 'Premium Product', 1, 999.99);
+
+-- 更新操作测试
+UPDATE users SET age = 35 WHERE username = 'user1';
+
+-- 删除操作测试
+DELETE FROM orders WHERE order_id = 2;
+
+-- 测试复杂的查询语句
+SELECT 
+    u.username,
+    o.product_name,
+    o.quantity,
+    o.price,
+    o.order_date
+FROM users u
+JOIN orders o ON u.id = o.user_id
+WHERE u.age > 25 AND o.price > 50.00
+ORDER BY o.order_date DESC;
+
+-- 测试聚合函数和分组
+SELECT 
+    u.username,
+    COUNT(o.order_id) AS total_orders,
+    MAX(o.price) AS max_price
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+GROUP BY u.username
+HAVING COUNT(o.order_id) > 0;
+
+-- 测试事务处理
+BEGIN TRANSACTION;
+INSERT INTO users (username, email, age)
+VALUES ('temp_user', 'temp@example.com', 20);
+SAVEPOINT sp1;
+DELETE FROM users WHERE username = 'temp_user';
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 创建索引测试
+CREATE INDEX idx_username ON users(username);
+
+-- 复杂的UNION查询
+SELECT id, username, age FROM users WHERE age > 25
+UNION 
+SELECT id, username, age FROM users WHERE status = TRUE;
+
+-- 测试外键约束
+INSERT INTO orders (user_id, product_name)
+VALUES (999, 'Nonexistent User Product'); -- 应该触发外键约束错误
+
+-- 清理测试数据（如果需要）
+-- DELETE FROM orders;
+-- DELETE FROM users;
+-- DROP TABLE orders;
+-- DROP TABLE users;

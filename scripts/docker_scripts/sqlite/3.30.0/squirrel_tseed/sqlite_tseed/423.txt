@@ -1,0 +1,9 @@
+PRAGMA cache_size = 5;
+    PRAGMA page_size = 1024;
+    PRAGMA auto_vacuum = 2;
+
+PRAGMA integrity_check
+
+PRAGMA freelist_count
+
+SELECT count(*) FROM t1

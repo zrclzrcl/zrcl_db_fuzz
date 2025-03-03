@@ -1,0 +1,54 @@
+SELECT pageno FROM stat WHERE name = 't1' ORDER BY pageno
+
+SELECT a FROM t1
+
+DELETE FROM t1;
+    DELETE FROM t2;
+
+PRAGMA freelist_count
+
+PRAGMA freelist_count
+
+DELETE FROM t1 WHERE a%2;
+    INSERT INTO t1 SELECT b, a FROM t2 WHERE a%2;
+    UPDATE t1 SET b=randomblob(600) WHERE (a%2)==0;
+
+CREATE TABLE t4(x);
+  INSERT INTO t4(x) VALUES('x');
+  INSERT INTO t4(x) VALUES('y');
+  INSERT INTO t4(x) VALUES('z');
+  DELETE FROM t4 WHERE x = 'y';
+  SELECT rowid, x FROM t4;
+
+CREATE TABLE t5(x, y INTEGER PRIMARY KEY);
+  INSERT INTO t5(x) VALUES('x');
+  INSERT INTO t5(x) VALUES('y');
+  INSERT INTO t5(x) VALUES('z');
+  DELETE FROM t5 WHERE x = 'y';
+  SELECT rowid, x FROM t5;
+
+DROP TABLE t5;
+  CREATE TABLE t5(x);
+  INSERT INTO t5(x) VALUES('x');
+  INSERT INTO t5(x) VALUES('y');
+  INSERT INTO t5(x) VALUES('z');
+  DELETE FROM t5 WHERE x = 'y';
+  SELECT rowid, x FROM t5;
+
+DROP TABLE t5;
+  CREATE TABLE t5(x,y,z);
+  INSERT INTO t5(x) VALUES('x');
+  INSERT INTO t5(x) VALUES('y');
+  INSERT INTO t5(x) VALUES('z');
+  UPDATE t5 SET y=x, z=random();
+  DELETE FROM t5 WHERE x = 'y';
+  CREATE INDEX t5x ON t5(x);
+  CREATE UNIQUE INDEX t5y ON t5(y);
+  CREATE INDEX t5zxy ON t5(z,x,y);
+  SELECT rowid, x FROM t5;
+
+BEGIN
+
+COMMIT
+
+COMMIT

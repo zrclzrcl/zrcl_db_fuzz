@@ -1,0 +1,29 @@
+SELECT * FROM t1 WHERE a=1
+
+SELECT * FROM t1 WHERE a=3
+
+SELECT * FROM t1 WHERE a=5
+
+SELECT a,length(b) FROM t1 WHERE a=2
+
+SELECT a,length(b) FROM t1 WHERE a=4
+
+PRAGMA page_size = 1024;
+        PRAGMA auto_vacuum = off;
+
+SELECT b FROM t1 WHERE a=1
+
+SELECT length(b) FROM t1 WHERE a=2
+
+CREATE TABLE t2(x); INSERT INTO t2 VALUES('tab-t2');
+
+PRAGMA multiplex_enabled;
+  PRAGMA multiplex_filecount;
+  PRAGMA multiplex_chunksize;
+
+PRAGMA multiplex_enabled;
+  PRAGMA multiplex_filecount;
+  PRAGMA multiplex_chunksize;
+
+PRAGMA multiplex_filecount;
+  PRAGMA multiplex_chunksize;

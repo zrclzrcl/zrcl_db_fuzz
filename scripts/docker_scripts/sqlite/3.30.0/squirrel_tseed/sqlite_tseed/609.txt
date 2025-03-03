@@ -1,0 +1,37 @@
+SELECT * FROM abc
+
+SELECT rowid FROM t1 LIMIT 2
+
+SELECT * FROM t1 LIMIT 1
+
+INSERT INTO t1 VALUES(101, 'Latham')
+
+SELECT * FROM t0 LIMIT 1
+
+INSERT INTO t0 SELECT a+1, b FROM t0
+
+INSERT INTO t0 SELECT a+2, b FROM t0
+
+ATTACH 'test.db2' AS aux;
+    CREATE TABLE t1(a, b);
+    CREATE TABLE aux.t2(a, b);
+
+PRAGMA temp_store = file
+
+PRAGMA temp.integrity_check
+
+SELECT * FROM t1 WHERE oid = $n
+
+SELECT * FROM t1
+
+CREATE TABLE t1(x);
+    INSERT INTO t1 VALUES(1);
+    SELECT * FROM t1;
+
+SELECT * FROM t1;
+
+PRAGMA cache_size = 1;
+    BEGIN;
+      UPDATE t1 SET x = randomblob(200);
+
+UPDATE t1 SET x = randomblob(200)

@@ -1,0 +1,5 @@
+SELECT random() AS y FROM t1 ORDER BY 1;
+
+SELECT random() AS y FROM t1 ORDER BY random();
+
+SELECT random() AS y FROM t1 ORDER BY +random();

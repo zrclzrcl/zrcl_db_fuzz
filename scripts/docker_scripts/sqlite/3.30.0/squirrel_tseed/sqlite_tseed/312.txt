@@ -1,0 +1,3 @@
+SELECT * FROM ft WHERE ft MATCH 'b:one'
+
+SELECT quote(root) FROM ft_segdir;

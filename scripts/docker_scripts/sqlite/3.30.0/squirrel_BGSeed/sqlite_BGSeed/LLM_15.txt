@@ -1,0 +1,95 @@
+-- 创建一个包含多种数据类型的表，用于测试各种数据类型和边界条件
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text_field TEXT,
+    number_field NUMERIC(10, 2),
+    boolean_field BOOLEAN DEFAULT FALSE,
+    date_field DATE,
+    time_field TIME,
+    datetime_field DATETIME,
+    blob_field BLOB,
+    unique_field UNIQUE
+);
+
+-- 创建一个包含外键约束的表，用于测试外键和引用完整性
+CREATE TABLE related_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id INTEGER REFERENCES test_table(id) ON DELETE CASCADE ON UPDATE NO ACTION,
+    name TEXT NOT NULL
+);
+
+-- 插入测试数据，包括各种边界条件和极端值
+INSERT INTO test_table (text_field, number_field, boolean_field, date_field, time_field, datetime_field, blob_field, unique_field)
+VALUES 
+('test_string', 123.45, TRUE, '2023-01-01', '12:34:56', '2023-01-01 12:34:56', X'010203', 'unique_value_1'),
+('test_string_2', -987.65, FALSE, '1970-01-01', '00:00:01', '1970-01-01 00:00:01', X'4A5B6C', 'unique_value_2'),
+('', NULL, NULL, NULL, NULL, NULL, NULL, 'unique_value_3');
+
+-- 插入外键相关的数据
+INSERT INTO related_table (test_id, name)
+VALUES 
+(1, 'related_record_1'),
+(2, 'related_record_2');
+
+-- 创建索引，用于测试查询性能和优化
+CREATE INDEX idx_text_field ON test_table(text_field);
+CREATE INDEX idx_number_field ON test_table(number_field);
+
+-- 测试复杂查询，包括JOIN、子查询和UNION操作
+SELECT t.text_field, r.name 
+FROM test_table t 
+LEFT JOIN related_table r ON t.id = r.test_id 
+WHERE t.number_field > 100;
+
+SELECT (SELECT text_field FROM test_table WHERE id=1) AS subquery_result 
+UNION 
+SELECT 'another_value';
+
+-- 测试边界条件，包括大文本、大数据量和特殊字符
+INSERT INTO test_table (text_field, number_field)
+VALUES ('a' || (SELECT group_concat('a', '') FROM generate_series(1, 1000)), 9223372036854775807);
+
+-- 测试错误和异常情况
+CREATE TABLE error_test (
+    id INTEGER PRIMARY KEY,
+    invalid_column INVALID_TYPE -- 故意创建一个无效的列类型，用于测试错误处理
+);
+DROP TABLE error_test;
+
+-- 测试事务控制
+BEGIN TRANSACTION;
+INSERT INTO test_table (text_field) VALUES ('transaction_test');
+SAVEPOINT sp1;
+UPDATE test_table SET text_field = 'updated_transaction_test' WHERE id=4;
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 清理测试数据
+DELETE FROM related_table;
+DELETE FROM test_table;
+VACUUM;
+
+-- 测试性能和资源管理
+SELECT COUNT(*) FROM test_table, related_table; -- 大表连接操作
+EXPLAIN QUERY PLAN SELECT * FROM test_table WHERE text_field LIKE 'test%'; -- 测试查询计划
+
+-- 测试函数和运算符
+SELECT 
+    LENGTH(text_field), 
+    UPPER(text_field),
+    LOWER(text_field),
+    SUBSTR(text_field, 1, 3),
+    REPLACE(text_field, 'a', 'b'),
+    STRFTIME('%Y-%m-%d', datetime_field),
+    ABS(number_field),
+    ROUND(number_field, 0)
+FROM test_table;
+
+-- 测试复杂表达式和聚合函数
+SELECT 
+    COUNT(*), 
+    SUM(number_field), 
+    AVG(number_field), 
+    MIN(number_field), 
+    MAX(number_field)
+FROM test_table;

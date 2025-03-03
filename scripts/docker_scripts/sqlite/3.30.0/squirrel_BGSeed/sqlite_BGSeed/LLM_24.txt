@@ -1,0 +1,39 @@
+-- 创建一个包含多种数据类型的表用于测试
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    score REAL CHECK (score >= 0 AND score <= 100)
+);
+
+-- 插入一些测试数据，包含各种边界值和特殊字符
+INSERT INTO test_table VALUES (
+    1, 'Test Name', '2024-01-01 00:00:00', 1, 100.0
+);
+INSERT INTO test_table VALUES (
+    2, '', '2024-01-01 23:59:59', 0, 0.0
+);
+INSERT INTO test_table VALUES (
+    3, 'Special$Characters', '2024-01-02 12:34:56', 1, 50.5
+);
+
+-- 创建索引以支持复杂查询
+CREATE INDEX idx_name_score ON test_table(name, score);
+
+-- 复杂查询，包含子查询、连接和聚合操作
+SELECT 
+    t1.id,
+    t1.name,
+    (SELECT COUNT(*) FROM test_table WHERE is_active = 1) AS active_count,
+    SUM(t2.score) OVER (ORDER BY t2.created_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_score
+FROM 
+    test_table t1
+JOIN 
+    test_table t2 ON t1.id = t2.id
+WHERE 
+    t1.name LIKE '%Test%' OR t2.score > 50.0
+GROUP BY 
+    t1.id, t1.name
+HAVING 
+    COUNT(*) > 1;

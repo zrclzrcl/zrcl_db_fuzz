@@ -12,23 +12,47 @@ from pathlib import Path
 import multiprocessing
 from openai import OpenAI
 from colorama import Fore, Style,init
+import argparse
+import heapq
+import threading
+import csv
+import time
+from collections import defaultdict
 
-# class test_stdscr:
-#     def __init__(self):
-#         self.a = ""
-#
-#     def addstr(self,x=None,y=None,z=None,w=None):
-#         pass
-#     def refresh(self,x=None,y=None,z=None,w=None):
-#         pass
-#     def clear(self,x=None,y=None,z=None,w=None):
-#         pass
-#
-#     def nodelay(self, param,x=None,y=None,z=None,w=None):
-#         pass
-#
-#     def getmaxyx(self,x=None,y=None,z=None,w=None):
-#         return 0, 0
+class DynamicIDAllocator:
+    def __init__(self):
+        self._recycled_ids = []       # 可回收ID堆
+        self._max_id = 0              # 当前最大ID
+        self._active_ids = set()      # 已分配ID集合
+        self._lock = threading.Lock() # 线程锁
+        self._total_allocated = 0 
+        heapq.heapify(self._recycled_ids)
+
+    def active_count(self) -> int:
+        with self._lock:
+            return len(self._active_ids)
+        
+    def acquire_id(self) -> int:
+        with self._lock:
+            self._total_allocated += 1
+            if self._recycled_ids:
+                new_id = heapq.heappop(self._recycled_ids)
+            else:
+                new_id = self._max_id
+                self._max_id += 1
+            self._active_ids.add(new_id)
+            return new_id
+    
+    def release_id(self, id_num: int) -> None:
+        with self._lock:
+            if id_num in self._active_ids:
+                self._active_ids.remove(id_num)
+                heapq.heappush(self._recycled_ids, id_num)
+
+allocator = DynamicIDAllocator()
+passively_llm_generate = 0
+saved_count = 0
+variable_lock = threading.Lock()
 
 
 #获得单次showmap的cmd指令行
@@ -45,23 +69,23 @@ def get_showmap_content(showmap_out_path, testcase_id):
             result_dict[int(key)] = int(value)  # 假设值是数字，转换为整数
     return result_dict
 
-def get_prompt(samples):
-    prompt = """I want to perform fuzzy testing of SQLITE and need to generate test cases for it. Please forget all database application background and generate complex and out-of-the-way sqlite database test cases from the point of view of a fuzzy testing expert, generate test cases that are complex and try to trigger database crashes as much as possible. Each test case consists of several SQLs. Below I will give some sample test cases that can trigger more program coverage:"""
+def get_prompt(samples,target_db,one_time_generete):
+    prompt = f"""I want to perform fuzzy testing of {target_db} and need to generate test case for it. Please forget all database application background and generate complex and out-of-the-way {target_db} database test case from the point of view of a fuzzy testing expert, generate test cases that are complex and try to trigger database crashes as much as possible. Each test case consists of several SQLs. Below I will give a sample test case that can trigger more program coverage:"""
 
     for sample in samples:
         prompt += f"\n```sql\n{sample}\n```"
 
-    prompt += """\nYou have to refer to the test cases I gave,add more contents base on the samples. And generate more test cases “randomly”. It is not only important to refer to the test cases I have given, but it is also important to think about the process of generating them according to the procedure I have given below.
-    First of all, you need to make sure that the SQL syntax is correct when generating the test cases.
-    Second, whether the generated test cases have sufficient statement diversity, there are no more statement types in the test cases, such as: MATCH, SELECT, INSERT, UPDATE, DELETE, CREATE DATABASE, CREATE TABLE, CREATE TEMPORARY TABLE, CREATE INDEX, CREATE VIEW, CREATE SEQUENCE, CREATE FUNCTION, CREATE PROCEDURE, CREATE TRIGGER, GRANT, REVOKE, BEGIN, COMMIT, ROLLBACK, MERGE, TRUNCATE. ANALYZE, EXPLAIN, SHOW, DESCRIBE and so on.
-    Third, it is very important that the generated test cases test the functionality that the target database has and other databases do not. If not, it needs to be added to the test cases.
+    prompt += f"""\nYou can refer to the test case I gave, add more contents base on the samples. And generate more test case randomly. It is not only important to refer to the test case I have given, but it is also important to think about the process of generating them according to the procedure I have given below.
+    First of all, you need to make sure that the SQL syntax is correct when generating the test case.
+    Second, whether the generated test case have sufficient statement diversity, there are no more statement types in the test case, such as: MATCH, SELECT, INSERT, UPDATE, DELETE, CREATE DATABASE, CREATE TABLE, CREATE TEMPORARY TABLE, CREATE INDEX, CREATE VIEW, CREATE SEQUENCE, CREATE FUNCTION, CREATE PROCEDURE, CREATE TRIGGER, GRANT, REVOKE, BEGIN, COMMIT, ROLLBACK, MERGE, TRUNCATE, ANALYZE, EXPLAIN, SHOW, DESCRIBE and so on.
+    Third, it is very important that the generated test case test the functionality that the target database has and other databases do not. If not, it needs to be added to the test case.
     Fourth, is the generated SQL complex enough, at least it's more complex than the structure of the sample I gave you.
     Fifth, check whether the SQL is semantically correct, and whether there is corresponding data in it to be manipulated, and if not, then create the insert data statement first to ensure that the statement can be successfully executed.
     Note that the generated statements must be very complex. Include multiple nesting with the use of functions, you can also create functions for testing!
-    Based on the above description, you can start generating 1 test cases and start them with
+    Based on the above description, you can start generating {one_time_generete} test cases and start them with
     ```sql
     ```
-    Separate the generated test cases. Now start generating sql testcase! Each testcase need have multiple sql. And just return the testcase!"""
+    warp the generated test case. Now start generating sql testcase! Each testcase need have multiple sql. And just return the testcase!"""
     return prompt
 
 
@@ -148,16 +172,16 @@ class ZrclSelectionQueue:
 
     def append_in(self, testcase, point):
         #无论怎么添加，都需要进行排序
-        if (self.lengthNow+1) == self.queueMaxLength:#当前队列已满 进行剔除处理
+        if self.lengthNow == self.queueMaxLength:#当前队列已满 进行剔除处理
 
             #1.对比当前的与最小的哪个最小，若不如最小的则剔除
-            if point <= self.pointQueue[self.lengthNow]:
+            if point < self.pointQueue[self.lengthNow-1]:
                 pass
 
             # 2.若比最小的大，则替换最小的，并排序
             else :
-                self.pointQueue[self.lengthNow] = point
-                self.selectTestcases[self.lengthNow] = testcase
+                self.pointQueue[self.lengthNow-1] = point
+                self.selectTestcases[self.lengthNow-1] = testcase
                 self.order_selectTestcases()
 
         #若队列没满 则直接加入到最后，并排序
@@ -210,6 +234,7 @@ def to_showmap(out_queue, testcase_path, showmap_path, showmap_out_path):
     showmap_stop_num = 0
     first_time = True
     # ===================定义区===================
+    print("showmap子线程启动")
     while True:
         try:    #尝试读取文件
             full_testcase_path, testcase_content = get_file_by_id(testcase_path,'id:',current_id)
@@ -220,6 +245,7 @@ def to_showmap(out_queue, testcase_path, showmap_path, showmap_out_path):
                 first_time = False
             continue
         print(Fore.YELLOW+f"showmap子线程: 正在处理 {current_id} 文件"+Style.RESET_ALL)
+        first_time = True
         #得到cmd路径
         cmd = get_showmap_cmd(showmap_path, showmap_out_path, current_id, full_testcase_path)
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -234,33 +260,38 @@ def to_showmap(out_queue, testcase_path, showmap_path, showmap_out_path):
 #work_id 即发送的第几个prompt,用于作为文件后缀
 #samples应为一个数组，里面是测试用例样本的内容
 #model 定义使用的LLM模型
-def llm_worker(work_id, samples, api_key, base_url, model, stdscr, save_queue,max_worker):
-    i = (work_id-1)%max_worker
-    prompt = get_prompt(samples)    #根据给定样本获取提示词
-    start_time = time.time()
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    llm_response =  client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "user", "content": prompt},
-        ]
-    )
-    #将测试用例保存进入目标
-    end_time = time.time()
-    stdscr.addstr(15+i,10,f"llm worker_{work_id}: use_time {end_time-start_time:.2f}s")
-    stdscr.refresh()
-    save_queue.put(llm_response.choices[0].message.content)
+def llm_worker(samples, api_key, base_url, model, save_queue,target_db,one_time_generete):
+    thread_id = allocator.acquire_id()
+    try:
+        print(Fore.LIGHTBLUE_EX + f"主动式大语言模型工作线程_{thread_id}:已启动，目前共有{allocator.active_count()}个主动线程正在运行。历史总计{allocator.total_allocated()}个" + Style.RESET_ALL)
+        prompt = get_prompt(samples,target_db,one_time_generete)    #根据给定样本获取提示词
+        start_time = time.time()
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        llm_response =  client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": prompt},
+            ]
+        )
+        #将测试用例保存进入目标
+        end_time = time.time()
+        print(Fore.LIGHTBLUE_EX + f"主动式大语言模型工作线程_{thread_id}:生成结束，目前共有{allocator.active_count()}个主动线程正在运行。历史总计{allocator.total_allocated()}个 用时：{end_time-start_time:.2f}" + Style.RESET_ALL)
+        save_queue.put(llm_response.choices[0].message.content)
+    finally:
+        allocator.release_id(thread_id)
 
-def passively_llm_worker(selection_queue, api_key, base_url, model, stdscr, save_queue):
-    i = 0
+def passively_llm_worker(selection_queue, api_key, base_url, model, save_queue,target_db,one_time_generete):
+    global passively_llm_generate
     while True:
+        start_time = time.time
         testcases,samples = selection_queue.pop_one_combo()
         output = ''
         for testcases in testcases:
             output += ' ' + str(testcases.id)
-        stdscr.addstr(12,10,f"llm passively worker_{i}: use_test_case {output}")
-        stdscr.refresh()
-        prompt = get_prompt(samples)    #根据给定样本获取提示词
+        if output == '':
+            output = '无'
+        print(Fore.LIGHTGREEN_EX + f"被动式大语言模型工作线程: 使用了{output}" + Style.RESET_ALL)
+        prompt = get_prompt(samples,target_db,one_time_generete)    #根据给定样本获取提示词
         client = OpenAI(api_key=api_key, base_url=base_url)
         llm_response =  client.chat.completions.create(
             model=model,
@@ -269,29 +300,32 @@ def passively_llm_worker(selection_queue, api_key, base_url, model, stdscr, save
             ]
         )
         #将测试用例保存进入保存队列
+        end_time = time.time()
+        print(Fore.LIGHTGREEN_EX + f"被动式大语言模型工作线程: 使用了{output}，生成了第{passively_llm_generate+1}个测试用例。用时：{end_time-start_time:.2f}" + Style.RESET_ALL)
         save_queue.put(llm_response.choices[0].message.content)
-        i += 1
+        with variable_lock:
+            passively_llm_generate += 1
 
 def save_testcase(testcase_queue,save_path):
     #首先从队列获取测试用例
     #拿到测试用例并分割
     #保存分割后的测试用例进入目标文件夹
-    testcase_now = 1  # 定义当前生成的测试用例id
+    global saved_count
+    print("保存子线程已启动")
     while True:
         need_slice_testcase = testcase_queue.get()
 
         # 拿到测试用例并分割
         sql_cases = re.findall(r'```sql(.*?)```', need_slice_testcase, re.DOTALL)
-        for testcase in sql_cases:
-            with open(f'{save_path}LLM_G_{testcase_now}.txt', 'w') as file:
-                file.write(testcase.strip())
-                print(Fore.CYAN + f"保存子线程:当前第 {testcase_now} 个LLM测试用例已生成" + Style.RESET_ALL)
-                testcase_now += 1
+        with variable_lock:
+            for testcase in sql_cases:
+                with open(f'{save_path}LLM_G_{saved_count+1}.txt', 'w') as file:
+                    file.write(f'-- LLM Generated {saved_count+1}\n'+testcase.strip())
+                    print(Fore.CYAN + f"保存子线程:当前第 {saved_count+1} 个LLM测试用例已生成" + Style.RESET_ALL)
+                    saved_count += 1
 
-
-def main(stdscr):
+def main():
     #===================定义区===================
-    #stdscr = test_stdscr()
     api_key = 'sk-zk24aba6ad3b8fd4a0e90ad7e28e19c0e046712507bcc931'    #LLM-apikey
     model = 'gpt-3.5-turbo' #LLM-模型
     base_url = 'https://api.zhizengzeng.com/v1/'    #LLM所在的基本地址
@@ -299,12 +333,13 @@ def main(stdscr):
     showmap_path = "/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-showmap"   #定义showmap工具的路径
     showmap_out_path = '/home/showmap/' #定义showmap的输出路径
     generate_testcase_save_path = '/home/LLM_testcase/'
+    log_save_path = '/home/CCLLM_log/'
     showmap_queue_max_size = 10 #定义showmap子线程队列长度
     llm_queue_max_size = 50 #llm队列的最长个数
     save_queue = multiprocessing.Queue()  #保存需要保存为文件的测试用例分割前的队列
     testcase_queue = multiprocessing.Queue(maxsize=showmap_queue_max_size)    #定义showmap线程通信队列
     process_count = 0   #处理数记录
-    llm_count = 1   #记录发送LLM请求的数量，以及保存生成的测试用例的后缀
+    llm_count = 0   #记录发送LLM请求的数量，以及保存生成的测试用例的后缀
     process_now = None  #保存当前记录的测试用例用于处理
     showmap = ZrclMap() #实例化一个showmap
     select_testcase = ZrclSelectionQueue()  #实例化一个选择保存队列
@@ -315,21 +350,48 @@ def main(stdscr):
     main_all_stop_time = 0  #主进程的阻塞总时间
     main_all_stop_num = 0   #主进程的阻塞总次数
     refresh_countdown = time.time() #记录上次发送时间
+    last_save_time = time.time() #记录上次保存日志时间
+
+    global passively_llm_generate
+    global saved_count
+
 
     main_log_path = '/home/main_log/log.txt'
     main_count = 0
     #===================定义区===================
+    parser = argparse.ArgumentParser(description="LLM生成器")
+    parser.add_argument('-t', help='发送阈值设置', required=True)
+    parser.add_argument('-db', help='目标数据库设置，可以是sqlite,mysql,postgresql,duckdb,mariadb', required=True)
+    parser.add_argument('-o', help='单次请求生成的测试用例数',default=1)
+    # 解析命令行参数
+    args = parser.parse_args()
+    
+    threshold = args.t  #阈值设置
+    target_db = args.db #目标数据库
+    number_of_generate_testcase = args.o    #单次请求生成的测试用例数
 
     #===================主过程区===================
 
     init()
 
+    
     #初始化，判断各路径是否存在，若不存在则创建文件夹
     if not Path(generate_testcase_save_path).exists():
         Path(generate_testcase_save_path).mkdir(parents=True)
 
     if not Path(showmap_out_path).exists():
         Path(showmap_out_path).mkdir(parents=True)
+
+    if not Path(log_save_path).exists():
+        Path(log_save_path).mkdir(parents=True)
+
+    with open(log_save_path+"ccllm_log.csv", 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['time', 'passively_llm_generate', 'active_llm_generate', 'now_active_llm_worker', 'all_active_llm_worker', 'saved_count','process_count','meets_threshold'])
+
+    with open(log_save_path+"point.csv", 'w', newline='', encoding='utf-8') as point_file:
+        writer = csv.writer(point_file)
+        writer.writerow(['time', 'id', 'point'])
 
     #初始化，输出区域
 
@@ -342,7 +404,7 @@ def main(stdscr):
     showmap_thread.start()  #showmap子线程启动
 
     pa_llm_thread = threading.Thread(target=passively_llm_worker, args=(
-        select_testcase, api_key, base_url, model, stdscr, save_queue), daemon=True)
+        select_testcase, api_key, base_url, model, save_queue,target_db,number_of_generate_testcase), daemon=True)
     pa_llm_thread.start()  #被动llm生成线程启动
 
 
@@ -359,19 +421,31 @@ def main(stdscr):
         #3.更新覆盖率向量
         showmap.recalculate_each_edgeCovPoint()
 
+        with open(log_save_path+"point.csv", 'a', newline='', encoding='utf-8') as point_file:
+            writer = csv.writer(point_file)
+            writer.writerow([time.time(), process_now.id , now_point])
 
         #当选择了一个队列长度的测试用例后，开始选择前3个测试用例，并发送给子线程
-        if process_count % showmap_queue_max_size == 0:
-            #选择选择队列中前三个值，传递给子线程池进行处理
-            selected_testcases,selected_testcases_strs = select_testcase.pop_one_combo()
-            #子线程池发送请求并等待结果，结果保存进入
-            llm_thread = threading.Thread(target=llm_worker, args=(llm_count, selected_testcases_strs, api_key, base_url, model,stdscr,save_queue,max_llm_workers), daemon=True)
-            llm_thread.start()  # llm子线程启动
+        #逻辑修改为，当得分超过阈值后，直接启动子线程
+        if now_point >= threshold:
+            #这里就应该直接获取到指定id的测试用例
+            now_content_list = [process_now.content]
+            llm_thread = threading.Thread(target=llm_worker, args=(now_content_list, api_key, base_url, model ,save_queue,target_db,number_of_generate_testcase), daemon=True)
+            llm_thread.start()
             llm_count += 1
+        
+        
         process_count += 1
+        if (process_count % 5 == 0 ) or (time.time() - last_save_time > 10):
+            with variable_lock:
+                with open(log_save_path+"ccllm_log.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([time.time(), passively_llm_generate, allocator.total_allocated()*number_of_generate_testcase, allocator.active_count(), allocator.total_allocated(), saved_count, process_count, llm_count])
+                    last_save_time = time.time()
+        
 
     #===================主过程区===================
 
 if __name__ == '__main__':
-    curses.wrapper(main)
+    main()
     #main(1) #测试用

@@ -1,0 +1,86 @@
+-- 创建测试表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    email TEXT UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入数据，包括边界值和特殊字符
+INSERT INTO test_table (name, age, email) VALUES 
+('Alice', 25, 'alice@example.com'),
+('', 0, 'test@example.com'), -- 测试空字符串
+('Bob ', 30, 'bob@example.com'); -- 测试包含空格的名字
+
+-- 创建另一个表用于JOIN测试
+CREATE TABLE test_table2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id INTEGER REFERENCES test_table(id),
+    value TEXT
+);
+
+-- 插入关联数据
+INSERT INTO test_table2 (test_id, value) VALUES 
+(1, 'value1'),
+(2, 'value2');
+
+-- 复杂查询，包含子查询、UNION和窗口函数
+SELECT t.name,
+       t.age,
+       COUNT(t2.id) AS total_values,
+       RANK() OVER (ORDER BY age DESC) AS age_rank,
+       CASE 
+           WHEN age > 30 THEN 'Old'
+           ELSE 'Young'
+       END AS age_group
+FROM test_table t
+LEFT JOIN test_table2 t2 ON t.id = t2.test_id
+WHERE t.name LIKE '%e%' -- 测试LIKE操作符
+   AND (t.age < 100 OR t.email IS NOT NULL)
+GROUP BY t.id
+HAVING total_values > 0
+ORDER BY age DESC, name ASC
+LIMIT 5 OFFSET 2;
+
+-- 测试事务和回滚
+BEGIN TRANSACTION;
+INSERT INTO test_table (name, age) VALUES ('TransactionTest', 99);
+SAVEPOINT my_savepoint;
+DELETE FROM test_table WHERE name = 'TransactionTest';
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- 测试复杂的UNION操作
+SELECT id, name FROM test_table
+UNION ALL
+SELECT id, value FROM test_table2;
+
+-- 测试子查询和 EXISTS
+SELECT t.name 
+FROM test_table t
+WHERE EXISTS (
+    SELECT 1 
+    FROM test_table2 t2 
+    WHERE t.id = t2.test_id AND t2.value LIKE 'val%'
+);
+
+-- 测试聚合函数和窗口函数
+SELECT 
+    COUNT(*) AS total_count,
+    SUM(age) AS age_sum,
+    AVG(age) AS age_avg,
+    MAX(age) AS max_age,
+    MIN(age) AS min_age,
+    RANK() OVER (ORDER BY age DESC) AS rank
+FROM test_table;
+
+-- 测试索引和性能相关的查询
+CREATE INDEX idx_name ON test_table(name);
+ANALYZE; -- 分析表结构
+
+-- 清理测试数据（可选）
+DELETE FROM test_table;
+DELETE FROM test_table2;
+DROP TABLE test_table2;
+DROP TABLE test_table;

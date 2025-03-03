@@ -1,0 +1,11 @@
+SELECT date($::jd);
+
+SELECT julianday($::date);
+
+SELECT date($::jd2);
+
+SELECT julianday($::date2);
+
+SELECT date($::jd2);
+
+SELECT julianday($::date2);

@@ -1,0 +1,3 @@
+PRAGMA database_list
+
+DROP TRIGGER tr1;

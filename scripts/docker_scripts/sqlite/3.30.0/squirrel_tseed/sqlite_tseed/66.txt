@@ -1,0 +1,54 @@
+PRAGMA page_size=1024;
+    PRAGMA cache_size=10;
+    CREATE TABLE t1(a TEXT);
+    INSERT INTO t1 VALUES ('dog'),('cat');
+    SELECT group_concat(a) as pets FROM (SELECT a FROM t1 ORDER BY a);
+
+SELECT group_concat(a) as pets FROM (SELECT a FROM t1 ORDER BY a DESC);
+
+PRAGMA auto_vacuum = 0;
+    PRAGMA page_size=512;
+    PRAGMA cache_size=0;
+    CREATE TABLE t1(a TEXT);
+    INSERT INTO t1 VALUES ('dog'),('cat'),('pig');
+    SELECT group_concat(a) as pets FROM (SELECT a FROM t1 ORDER BY a);
+
+SELECT group_concat(a) as pets FROM (SELECT a FROM t1 ORDER BY a DESC);
+
+DROP TABLE t1;
+    PRAGMA cache_size=10;
+    CREATE TABLE ri (i INTEGER);
+    BEGIN;
+
+INSERT INTO ri VALUES ($r),($s),($t),($u),($v)
+
+COMMIT;
+    SELECT integrity_check as ic FROM pragma_integrity_check();
+
+SELECT count(*) as ic FROM ri;
+    DELETE FROM ri WHERE (i % 50) <> 25;
+    SELECT integrity_check as ic FROM pragma_integrity_check();
+    VACUUM;
+    SELECT integrity_check as ic FROM pragma_integrity_check();
+    SELECT count(*) as ic FROM ri;
+
+SELECT integrity_check as ic FROM pragma_integrity_check();
+
+BEGIN
+
+INSERT INTO ri VALUES (randomblob(1500))
+
+COMMIT
+
+SELECT integrity_check as ic FROM pragma_integrity_check();
+
+SELECT integrity_check as ic FROM pragma_integrity_check();
+
+DELETE FROM ri WHERE rowid % 8 <> 0;
+    SELECT integrity_check as ic FROM pragma_integrity_check();
+    VACUUM;
+    SELECT integrity_check as ic FROM pragma_integrity_check();
+
+SELECT integrity_check as ic FROM pragma_integrity_check();
+
+SELECT count(*) as n FROM sqlar

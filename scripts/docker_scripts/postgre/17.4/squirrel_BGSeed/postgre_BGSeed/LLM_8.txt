@@ -1,0 +1,88 @@
+-- 创建一个测试数据库
+CREATE DATABASE test_fuzz;
+
+-- 切换到测试数据库
+\c test_fuzz;
+
+-- 创建一个测试用户
+CREATE USER fuzz_tester WITH PASSWORD 'fuzz_password';
+
+-- 授予用户所有权限
+GRANT ALL PRIVILEGES ON DATABASE test_fuzz TO fuzz_tester;
+
+-- 创建一个包含各种数据类型的表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    birth_date DATE,
+    is_active BOOLEAN,
+    description TEXT,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入测试数据，包含边界条件和特殊字符
+INSERT INTO test_table (name, age, birth_date, is_active, description)
+VALUES 
+('Test User 1', 0, '2000-01-01', true, 'This is a test description with special characters: !@#$%^&*()'),
+('', -1, '1970-01-01', false, NULL),
+('Max Int Value', 2147483647, '9999-12-31', true, 'Testing maximum integer value'),
+('Special Case', 100, '2020-02-29', true, E'Test with escaped characters: \\n \\t');
+
+-- 创建索引，包括唯一索引和全文检索
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+CREATE INDEX idx_text_search ON test_table USING GIN (to_tsvector('english', description));
+
+-- 创建视图以测试复杂查询
+CREATE VIEW test_view AS 
+SELECT id, name, age, birth_date, is_active, 
+       EXTRACT(YEAR FROM last_updated) as year_updated,
+       CASE WHEN age > 18 THEN 'Adult' ELSE 'Minor' END as age_group
+FROM test_table;
+
+-- 创建存储过程以测试动态SQL和条件判断
+CREATE OR REPLACE PROCEDURE test_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE NOTICE 'Procedure started at: %', CURRENT_TIMESTAMP;
+    
+    -- 动态 SQL 示例
+    EXECUTE $$CREATE TEMPORARY TABLE temp_table (id INT, name VARCHAR)$$;
+    
+    INSERT INTO temp_table VALUES (1, 'Test');
+    
+    IF EXISTS (SELECT 1 FROM temp_table WHERE id = 1) THEN
+        RAISE NOTICE 'Record exists';
+    END IF;
+    
+    DROP TABLE temp_table;
+END $$;
+
+-- 创建触发器以测试数据变更操作
+CREATE TRIGGER test_trigger 
+BEFORE INSERT ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION test_function();
+
+CREATE OR REPLACE FUNCTION test_function()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.last_updated = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END $$;
+
+-- 测试复杂查询和边界条件
+SELECT 
+    id, name, age, birth_date, is_active,
+    last_updated AT TIME ZONE 'UTC' as updated_utc,
+    AGE(birth_date) as age_duration,
+    (description || ' appended text') as modified_description
+FROM test_table
+WHERE 
+    age > 0 AND 
+    name ~* 'test' AND 
+    birth_date BETWEEN '2000-01-01' AND CURRENT_DATE
+ORDER BY last_updated DESC;

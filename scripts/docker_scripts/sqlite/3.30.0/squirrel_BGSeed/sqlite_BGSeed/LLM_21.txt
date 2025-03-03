@@ -1,0 +1,23 @@
+-- 创建一个测试数据库并包含多种数据类型用于模糊测试
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    value REAL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 0
+);
+
+-- 插入一些测试数据，包括边界值和特殊字符
+INSERT INTO test_table (name, value) VALUES ('test_name', 123.45);
+INSERT INTO test_table (name, value) VALUES ('', -9223372036854775808); -- SQLite的整数边界
+INSERT INTO test_table (name, value) VALUES ('special_chars', 0.0000001);
+INSERT INTO test_table (name, value) VALUES ('max_float', 1.7976931348623157e+308);
+
+-- 测试各种查询和操作
+SELECT * FROM test_table WHERE id = 1;
+SELECT name, value FROM test_table ORDER BY timestamp DESC LIMIT 5 OFFSET 2;
+SELECT COUNT(*) as total, SUM(value) as sum_value FROM test_table GROUP BY is_active;
+
+-- 测试可能的数据库漏洞或边界条件
+SELECT DISTINCT name FROM test_table UNION ALL SELECT 'test' WHERE 1=0;
+SELECT (CASE WHEN value > 100 THEN 'high' ELSE 'low' END) AS category FROM test_table;

@@ -1,0 +1,25 @@
+SELECT strftime('%s','2003-10-22 12:34:00')
+
+SELECT * FROM t1
+
+SELECT c - a FROM (SELECT julianday('now') AS a,
+                               sleeper(), julianday('now') AS c);
+
+SELECT a==b FROM (SELECT current_timestamp AS a,
+                               sleeper(), current_timestamp AS b);
+
+SELECT datetime('2000-10-29 12:00Z','utc','utc');
+
+SELECT datetime('2000-10-29 12:00:00+05:00');
+
+SELECT datetime('2000-10-29 12:00:00+05:00', 'utc');
+
+SELECT datetime('2000-10-29 12:00:00Z', 'localtime');
+
+SELECT datetime('2000-10-29 12:00:00Z', 'utc', 'localtime');
+
+SELECT datetime('2000-10-29 12:00:00Z', 'utc', 'localtime', 'utc');
+
+SELECT datetime('2000-10-29 12:00:00Z', 'utc','localtime','utc','localtime');
+
+SELECT datetime('2000-10-29 12:00:00Z', 'localtime','localtime');

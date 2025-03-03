@@ -1,0 +1,90 @@
+-- 创建一个测试数据库并切换到该数据库
+CREATE DATABASE test_db;
+\c test_db;
+
+-- 创建各种类型的表以覆盖不同的数据类型和结构
+CREATE TABLE edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER DEFAULT 0,
+    str_col VARCHAR(255),
+    date_col DATE,
+    bool_col BOOLEAN,
+    num_col NUMERIC(10, 2),
+    text_col TEXT,
+    bytea_col BYTEA,
+    uuid_col UUID
+);
+
+-- 插入不同类型的测试数据，包括边缘值和特殊字符
+INSERT INTO edge_cases (str_col, date_col, bool_col, num_col, text_col, bytea_col, uuid_col)
+VALUES 
+('', '1970-01-01', false, 99999.99, REPEAT('text', 1000), 'binary\0data', gen_random_uuid()),
+('测试字符串', CURRENT_DATE, true, -99999.99, NULL, E'\\xdeadbeef', '550e8400-e29b-41d4-a716-446655440000');
+
+-- 测试边界条件和异常情况
+CREATE TABLE boundary_test (
+    id INTEGER CHECK (id >= 0 AND id <= 255),
+    name VARCHAR(1) DEFAULT 'A'
+);
+
+INSERT INTO boundary_test VALUES (0, 'a');
+INSERT INTO boundary_test VALUES (255, 'z');
+
+-- 测试复杂查询和聚合操作
+CREATE TABLE complex_queries (
+    id SERIAL,
+    a INTEGER,
+    b TEXT,
+    c TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO complex_queries (a, b)
+SELECT generate_series(1, 10), REPEAT('test', generate_series(1, 10));
+
+-- 复杂查询示例
+WITH subquery AS (
+    SELECT id, a * 2 AS doubled_a 
+    FROM complex_queries 
+    WHERE a % 2 = 0
+)
+SELECT sq.id, cq.b, NOW() - cq.c AS age 
+FROM subquery sq 
+JOIN complex_queries cq ON sq.id = cq.id 
+WHERE sq.doubled_a > 10 
+ORDER BY age DESC 
+LIMIT 5;
+
+-- 测试事务和锁机制
+BEGIN;
+    INSERT INTO edge_cases (str_col) VALUES ('transaction_test');
+    -- 使用显式锁测试
+    SELECT id FROM edge_cases WHERE str_col = 'transaction_test' FOR UPDATE;
+COMMIT;
+
+-- 创建索引以测试查询性能和优化器行为
+CREATE INDEX idx_edge_cases_str ON edge_cases(str_col);
+
+-- 创建视图和函数以丰富初始种子结构
+CREATE VIEW v_edge_cases AS 
+SELECT id, str_col, bool_col FROM edge_cases WHERE bool_col IS TRUE;
+
+CREATE OR REPLACE FUNCTION fn_test()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO boundary_test VALUES (127, 'm');
+END;
+$$ LANGUAGE plpgsql;
+
+-- 测试异常处理和错误触发
+DO $$
+BEGIN
+    RAISE NOTICE 'Test notice message';
+    -- 引发一个预期的错误以测试错误处理机制
+    PERFORM 1 / 0;
+EXCEPTION 
+    WHEN division_by_zero THEN
+        RAISE INFO 'Caught division_by_zero error';
+END $$;
+
+-- 清理部分数据，为后续测试留下更多可能性
+DELETE FROM edge_cases WHERE str_col = '';

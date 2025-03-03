@@ -1,0 +1,7 @@
+SELECT count(*) FROM t1
+
+SELECT sum(a) FROM t1
+
+SELECT a, b, c FROM abc
+
+SELECT a, b, c FROM abc

@@ -1,0 +1,10 @@
+SELECT execsql('CREATE TABLE t1(x)');
+
+INSERT INTO t1 VALUES('CREATE TABLE t2(y);');
+    SELECT execsql(x) FROM t1;
+
+SELECT name FROM sqlite_master;
+
+SELECT name FROM sqlite_master;
+
+SELECT execsql(x) FROM t1

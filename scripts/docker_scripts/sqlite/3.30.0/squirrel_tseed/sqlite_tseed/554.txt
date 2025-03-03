@@ -1,0 +1,43 @@
+SELECT rowid FROM t1
+
+SELECT rowid, x FROM t1
+
+DELETE FROM t1 WHERE rowid=$rowid
+
+SELECT rowid, x FROM t1
+
+DELETE FROM t1 WHERE rowid=$rowid+1
+
+SELECT rowid, x FROM t1
+
+DELETE FROM t1
+
+SELECT rowid, x FROM t1
+
+UPDATE t1 SET x=x+100 WHERE rowid=$rowid
+
+SELECT rowid, x FROM t1
+
+INSERT INTO t1 VALUES($x+1)
+
+SELECT rowid FROM t1 ORDER BY rowid DESC
+
+SELECT rowid, x FROM t1 ORDER BY rowid DESC
+
+DELETE FROM t1 WHERE rowid=$rowid
+
+SELECT rowid, x FROM t1
+
+DELETE FROM t1 WHERE rowid=$rowid+1
+
+SELECT rowid, x FROM t1 ORDER BY rowid DESC
+
+DELETE FROM t1
+
+SELECT rowid, x FROM t1 ORDER BY rowid DESC
+
+UPDATE t1 SET x=x+100 WHERE rowid=$rowid
+
+SELECT rowid, x FROM t1 ORDER BY rowid DESC
+
+INSERT INTO t1(rowid,x) VALUES($x-1,$x-1)

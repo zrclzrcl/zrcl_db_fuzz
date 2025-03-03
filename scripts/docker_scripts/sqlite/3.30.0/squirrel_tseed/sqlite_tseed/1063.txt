@@ -1,0 +1,14 @@
+PRAGMA integrity_check;
+    SELECT md5sum(a, b) FROM t1;
+
+PRAGMA page_size = 1024 ; PRAGMA journal_mode = WAL
+
+PRAGMA page_size = 1024 ; PRAGMA journal_mode = WAL
+
+PRAGMA page_size = 1024 ; PRAGMA journal_mode = WAL
+
+PRAGMA page_size = 1024 ; PRAGMA journal_mode = WAL
+
+CREATE TABLE t1(a, b);
+      INSERT INTO t1 VALUES('I', 'II');
+      INSERT INTO t1 VALUES('III', 'IV');

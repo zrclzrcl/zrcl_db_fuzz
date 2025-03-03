@@ -1,0 +1,41 @@
+CREATE TABLE IF NOT EXISTS test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    age INTEGER CHECK (age >= 0),
+    score REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN NOT NULL DEFAULT 1,
+    description BLOB
+);
+
+INSERT INTO test_table (name, age, score, description)
+VALUES 
+    ('Alice', 30, 95.5, 'description for Alice'),
+    ('Bob', 25, 87.6, 'description for Bob'),
+    ('Charlie', 35, NULL, NULL),
+    ('David', 40, 100.0, 'description for David');
+
+UPDATE test_table SET age = age + 1 WHERE name LIKE 'A%';
+
+DELETE FROM test_table WHERE status = 0;
+
+SELECT id, name, age, score, created_at, status, description 
+FROM test_table
+WHERE (age > 25 AND status = 1) OR (name LIKE '%a%' AND score >= 85)
+ORDER BY age DESC LIMIT 3 OFFSET 1;
+
+BEGIN;
+    INSERT INTO test_table (name, age, score) VALUES ('Eve', 28, 80.0);
+    UPDATE test_table SET name = 'Eve Updated' WHERE id = last_insert_rowid();
+COMMIT;
+
+SELECT COUNT(*) as total_count,
+       SUM(age) as total_age,
+       AVG(score) as average_score
+FROM test_table
+WHERE created_at >= date('now', '-1 month');
+
+SELECT t1.id, t1.name, t2.description 
+FROM test_table AS t1
+LEFT JOIN (SELECT id, description FROM test_table WHERE status = 1) AS t2
+ON t1.id = t2.id;

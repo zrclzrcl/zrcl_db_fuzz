@@ -1,0 +1,93 @@
+-- 创建测试数据库
+ATTACH DATABASE 'test.db' AS test;
+
+-- 创建表结构
+CREATE TABLE IF NOT EXISTS employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    salary REAL CHECK (salary >= 0),
+    department_id INTEGER REFERENCES departments(id)
+);
+
+CREATE TABLE IF NOT EXISTS departments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE
+);
+
+-- 插入数据
+INSERT INTO departments(name) VALUES ('Engineering'), ('Marketing');
+INSERT INTO employees(name, salary, department_id) 
+VALUES ('Alice', 8000.50, 1),
+       ('Bob', 7500.00, 2),
+       ('Charlie', 9000.75, 1);
+
+-- 更新和删除操作
+UPDATE employees SET salary = 8500.00 WHERE name = 'Alice';
+DELETE FROM departments WHERE name = 'Marketing';
+
+-- 复杂查询
+SELECT e.name AS employee_name, d.name AS department_name, e.salary 
+FROM employees e 
+JOIN departments d ON e.department_id = d.id 
+WHERE e.salary > 7000 
+ORDER BY e.salary DESC;
+
+-- 使用聚合函数和分组
+SELECT d.name, COUNT(e.id) as employee_count, AVG(e.salary) as avg_salary
+FROM departments d
+LEFT JOIN employees e ON d.id = e.department_id
+GROUP BY d.name
+HAVING COUNT(e.id) > 1;
+
+-- 复杂查询结构
+SELECT *
+FROM (
+    SELECT name, salary, 
+           LAG(salary) OVER (ORDER BY salary) as prev_salary
+    FROM employees
+)
+WHERE prev_salary IS NOT NULL;
+
+-- 使用事务控制
+BEGIN TRANSACTION;
+INSERT INTO departments(name) VALUES ('Sales');
+SAVEPOINT my_savepoint;
+INSERT INTO employees(name, salary, department_id) 
+VALUES ('David', 8200.00, (SELECT id FROM departments WHERE name = 'Sales'));
+ROLLBACK TO my_savepoint;
+
+-- 创建索引和视图
+CREATE INDEX idx_employee_salary ON employees(salary);
+CREATE VIEW employee_summary AS 
+SELECT e.name, d.name as department, e.salary 
+FROM employees e 
+JOIN departments d ON e.department_id = d.id;
+
+-- 使用触发器
+CREATE TRIGGER update_department_count AFTER INSERT ON employees
+FOR EACH ROW
+BEGIN
+    UPDATE departments SET name = name || ' (' || (SELECT COUNT(*) FROM employees WHERE department_id = NEW.department_id) || ')'
+    WHERE id = NEW.department_id;
+END;
+
+-- 复杂结构和边界条件测试
+WITH recursive_numbers AS (
+    SELECT 1 as n
+    UNION ALL
+    SELECT n + 1 
+    FROM recursive_numbers 
+    WHERE n < 5
+)
+SELECT * FROM recursive_numbers;
+
+SELECT DISTINCT dept.name, emp.salary
+FROM departments dept
+JOIN employees emp ON dept.id = emp.department_id
+WHERE emp.salary IN (7500.00, 8000.50, 9000.75)
+ORDER BY dept.name DESC, emp.salary ASC
+LIMIT 2 OFFSET 1;
+
+-- 边缘条件测试
+SELECT * FROM employees WHERE id = 0;
+SELECT * FROM departments WHERE name = '';

@@ -1,0 +1,6 @@
+PRAGMA journal_mode = memory;
+  CREATE TABLE t1(a INTEGER PRIMARY KEY, b UNIQUE);
+
+PRAGMA integrity_check;
+    ROLLBACK TO one;
+    RELEASE one;

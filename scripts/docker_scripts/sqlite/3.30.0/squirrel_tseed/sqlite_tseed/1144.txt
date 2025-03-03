@@ -1,0 +1,32 @@
+CREATE TABLE raw(country,date,total,delta, UNIQUE(country,date));
+
+CREATE TABLE t1(x);
+  INSERT INTO t1(x) VALUES(4);
+  CREATE VIEW t2(y) AS
+    WITH c(z) AS (VALUES(4),(5),(6))
+    SELECT c1.z+c2.z*100+t1.x*10000
+      FROM t1,
+           (SELECT z FROM c LIMIT 5) AS c1,
+           (SELECT z FROM c LIMIT 5) AS c2;
+  SELECT y FROM t2 ORDER BY y;
+
+DROP VIEW t2;
+  CREATE VIEW t2(y) AS
+    WITH c(z) AS NOT MATERIALIZED (VALUES(4),(5),(6))
+    SELECT c1.z+c2.z*100+t1.x*10000
+      FROM t1,
+           (SELECT z FROM c LIMIT 5) AS c1,
+           (SELECT z FROM c LIMIT 5) AS c2;
+  SELECT y FROM t2 ORDER BY y;
+
+DROP VIEW t2;
+  CREATE VIEW t2(y) AS
+    WITH c(z) AS MATERIALIZED (VALUES(4),(5),(6))
+    SELECT c1.z+c2.z*100+t1.x*10000
+      FROM t1,
+           (SELECT z FROM c LIMIT 5) AS c1,
+           (SELECT z FROM c LIMIT 5) AS c2;
+  SELECT y FROM t2 ORDER BY y;
+
+CREATE TABLE t2(a INT,b INT,d INT); INSERT INTO t2 VALUES(4,5,6),(7,8,9);
+  CREATE TABLE t3(a INT,b INT,e INT); INSERT INTO t3 VALUES(3,3,3),(8,8,8);

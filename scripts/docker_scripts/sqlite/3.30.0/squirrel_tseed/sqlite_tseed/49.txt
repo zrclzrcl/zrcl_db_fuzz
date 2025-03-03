@@ -1,0 +1,8 @@
+CREATE TABLE t1(a,b);
+    CREATE INDEX x1 ON t1(a);
+
+DETACH t2
+
+PRAGMA encoding = 'utf16';
+    ATTACH 'test.db2' AS aux;
+    SELECT * FROM t2;

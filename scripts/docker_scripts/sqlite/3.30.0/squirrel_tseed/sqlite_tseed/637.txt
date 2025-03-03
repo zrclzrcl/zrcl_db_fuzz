@@ -1,0 +1,9 @@
+CREATE TABLE t2(x); INSERT INTO t2 VALUES('tab-t2');
+
+CREATE TABLE t1(x);
+     INSERT INTO t1 VALUES(randomblob(5000));
+
+CREATE TABLE t1(x);
+     INSERT INTO t1 VALUES(randomblob(5000));
+
+SELECT count(*) FROM sqlite_master

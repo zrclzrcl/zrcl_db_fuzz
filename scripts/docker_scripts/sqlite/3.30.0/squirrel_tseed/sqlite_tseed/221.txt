@@ -1,0 +1,28 @@
+PRAGMA encoding
+
+PRAGMA encoding
+
+PRAGMA encoding=UTF8
+
+PRAGMA encoding
+
+PRAGMA encoding=UTF16le
+
+PRAGMA encoding
+
+PRAGMA encoding=UTF16be
+
+PRAGMA encoding
+
+PRAGMA encoding=UTF16;
+    CREATE TABLE t1(a);
+    PRAGMA encoding=UTF8;
+    CREATE TABLE t2(b);
+
+SELECT name FROM sqlite_master
+
+PRAGMA encoding=UTF8;
+  CREATE TEMP TABLE t1(x);
+  INSERT INTO t1 VALUES('this is a test');
+  PRAGMA encoding=UTF16;
+  SELECT * FROM t1;

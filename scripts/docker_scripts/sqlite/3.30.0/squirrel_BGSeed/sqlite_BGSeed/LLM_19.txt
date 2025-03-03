@@ -1,0 +1,58 @@
+-- 创建一个包含不同数据类型的表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    score REAL CHECK (score >=0 AND score <=100),
+    data BLOB
+);
+
+-- 插入一些测试数据
+INSERT INTO test_table (id, name, created_at, is_active, score, data) 
+VALUES 
+(1, 'Test User', '2023-01-01 00:00:00', 1, 95.5, X'ABCDEF'),
+(2, '', '2024-01-01 00:00:00', 0, 85.0, NULL),
+(3, 'Another User', CURRENT_TIMESTAMP, 1, 75.5, X'123456');
+
+-- 测试基本查询和聚合函数
+SELECT * FROM test_table;
+SELECT name, score FROM test_table WHERE id = 1;
+SELECT COUNT(*) AS total_users FROM test_table;
+SELECT AVG(score) AS average_score FROM test_table;
+
+-- 复杂查询：测试JOIN、UNION、子查询等
+SELECT t1.name, t2.name 
+FROM test_table t1 
+JOIN (SELECT name FROM test_table WHERE id = 2) t2 ON t1.id = t2.id;
+
+SELECT * FROM (
+    SELECT name FROM test_table WHERE score > 90
+    UNION ALL
+    SELECT name FROM test_table WHERE is_active = 0
+);
+
+-- 测试更新和删除操作
+UPDATE test_table SET score = 100 WHERE id = 1;
+DELETE FROM test_table WHERE id = 2;
+
+-- 测试事务控制
+BEGIN TRANSACTION;
+INSERT INTO test_table (id, name) VALUES (4, 'Transaction Test');
+SAVEPOINT sp1;
+INSERT INTO test_table (id, name) VALUES (5, 'Nested Transaction Test');
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 测试复杂的条件和边界情况
+SELECT * FROM test_table 
+WHERE score > 90 AND is_active = 1 
+ORDER BY created_at DESC 
+LIMIT 2 OFFSET 1;
+
+-- 测试特殊字符和SQL注入场景
+SELECT name || ' ' || id AS full_info FROM test_table;
+SELECT * FROM test_table WHERE name LIKE '%Test%';
+
+-- 清理数据（如果需要）
+DROP TABLE IF EXISTS test_table;

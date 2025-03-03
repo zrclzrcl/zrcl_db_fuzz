@@ -1,0 +1,14 @@
+select * from sqlite_master
+
+BEGIN;
+      SELECT * FROM sqlite_master;
+
+CREATE TABLE def(d, e, f)
+
+SELECT * FROM sqlite_master;
+      COMMIT;
+
+BEGIN;
+      SELECT * FROM sqlite_master;
+
+SELECT * FROM sqlite_master;

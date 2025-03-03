@@ -1,0 +1,5 @@
+CREATE TABLE t1(a, b)
+
+SELECT * FROM t1
+
+INSERT INTO t2 VALUES('c', 'd')

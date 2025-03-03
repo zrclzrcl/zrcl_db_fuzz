@@ -1,0 +1,43 @@
+from ubuntu:22.04
+LABEL maintainer="ccllmfuzz"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# common config
+RUN apt-get update
+RUN apt-get -y install libssl-dev autoconf automake	libtool bison m4 gperf gawk flex make cmake build-essential vim sudo git \
+clang libmysqlclient-dev ninja-build pkg-config clang-format \
+libpq-dev libyaml-cpp-dev lld llvm bison python3-fire
+
+RUN mkdir -p /home && \
+    groupadd zrcl && \
+    useradd -l -K UMASK=0000 -d /home -g zrcl zrcl && \
+    chown zrcl:zrcl /home
+
+RUN	echo "zrcl:zrcl" | chpasswd && usermod -a -G sudo zrcl
+RUN chmod +w /etc/sudoers && \
+    echo "%zrcl   ALL=(ALL:ALL)NOPASSWD:ALL" >> /etc/sudoers && \
+    chmod -w /etc/sudoers
+
+USER zrcl
+WORKDIR /home
+
+RUN git clone https://github.com/s3team/Squirrel.git && \
+    cd Squirrel && git submodule update --init && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMYSQL=ON && \
+    cmake --build build -j && \
+    cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
+
+ARG CFLAGS="-O2 -m64"
+RUN git clone https://github.com/openlink/virtuoso-opensource.git virtuoso/ && cd virtuoso && ./autogen.sh && mkdir bld && ./configure --prefix=/home/virtuoso/bld CC=/home/Squirrel/AFLplusplus/afl-cc CXX=/home/Squirrel/AFLplusplus/afl-c++
+
+WORKDIR /home/virtuoso
+
+RUN  make && make install
+#此处安装virtuoso成功
+RUN cd /home/virtuoso/bld/var/lib/virtuoso/db && AFL_IGNORE_PROBLEMS=1 ../../../../bin/virtuoso-t &
+RUN AFL_DEBUG=1 __AFL_SHM_ID=1234 /home/virtuoso/bld/bin/virtuoso-t 2>&1 | grep "__afl_map_size" | tail -n 1 | cut -d"," -f8 | cut -d" " -f 3 > /tmp/mapsize
+
+
+WORKDIR /home/Squirrel/scripts/utils
+ENTRYPOINT AFL_MAP_SIZE=$(cat /tmp/mapsize) python3 run.py mysql ../../data/fuzz_root/mysql_input/

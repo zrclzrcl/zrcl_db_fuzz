@@ -1,0 +1,23 @@
+INSERT INTO t1 VALUES($i,$r,$x)
+
+INSERT INTO t2 VALUES($i,$r,$x)
+
+SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr
+
+SELECT count(*), avg(b) FROM t1 WHERE c LIKE $pattern
+
+SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr
+
+SELECT c FROM t1 WHERE rowid=$id
+
+SELECT c FROM t1 WHERE a=$id
+
+SELECT c FROM t1 ORDER BY random() LIMIT 50000
+
+SELECT c FROM t1 WHERE c=$c
+
+UPDATE t1 SET b=b*2 WHERE a>=$lwr AND a<$upr
+
+UPDATE t1 SET b=$r WHERE a=$i
+
+UPDATE t1 SET c=$x WHERE a=$i

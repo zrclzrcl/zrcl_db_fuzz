@@ -1,0 +1,10 @@
+util/to_target_tseed/output_sqlite/
+util/GSeed_generate/output_sqlite/
+util/GSeed_generate/output_postgresql/
+util/GSeed_generate/output_postgresql_first/
+util/scan_sql/mariaDB_dseed/
+util/scan_sql/postgre_dseed/
+util/transform_duckdb_seed/duckdb_dseed/
+util/transform_mysql_seed/mysql_dseed/
+util/transform_mysql_seed/mysql_dseed_1/
+util/transform_sqlite_seed/sqlite_dseed/

@@ -1,0 +1,54 @@
+PRAGMA integrity_check
+
+SELECT randomblob($E(pid)*5)
+
+BEGIN;
+        PRAGMA integrity_check;
+        SELECT md5sum(x) FROM t1 WHERE rowid != (SELECT max(rowid) FROM t1);
+        SELECT x FROM t1 WHERE rowid = (SELECT max(rowid) FROM t1);
+        SELECT md5sum(x) FROM t1 WHERE rowid != (SELECT max(rowid) FROM t1);
+      COMMIT;
+
+BEGIN;
+        INSERT INTO t1 VALUES(randomblob(101 + $::E(pid)));
+        INSERT INTO t1 VALUES(randomblob(101 + $::E(pid)));
+        INSERT INTO t1 SELECT md5sum(x) FROM t1;
+      COMMIT;
+
+PRAGMA wal_autocheckpoint = 0
+
+SELECT * FROM sqlite_master
+
+PRAGMA journal_mode = DELETE
+
+BEGIN;
+        INSERT INTO t1 VALUES(NULL, randomblob(100+$E(pid)));
+
+SELECT * FROM sqlite_master
+
+PRAGMA journal_mode = WAL
+
+BEGIN;
+        INSERT INTO t1 VALUES(NULL, randomblob(110+$E(pid)));
+
+PRAGMA wal_checkpoint
+
+SELECT max(cnt) FROM t1
+
+SELECT sum(cnt) FROM t1
+
+SELECT sum(sum1) FROM t1
+
+INSERT INTO t1 VALUES($nextwrite, $sum1, $sum2)
+
+SELECT count(*) FROM t1
+
+PRAGMA integrity_check
+
+SELECT cnt, sum1, sum2 FROM t1 ORDER BY cnt
+
+PRAGMA wal_checkpoint
+
+REPLACE INTO t1 VALUES($row, randomblob(300))
+
+SELECT count(*) FROM t1

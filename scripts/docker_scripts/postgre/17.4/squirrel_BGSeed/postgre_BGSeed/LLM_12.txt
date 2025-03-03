@@ -1,0 +1,37 @@
+-- 创建一个包含各种数据类型的表
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    age INTEGER CHECK (age >= 0),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- 插入一些测试数据
+INSERT INTO test_fuzz (name, age, description)
+VALUES 
+    ('Alice', 30, 'Test user Alice'),
+    ('Bob', 25, 'Test user Bob'),
+    ('Charlie', NULL, 'Test user Charlie with no age'),
+    ('', 45, 'Empty name test');
+
+-- 查询所有记录并进行排序和聚合
+SELECT id, name, age, description,
+       EXTRACT(YEAR FROM created_at) AS year_joined,
+       COUNT(*) OVER () AS total_records
+FROM test_fuzz
+ORDER BY is_active DESC NULLS LAST;
+
+-- 测试事务和锁机制
+BEGIN TRANSACTION;
+    UPDATE test_fuzz SET is_active = FALSE WHERE id = 1 FOR UPDATE;
+    SELECT * FROM test_fuzz WHERE id = 1;
+COMMIT;
+
+-- 创建索引以测试查询性能
+CREATE INDEX idx_name_age ON test_fuzz (name, age);
+
+-- 删除数据以保持数据库清洁
+DELETE FROM test_fuzz WHERE name LIKE 'Test%';

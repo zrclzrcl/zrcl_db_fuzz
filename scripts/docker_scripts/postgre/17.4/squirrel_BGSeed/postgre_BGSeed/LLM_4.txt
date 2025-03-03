@@ -1,0 +1,30 @@
+-- 创建一个包含多种数据类型的表来测试数据库对不同类型的支持
+CREATE TABLE test_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    value DECIMAL(10, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+-- 添加索引来测试查询优化和性能
+CREATE INDEX idx_test_name ON test_types (name);
+
+-- 创建一个带有外键约束的表来测试关系完整性
+CREATE TABLE related_table (
+    id SERIAL PRIMARY KEY,
+    type_id INT REFERENCES test_types(id),
+    description TEXT
+);
+
+-- 插入一些测试数据，包括边缘情况如空值和大文本
+INSERT INTO test_types (name, value, is_active) VALUES 
+    ('Test1', 100.5, true),
+    ('Test2', NULL, false),
+    ('LongText', 200.75, true);
+
+-- 创建一个包含二进制数据的字段来测试数据库对二进制存储的支持
+ALTER TABLE test_types ADD COLUMN binary_data BYTEA;
+
+-- 插入二进制数据进行测试
+UPDATE test_types SET binary_data = 'binary data here' WHERE id = 1;

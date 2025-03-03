@@ -1,0 +1,10 @@
+INSERT INTO seq SELECT i + :max, x FROM seq;
+
+DELETE FROM seq WHERE i = :i
+
+INSERT INTO t1 VALUES(:a, :b);
+
+SELECT name FROM sqlite_master
+
+CREATE TABLE yy(a, b);
+      INSERT INTO yy VALUES(77, 88);

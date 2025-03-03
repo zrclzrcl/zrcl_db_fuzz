@@ -1,0 +1,20 @@
+SELECT * FROM t1;
+
+PRAGMA page_size = 1024
+
+CREATE TABLE t1(x)
+
+INSERT INTO t1 VALUES(randomblob(1100));
+
+INSERT INTO t1 VALUES(randomblob(2000));
+
+BEGIN;
+    PRAGMA cache_size = 10;
+    CREATE TABLE t1(a);
+    CREATE INDEX i1 ON t1(a);
+    CREATE TABLE t2(a);
+
+INSERT INTO t1 VALUES($v)
+
+DELETE FROM t1 WHERE oid > 85;
+    COMMIT;

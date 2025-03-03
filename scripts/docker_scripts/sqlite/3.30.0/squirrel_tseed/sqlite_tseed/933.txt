@@ -1,0 +1,5 @@
+SELECT f2($a)
+
+INSERT INTO t2 SELECT a+5, b||'+5' FROM t1
+
+SELECT f2('three')

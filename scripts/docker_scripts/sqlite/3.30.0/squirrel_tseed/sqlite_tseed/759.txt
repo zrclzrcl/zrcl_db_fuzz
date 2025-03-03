@@ -1,0 +1,23 @@
+SELECT (SELECT t FROM t1 WHERE rowid = $v), 
+             (SELECT t FROM t2 WHERE rowid = $v), 
+             (SELECT t FROM t3 WHERE rowid = $v)
+
+UPDATE t1 SET i=i+1 WHERE rowid=$ii
+
+CREATE TABLE t5(t TEXT PRIMARY KEY, i INTEGER);
+
+SELECT t FROM t5
+
+UPDATE t5 SET i=i+1 WHERE t=$t
+
+INSERT INTO t4 VALUES(NULL, $ii, $name)
+
+UPDATE t4 SET i = $ii2, t = $name WHERE rowid = $ii;
+
+DELETE FROM t4 WHERE rowid = $ii
+
+INSERT INTO t4 VALUES(NULL, $ii, $name);
+
+UPDATE t4 SET i = $ii2, t = $name WHERE rowid = $ii;
+
+DELETE FROM t4 WHERE rowid = $ii

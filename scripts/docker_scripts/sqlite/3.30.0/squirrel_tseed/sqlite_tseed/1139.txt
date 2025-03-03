@@ -1,0 +1,218 @@
+DELETE FROM tree
+
+INSERT INTO tree VALUES(NULL, $parentid, $seg)
+
+WITH x AS (
+        WITH y(b) AS (SELECT 10)
+        SELECT * FROM y UNION ALL SELECT * FROM y
+    )
+    SELECT * FROM x
+
+EXPLAIN SELECT * FROM v1 AS aa, v1 AS bb, v1 AS cc
+
+CREATE TABLE t1(x INTEGER, y INTEGER);
+  WITH x(a) AS ( SELECT * FROM t1) SELECT 10
+
+SELECT * FROM ( WITH x AS ( SELECT * FROM t1) SELECT 10 );
+
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES(1);
+  INSERT INTO t1 VALUES(2);
+  WITH tmp AS ( SELECT * FROM t1 ) SELECT x FROM tmp;
+
+SELECT * FROM (
+    WITH tmp(a) AS ( SELECT * FROM t1 ) SELECT a FROM tmp
+  );
+
+CREATE TABLE t3(x);
+  CREATE TABLE t4(x);
+
+  INSERT INTO t3 VALUES('T3');
+  INSERT INTO t4 VALUES('T4');
+
+  WITH t3(a) AS (SELECT * FROM t4)
+  SELECT * FROM t3;
+
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES(1);
+  INSERT INTO t1 VALUES(2);
+  INSERT INTO t1 VALUES(3);
+  INSERT INTO t1 VALUES(4);
+
+  WITH dset AS ( SELECT 2 UNION ALL SELECT 4 )
+  DELETE FROM t1 WHERE x IN dset;
+  SELECT * FROM t1;
+
+CREATE TABLE edge(xfrom, xto, seq, PRIMARY KEY(xfrom, xto)) WITHOUT ROWID;
+  INSERT INTO edge VALUES(0, 1, 10);
+  INSERT INTO edge VALUES(1, 2, 20);
+  INSERT INTO edge VALUES(0, 3, 30);
+  INSERT INTO edge VALUES(2, 4, 40);
+  INSERT INTO edge VALUES(3, 4, 40);
+  INSERT INTO edge VALUES(2, 5, 50);
+  INSERT INTO edge VALUES(3, 6, 60);
+  INSERT INTO edge VALUES(5, 7, 70);
+  INSERT INTO edge VALUES(3, 7, 70);
+  INSERT INTO edge VALUES(4, 8, 80);
+  INSERT INTO edge VALUES(7, 8, 80);
+  INSERT INTO edge VALUES(8, 9, 90);
+  
+  WITH RECURSIVE
+    ancest(id, mtime) AS
+      (VALUES(0, 0)
+       UNION
+       SELECT edge.xto, edge.seq FROM edge, ancest
+        WHERE edge.xfrom=ancest.id
+        ORDER BY 2
+      )
+  SELECT * FROM ancest;
+
+CREATE TABLE f(
+      id INTEGER PRIMARY KEY, parentid REFERENCES f, name TEXT
+  );
+
+  INSERT INTO f VALUES(0, NULL, '');
+  INSERT INTO f VALUES(1, 0, 'bin');
+    INSERT INTO f VALUES(2, 1, 'true');
+    INSERT INTO f VALUES(3, 1, 'false');
+    INSERT INTO f VALUES(4, 1, 'ls');
+    INSERT INTO f VALUES(5, 1, 'grep');
+  INSERT INTO f VALUES(6, 0, 'etc');
+    INSERT INTO f VALUES(7, 6, 'rc.d');
+      INSERT INTO f VALUES(8, 7, 'rc.apache');
+      INSERT INTO f VALUES(9, 7, 'rc.samba');
+  INSERT INTO f VALUES(10, 0, 'home');
+    INSERT INTO f VALUES(11, 10, 'dan');
+      INSERT INTO f VALUES(12, 11, 'public_html');
+        INSERT INTO f VALUES(13, 12, 'index.html');
+          INSERT INTO f VALUES(14, 13, 'logo.gif');
+
+CREATE TABLE tree(i, p);
+  INSERT INTO tree VALUES(1, NULL);
+  INSERT INTO tree VALUES(2, 1);
+  INSERT INTO tree VALUES(3, 1);
+  INSERT INTO tree VALUES(4, 2);
+  INSERT INTO tree VALUES(5, 4);
+
+DROP TABLE IF EXISTS tree;
+  CREATE TABLE tree(id INTEGER PRIMARY KEY, parentid, payload);
+
+CREATE TABLE tst(a,b);
+  INSERT INTO tst VALUES('a', 'A');
+  INSERT INTO tst VALUES('b', 'B');
+  INSERT INTO tst VALUES('c', 'C');
+  SELECT a COLLATE nocase FROM tst UNION ALL SELECT b FROM tst ORDER BY 1;
+
+SELECT a FROM tst UNION ALL SELECT b COLLATE nocase FROM tst ORDER BY 1;
+
+SELECT a||'' FROM tst UNION ALL SELECT b COLLATE nocase FROM tst ORDER BY 1;
+
+CREATE TABLE org(
+    name TEXT PRIMARY KEY,
+    boss TEXT REFERENCES org
+  ) WITHOUT ROWID;
+  INSERT INTO org VALUES('Alice',NULL);
+  INSERT INTO org VALUES('Bob','Alice');
+  INSERT INTO org VALUES('Cindy','Alice');
+  INSERT INTO org VALUES('Dave','Bob');
+  INSERT INTO org VALUES('Emma','Bob');
+  INSERT INTO org VALUES('Fred','Cindy');
+  INSERT INTO org VALUES('Gail','Cindy');
+  INSERT INTO org VALUES('Harry','Dave');
+  INSERT INTO org VALUES('Ingrid','Dave');
+  INSERT INTO org VALUES('Jim','Emma');
+  INSERT INTO org VALUES('Kate','Emma');
+  INSERT INTO org VALUES('Lanny','Fred');
+  INSERT INTO org VALUES('Mary','Fred');
+  INSERT INTO org VALUES('Noland','Gail');
+  INSERT INTO org VALUES('Olivia','Gail');
+  -- The above are all under Alice.  Add a few more records for people
+  -- not in Alice's group, just to prove that they won't be selected.
+  INSERT INTO org VALUES('Xaviar',NULL);
+  INSERT INTO org VALUES('Xia','Xaviar');
+  INSERT INTO org VALUES('Xerxes','Xaviar');
+  INSERT INTO org VALUES('Xena','Xia');
+  -- Find all members of Alice's group, breath-first order  
+  WITH RECURSIVE
+    under_alice(name,level) AS (
+       VALUES('Alice','0')
+       UNION ALL
+       SELECT org.name, under_alice.level+1
+         FROM org, under_alice
+        WHERE org.boss=under_alice.name
+        ORDER BY 2
+    )
+  SELECT group_concat(substr('...............',1,level*3) || name,x'0a')
+    FROM under_alice;
+
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(x);
+
+SELECT printf('',
+     EXISTS (WITH RECURSIVE Table0 AS (WITH Table0 AS (SELECT DISTINCT 1)
+                                       SELECT *, * FROM Table0 ORDER BY 1 DESC)
+             SELECT * FROM Table0  NATURAL JOIN  Table0));
+
+CREATE TABLE t1(id INTEGER NULL PRIMARY KEY, name Text);
+  INSERT INTO t1 VALUES (1, 'john');
+  INSERT INTO t1 VALUES (2, 'james');
+  INSERT INTO t1 VALUES (3, 'jingle');
+  INSERT INTO t1 VALUES (4, 'himer');
+  INSERT INTO t1 VALUES (5, 'smith');
+  CREATE VIEW v2 AS
+    WITH t4(Name) AS (VALUES ('A'), ('B'))
+    SELECT Name Name FROM t4;
+  CREATE VIEW v3 AS
+    WITH t4(Att, Val, Act) AS (VALUES
+      ('C', 'D', 'E'),
+      ('F', 'G', 'H')
+    )
+    SELECT D.Id Id, P.Name Protocol, T.Att Att, T.Val Val, T.Act Act
+    FROM t1 D
+    CROSS JOIN v2 P
+    CROSS JOIN t4 T;
+  SELECT * FROM v3;
+
+CREATE TABLE t1(a, b, c);
+  CREATE VIEW v1 AS SELECT max(a), min(b) FROM t1 GROUP BY c;
+
+CREATE TABLE t (label VARCHAR(10), step INTEGER);
+  INSERT INTO T VALUES('a', 1);
+  INSERT INTO T VALUES('a', 1);
+  INSERT INTO T VALUES('b', 1);
+  WITH RECURSIVE cte(label, step) AS (
+      SELECT DISTINCT * FROM t 
+    UNION ALL 
+      SELECT label, step + 1 FROM cte WHERE step < 3
+  )
+  SELECT * FROM cte ORDER BY +label, +step;
+
+CREATE TABLE tworow(x);
+  INSERT INTO tworow(x) VALUES(1),(2);
+  DELETE FROM t WHERE rowid=2;
+  WITH RECURSIVE cte(label, step) AS (
+      SELECT * FROM t
+    UNION ALL
+      SELECT DISTINCT label, step + 1 FROM cte, tworow WHERE step < 3
+  )
+  SELECT * FROM cte ORDER BY +label, +step;
+
+CREATE TABLE t1(k);
+  CREATE TABLE log(k, cte_map, main_map);
+  CREATE TABLE map(k, v);
+  INSERT INTO map VALUES(1, 'main1'), (2, 'main2');
+  
+  CREATE TRIGGER tr1 AFTER INSERT ON t1 BEGIN
+    INSERT INTO log
+        WITH map(k,v) AS (VALUES(1,'cte1'),(2,'cte2'))
+        SELECT
+          new.k,
+          (SELECT v FROM map WHERE k=new.k),
+          (SELECT v FROM main.map WHERE k=new.k);
+  END;
+  
+  INSERT INTO t1 VALUES(1);
+  INSERT INTO t1 VALUES(2);
+  SELECT k, cte_map, main_map, '|' FROM log ORDER BY k;

@@ -1,0 +1,31 @@
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE a=55;
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE a IN (55,199,299);
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE (b,c)=(45,45);
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE d=45;
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE d=45 AND a=45;
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE d=45 AND a IN (45,46);
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT * FROM t1 WHERE b=45;
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;
+
+SELECT (flgs & 0x0100)!=0 FROM pragma_stats WHERE tbl='t1' AND idx IS NULL;

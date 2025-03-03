@@ -1,0 +1,74 @@
+-- 创建一个测试数据库
+CREATE DATABASE test_db;
+
+-- 创建各种类型的表以覆盖不同的数据类型和约束条件
+CREATE TABLE IF NOT EXISTS test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    value REAL DEFAULT 0.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建包含外键的表以测试关系型数据库特性
+CREATE TABLE IF NOT EXISTS related_table (
+    id INTEGER PRIMARY KEY,
+    test_id INTEGER,
+    FOREIGN KEY(test_id) REFERENCES test_table(id)
+);
+
+-- 创建一个复杂结构的表，包含多种数据类型和约束
+CREATE TABLE IF NOT EXISTS complex_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    boolean_field BOOLEAN,
+    text_field TEXT CHECK(length(text_field) <= 100),
+    numeric_field NUMERIC(10,2),
+    blob_field BLOB,
+    UNIQUE(boolean_field, numeric_field)
+);
+
+-- 创建视图以测试查询优化和权限管理
+CREATE VIEW IF NOT EXISTS test_view AS
+SELECT id, name, value FROM test_table WHERE value > 0;
+
+-- 创建触发器以测试事务处理和时间点一致性
+CREATE TRIGGER IF NOT EXISTS insert_trigger
+AFTER INSERT ON test_table
+FOR EACH ROW
+BEGIN
+    INSERT INTO related_table (test_id) VALUES (new.id);
+END;
+
+-- 创建索引以测试查询性能优化
+CREATE INDEX IF NOT EXISTS idx_test_value ON test_table(value);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_constraint ON complex_table(boolean_field, numeric_field);
+
+-- 测试分区表（虽然 SQLite 不直接支持分区，但可以通过视图模拟）
+CREATE TABLE IF NOT EXISTS partitioned_table (
+    id INTEGER PRIMARY KEY,
+    data TEXT,
+    region TEXT
+);
+CREATE VIEW IF NOT EXISTS eu_partition AS SELECT * FROM partitioned_table WHERE region = 'EU';
+CREATE VIEW IF NOT EXISTS us_partition AS SELECT * FROM partitioned_table WHERE region = 'US';
+
+-- 创建和测试事务控制
+BEGIN TRANSACTION;
+INSERT INTO test_table (name, value) VALUES ('test1', 100.5);
+SAVEPOINT sp1;
+INSERT INTO test_table (name, value) VALUES ('test2', 200.3);
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 创建和测试授权语句
+GRANT SELECT ON test_table TO user1;
+REVOKE INSERT ON test_table FROM user2;
+
+-- 测试存储过程（虽然 SQLite 的存储过程支持有限，但可以模拟）
+CREATE FUNCTION IF NOT EXISTS sum_numbers(a INT, b INT) RETURNS INT AS 'return a + b';
+SELECT sum_numbers(5, 3);
+
+-- 插入测试数据以覆盖各种可能的查询场景
+INSERT INTO test_table (name, value) VALUES ('test_name_1', 123.45);
+INSERT INTO test_table (name, value) VALUES ('test_name_2', -987.65);
+INSERT INTO complex_table (boolean_field, text_field, numeric_field, blob_field)
+VALUES (true, 'complex_test', 1234.56, x'010203');

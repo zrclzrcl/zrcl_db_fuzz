@@ -1,0 +1,17 @@
+SELECT hex( unhex( $hex ) );
+
+SELECT hex( unhex( lower( $hex ) ) );
+
+SELECT typeof( unhex('') ), length( unhex('') );
+
+SELECT unhex( $hex ) IS NULL;
+
+SELECT hex( unhex($hex, ' -') );
+
+SELECT typeof( unhex(' ', ' -') ), length( unhex('-', ' -') );
+
+SELECT typeof(unhex(NULL))
+
+SELECT typeof(unhex(NULL, ' '))
+
+SELECT typeof(unhex('1234', NULL))

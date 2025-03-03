@@ -1,0 +1,95 @@
+-- 创建测试表并插入测试数据以覆盖多种数据类型和边缘情况
+CREATE TABLE IF NOT EXISTS test_fuzz (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    age INTEGER,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    data JSONB,
+    arr INT[]  -- 测试数组类型
+);
+
+-- 插入测试数据，包括边缘情况和可能的特殊值
+INSERT INTO test_fuzz (name, age, description, is_active, data, arr)
+VALUES 
+('Test Name', 30, 'This is a test description.', TRUE, '{"key": "value"}', '{1,2,3}'),
+('', NULL, NULL, FALSE, '{}', '{}'), -- 测试空值和NULL
+('boundary_test', 2147483647, REPEAT('a', 1000), TRUE, '{"large": "test"}', '{9999999}');
+
+-- 复杂查询，包括聚合函数、子查询和窗口函数
+SELECT 
+    id,
+    name,
+    age,
+    created_at AT TIME ZONE 'UTC' AS utc_time,
+    is_active,
+    data->>'key' AS extracted_json_value,
+    arr[1] AS first_array_element,
+    ROW_NUMBER() OVER (ORDER BY age DESC) AS row_num
+FROM test_fuzz
+WHERE 
+    age > 20 AND name LIKE 'Test%'
+AND 
+    created_at BETWEEN CURRENT_TIMESTAMP - INTERVAL '7 days' AND CURRENT_TIMESTAMP
+GROUP BY id, name, age, created_at, is_active, data, arr
+HAVING COUNT(*) > 1
+ORDER BY age DESC NULLS LAST;
+
+-- 测试事务控制和锁机制
+BEGIN;
+INSERT INTO test_fuzz (name, age) VALUES ('Transaction Test', 42);
+SAVEPOINT my_savepoint;
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- 锁表测试以引发潜在的并发问题
+LOCK TABLE test_fuzz IN ACCESS EXCLUSIVE MODE;
+
+-- 复杂的UNION ALL查询，覆盖多种数据源和条件
+SELECT id, name FROM test_fuzz WHERE age > 30
+UNION ALL
+SELECT id, description FROM test_fuzz WHERE is_active = FALSE;
+
+-- 测试JSONB类型的操作和函数
+SELECT 
+    data,
+    data->>'key' AS key_value,
+    jsonb_array_length(data) AS array_length,
+    CASE WHEN data ? 'key' THEN TRUE ELSE FALSE END AS has_key
+FROM test_fuzz
+WHERE data @> '{"key": "value"}';
+
+-- 复杂的窗口函数和排序操作
+SELECT 
+    id,
+    name,
+    age,
+    NTILE(4) OVER (ORDER BY age ASC) AS quartile,
+    RANK() OVER (PARTITION BY is_active ORDER BY age DESC) AS rank_by_activity
+FROM test_fuzz
+WHERE age IS NOT NULL AND description IS NOT NULL
+ORDER BY quartile, rank_by_activity;
+
+-- 测试边界条件，如最大整数、空字符串和NULL值
+SELECT 
+    id,
+    CASE WHEN age = 2147483647 THEN 'max int' ELSE name END AS age_info,
+    CASE WHEN description IS NULL THEN 'empty_desc' ELSE description END AS desc_info
+FROM test_fuzz
+WHERE age >= 0 AND age <= 2147483647;
+
+-- 测试复杂条件和子查询的组合
+SELECT 
+    id,
+    name,
+    (SELECT COUNT(*) FROM test_fuzz WHERE is_active = TRUE) AS active_count,
+    (SELECT MAX(age) FROM test_fuzz) AS max_age
+FROM test_fuzz
+WHERE 
+    age IN (SELECT age FROM test_fuzz GROUP BY age HAVING COUNT(*) > 1)
+AND 
+    name LIKE ANY(ARRAY['Test%', 'boundary%']);
+
+-- 清理测试数据（可选）
+TRUNCATE TABLE test_fuzz;

@@ -1,0 +1,79 @@
+-- 创建一个带有多种数据类型的表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    score FLOAT8,
+    data JSONB
+);
+
+-- 插入一些测试数据，包含边界值和特殊字符
+INSERT INTO test_table (name, age, description, created_at, updated_at, is_active, score, data)
+VALUES 
+    ('Test User 1', 0, 'This is a test description.', '2023-01-01 00:00:00', NULL, TRUE, 100.5, '{"key": "value"}'),
+    ('Test User 2', 18, '', '2023-01-01 00:00:00', '2023-01-02 00:00:00', FALSE, -5.2, '{"array": [1,2,3]}'),
+    ('Test User 3', 999, NULL, '2023-01-01 00:00:00', NULL, TRUE, NaN, '{"nested": {"object": true}}'),
+    ('Test User 4', 127, 'Long description with special characters: !@#$%^&*()_+', '2023-01-01 00:00:00', NULL, FALSE, INF, '{"binary": "dGVzdA=="}');
+
+-- 创建一个带有外键的表
+CREATE TABLE related_table (
+    id SERIAL PRIMARY KEY,
+    test_id INTEGER REFERENCES test_table(id),
+    value VARCHAR(255)
+);
+
+-- 插入外键关联数据
+INSERT INTO related_table (test_id, value)
+VALUES 
+    (1, 'Related Value 1'),
+    (2, 'Related Value 2'),
+    (3, 'Related Value 3');
+
+-- 创建一个索引
+CREATE INDEX idx_name ON test_table(name);
+
+-- 创建一个视图
+CREATE VIEW test_view AS
+SELECT id, name, age, is_active 
+FROM test_table
+WHERE is_active = TRUE;
+
+-- 更新操作，包含条件和自增
+UPDATE test_table 
+SET score = score + 10,
+    updated_at = CURRENT_TIMESTAMP
+WHERE age > 50 AND is_active = TRUE;
+
+-- 删除操作，包含子查询
+DELETE FROM test_table 
+WHERE id IN (
+    SELECT id 
+    FROM test_table 
+    WHERE age < 18 AND is_active = FALSE
+);
+
+-- 创建一个触发器函数和触发器
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.age < 0 THEN
+        NEW.age = 0;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger
+BEFORE INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_function();
+
+-- 复杂查询，包含多个条件和排序
+SELECT t.id, r.value, t.description 
+FROM test_table t
+JOIN related_table r ON t.id = r.test_id
+WHERE t.is_active = TRUE AND r.value LIKE 'Related%'
+ORDER BY t.created_at DESC
+LIMIT 10;

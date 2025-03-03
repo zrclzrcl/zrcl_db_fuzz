@@ -1,0 +1,92 @@
+-- 创建一个包含多种数据类型的表以测试不同数据类型的行为
+CREATE TABLE IF NOT EXISTS test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    balance REAL DEFAULT 0.0,
+    last_login DATETIME,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- 插入一些测试数据以确保表中有足够的数据进行后续操作
+INSERT INTO test_table (name, age, last_login) 
+VALUES ('Alice', 30, '2024-01-01'),
+       ('Bob', 25, '2024-01-02'),
+       ('Charlie', NULL, NULL);
+
+-- 创建一个外键约束以测试数据库的引用完整性
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    amount REAL DEFAULT 0.0,
+    FOREIGN KEY (user_id) REFERENCES test_table(id)
+);
+
+-- 插入数据到orders表中
+INSERT INTO orders (user_id, amount)
+VALUES ((SELECT id FROM test_table WHERE name = 'Alice'), 100.5),
+       ((SELECT id FROM test_table WHERE name = 'Bob'), 75.25);
+
+-- 创建一个索引以测试查询性能和优化器行为
+CREATE INDEX idx_name_age ON test_table(name, age);
+
+-- 创建一个视图以测试复杂查询和数据库元数据处理
+CREATE VIEW IF NOT EXISTS user_statistics AS 
+SELECT 
+    name,
+    CASE WHEN age >= 18 THEN 'Adult' ELSE 'Minor' END AS age_group,
+    balance,
+    is_active
+FROM test_table;
+
+-- 插入包含特殊字符和边界条件的数据以测试输入验证
+INSERT INTO test_table (name, age) 
+VALUES ('Test''User', -1),
+       ('Another Test User', 127);
+
+-- 更新操作以触发数据库的更新机制
+UPDATE test_table SET is_active = FALSE WHERE name LIKE 'A%';
+
+-- 删除操作以测试数据库的删除机制和外键约束
+DELETE FROM orders WHERE amount < 0;
+
+-- 测试事务处理能力
+BEGIN TRANSACTION;
+    INSERT INTO test_table (name, age) VALUES ('TransactionTest', 42);
+    -- 故意插入一个错误以触发回滚
+    INSERT INTO non_existent_table VALUES (1); 
+ROLLBACK;
+
+-- 创建存储过程以测试数据库的函数和触发器支持
+CREATE TABLE IF NOT EXISTS logs (
+    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER IF NOT EXISTS after_update_trigger
+AFTER UPDATE ON test_table
+FOR EACH ROW
+BEGIN
+    INSERT INTO logs (action) VALUES ('Updated row with id: ' || old.id);
+END;
+
+-- 测试数据库的边界条件和异常处理
+INSERT INTO test_table (name, age) 
+VALUES (
+    -- 使用重复单引号来测试字符串处理
+    'Test''''User',
+    -- 测试整数边界
+    2147483647
+);
+
+-- 测试大文本插入以覆盖数据库的内存管理机制
+INSERT INTO test_table (name) 
+VALUES (
+    -- 大约10KB的随机字符串
+    'Test' || substr(hex(randomblob(1000)), 1, 1000)
+);
+
+-- 测试数据库的维护命令和优化器行为
+VACUUM;
+ANALYZE;

@@ -1,0 +1,33 @@
+CREATE TABLE test_fuzz (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    value REAL DEFAULT 0.0
+);
+
+INSERT INTO test_fuzz VALUES(0, 'a', 1.5);
+INSERT INTO test_fuzz VALUES(2147483647, 'z', -999.999);
+INSERT INTO test_fuzz VALUES(-2147483648, '', NULL);
+
+SELECT * FROM test_fuzz ORDER BY name DESC;
+SELECT id, name FROM test_fuzz WHERE value > 100;
+SELECT COUNT(*) AS total_rows FROM test_fuzz;
+
+UNION SELECT name FROM test_fuzz UNION SELECT 'test';
+SELECT t1.id, t2.name FROM test_fuzz t1 JOIN test_fuzz t2 ON t1.id = t2.id;
+
+CASE WHEN (SELECT COUNT(*) FROM test_fuzz) > 0 THEN 'NotEmpty' ELSE 'Empty';
+
+BEGIN TRANSACTION;
+INSERT INTO test_fuzz VALUES(3, 'test_transaction', 10.5);
+COMMIT;
+
+CREATE INDEX idx_value ON test_fuzz(value);
+
+SELECT id, CASE 
+    WHEN value > 0 THEN 'positive'
+    WHEN value < 0 THEN 'negative'
+    ELSE 'zero'
+END AS status FROM test_fuzz;
+
+DELETE FROM test_fuzz WHERE id = 2;
+DROP TABLE IF EXISTS test_fuzz;

@@ -1,0 +1,62 @@
+-- 创建数据库和表结构以满足后续测试需求
+CREATE DATABASE testdb;
+\c testdb;
+
+-- 创建包含多种数据类型的表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT 'test',
+    age INTEGER CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    score DECIMAL(5,2) DEFAULT 0.00,
+    description JSONB
+);
+
+-- 插入测试数据，包含边界条件和特殊字符
+INSERT INTO test_table (name, age, created_at, is_active, score, description)
+VALUES 
+('Test User', 18, '2023-01-01 00:00:00', TRUE, 99.99, '{"key": "value"}'),
+('', -1, CURRENT_TIMESTAMP, FALSE, -100.50, null),
+('Special chars: !@#$%^&*()_+', 123456789, '2024-12-31 23:59:59', TRUE, 0.01, '{"nested": {"object": "test"}}');
+
+-- 测试边界条件和特殊查询
+SELECT * FROM test_table WHERE age = (SELECT MAX(age) FROM test_table);
+SELECT COUNT(*) FROM test_table WHERE name LIKE '%_%';
+
+-- 更新操作
+UPDATE test_table SET score = score + 100.00 WHERE id = 1;
+
+-- 删除操作
+DELETE FROM test_table WHERE is_active = FALSE;
+
+-- 复杂查询和联合测试
+CREATE TABLE test_table2 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    ref_id INTEGER REFERENCES test_table(id)
+);
+
+INSERT INTO test_table2 (name, ref_id) VALUES ('Ref1', 1), ('Ref2', 2);
+
+SELECT t.name, t2.name FROM test_table t LEFT JOIN test_table2 t2 ON t.id = t2.ref_id;
+
+-- 测试事务和错误处理
+BEGIN;
+    INSERT INTO test_table (name) VALUES ('Transaction Test');
+    SELECT pg_sleep(1);
+    ROLLBACK;
+
+DO $$
+BEGIN
+    RAISE NOTICE 'Test Notice';
+    -- 有意触发错误以测试异常处理
+    PERFORM 1/0;
+EXCEPTION WHEN division_by_zero THEN
+    RAISE WARNING 'Caught division by zero';
+END $$;
+
+-- 清理资源
+DROP TABLE IF EXISTS test_table2;
+DROP TABLE IF EXISTS test_table;
+\q

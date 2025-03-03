@@ -1,0 +1,45 @@
+-- 创建一个包含多种数据类型的测试表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    birth_date DATE DEFAULT CURRENT_DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    score REAL,
+    description BLOB
+);
+
+-- 插入一些测试数据，包含边界值和正常值
+INSERT INTO test_table(name, age, birth_date, is_active, score, description)
+VALUES 
+    ('Alice', 25, '1998-03-15', TRUE, 85.5, 'A normal user'),
+    ('Bob', 30, '1993-07-20', FALSE, NULL, 'Inactive user'),
+    ('Charlie', 18, '2005-12-31', TRUE, 95.0, 'Youngest user'),
+    ('David', 65, '1958-01-01', TRUE, 75.2, 'Senior user'),
+    ('Eve', NULL, '2000-01-01', FALSE, 80.0, 'User with missing age');
+
+-- 测试复杂查询
+SELECT name, age, birth_date 
+FROM test_table 
+WHERE age > 20 AND is_active = TRUE 
+ORDER BY age DESC;
+
+-- 测试聚合函数和分组
+SELECT is_active, COUNT(*) as total_count, AVG(score) as average_score
+FROM test_table
+GROUP BY is_active
+HAVING total_count >= 3;
+
+-- 测试边界值插入
+INSERT INTO test_table(name, age, birth_date, is_active)
+VALUES 
+    ('MaxInt', 2147483647, '0000-00-00', TRUE),
+    ('MinDate', -2147483648, '0000-00-00', FALSE);
+
+-- 测试更新操作
+UPDATE test_table 
+SET is_active = FALSE, score = 0.0
+WHERE age > 100;
+
+-- 清理测试数据（可选）
+DELETE FROM test_table WHERE name LIKE '%Test%';

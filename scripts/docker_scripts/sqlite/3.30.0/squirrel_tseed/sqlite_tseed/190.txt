@@ -1,0 +1,3 @@
+PRAGMA compile_options
+
+SELECT sqlite_compileoption_used($opt)

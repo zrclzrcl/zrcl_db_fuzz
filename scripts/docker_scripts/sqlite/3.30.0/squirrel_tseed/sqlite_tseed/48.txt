@@ -1,0 +1,20 @@
+CREATE TABLE t1(x);
+      CREATE TABLE t2(a,b);
+      CREATE TRIGGER x1 AFTER INSERT ON t1 BEGIN
+        INSERT INTO t2(a,b) SELECT key, value FROM json_each(NEW.x);
+      END;
+      INSERT INTO t1(x) VALUES('{"a":1}');
+      SELECT * FROM t2;
+
+CREATE TABLE base(x);
+
+SELECT a FROM t1 WHERE b IN (SELECT a FROM t2);
+
+CREATE TABLE Table1 (col TEXT NOT NULL PRIMARY KEY);
+  ATTACH ':memory:' AS db2;
+  CREATE TABLE db2.Table2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4);
+  CREATE UNIQUE INDEX db2.idx_col1_unique ON Table2 (col1);
+  CREATE UNIQUE INDEX db2.idx_col23_unique ON Table2 (col2, col3);
+  CREATE INDEX db2.idx_col2 ON Table2 (col2);
+  INSERT INTO Table2 VALUES(1,2,3,4);
+  PRAGMA integrity_check;

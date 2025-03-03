@@ -1,0 +1,6 @@
+SELECT * FROM sqlite_master
+
+SELECT * FROM t1
+
+PRAGMA journal_mode = wal;
+  CREATE TABLE t1(x);

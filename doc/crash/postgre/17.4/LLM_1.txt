@@ -1,0 +1,139 @@
+-- 创建一个包含多种数据类型的表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    salary DECIMAL(10, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN,
+    bio TEXT
+);
+
+-- 插入一些测试数据，包括边界条件和特殊值
+INSERT INTO test_table (name, age, salary, is_active, bio)
+VALUES 
+('Alice', 25, 1000.5, TRUE, 'A nice person.'),
+('Bob', 30, NULL, FALSE, NULL),
+('', 0, 99999999.99, TRUE, 'This is a very long bio that exceeds the expected length for testing purposes.');
+
+-- 创建一个索引
+CREATE INDEX idx_name ON test_table (name);
+
+-- 创建一个视图，包含一些复杂的查询逻辑
+CREATE VIEW test_view AS
+SELECT 
+    id,
+    name,
+    age,
+    salary,
+    created_at,
+    is_active,
+    bio,
+    CASE 
+        WHEN age < 18 THEN 'Minor'
+        WHEN age >= 18 AND age <= 65 THEN 'Adult'
+        ELSE 'Senior'
+    END AS age_group
+FROM test_table;
+
+-- 创建一个存储过程，包含事务和错误处理
+CREATE OR REPLACE PROCEDURE test_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- 开始一个事务
+    INSERT INTO test_table (name, age, salary, is_active)
+    VALUES ('Transaction Test', 35, 1234.56, TRUE);
+    
+    -- 故意制造一个错误来测试异常处理
+    RAISE EXCEPTION 'Simulated error for testing purposes';
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        INSERT INTO test_table (name, age, salary, is_active)
+        VALUES ('Error Recovery', 40, 9876.54, FALSE);
+END$$;
+
+-- 创建一个触发器函数和触发器，用于测试数据变更时的行为
+CREATE OR REPLACE FUNCTION trigger_function()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        RAISE NOTICE 'New record inserted: %', NEW.name;
+    ELSIF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'Record updated from % to %', OLD.name, NEW.name;
+    ELSIF TG_OP = 'DELETE' THEN
+        RAISE NOTICE 'Record deleted: %', OLD.name;
+    END IF;
+    RETURN NEW;
+END$$;
+
+CREATE TRIGGER test_trigger
+AFTER INSERT OR UPDATE OR DELETE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION trigger_function();
+
+-- 创建一个包含多种约束的表，用于测试约束条件
+CREATE TABLE constraint_test (
+    id SERIAL PRIMARY KEY,
+    unique_field VARCHAR(50) UNIQUE,
+    not_null_field TEXT NOT NULL,
+    check_field INT CHECK (check_field > 0),
+    foreign_key_ref INT REFERENCES test_table(id)
+);
+
+-- 插入满足约束的数据
+INSERT INTO constraint_test (unique_field, not_null_field, check_field, foreign_key_ref)
+VALUES 
+('Unique1', 'NotNull1', 10, 1),
+('Unique2', 'NotNull2', 5, 2);
+
+-- 创建一个分区表，用于测试分区功能
+CREATE TABLE partitioned_table (
+    id SERIAL,
+    region VARCHAR(50),
+    amount DECIMAL(10, 2),
+    transaction_date DATE
+) PARTITION BY RANGE (transaction_date);
+
+-- 创建分区
+CREATE TABLE partition_2023 PARTITION OF partitioned_table 
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+INSERT INTO partitioned_table (region, amount, transaction_date)
+VALUES 
+('East', 100.5, '2023-06-01'),
+('West', 200.75, '2023-12-31');
+
+-- 创建一个包含自定义类型的类型和表
+CREATE TYPE custom_type AS ENUM ('value1', 'value2', 'value3');
+
+CREATE TABLE type_test (
+    id SERIAL PRIMARY KEY,
+    custom_col custom_type
+);
+
+INSERT INTO type_test (custom_col)
+VALUES 
+('value1'),
+('value2');
+
+-- 创建一个包含继承关系的表
+CREATE TABLE parent_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50)
+);
+
+CREATE TABLE child_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    inherited_id INT REFERENCES parent_table(id)
+) INHERITS (parent_table);
+
+INSERT INTO parent_table (name)
+VALUES ('Parent1');
+
+INSERT INTO child_table (name, inherited_id)
+VALUES ('Child1', 1);

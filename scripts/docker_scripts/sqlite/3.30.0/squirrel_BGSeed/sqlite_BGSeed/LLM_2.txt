@@ -1,0 +1,64 @@
+-- 创建一个包含多种数据类型和约束条件的表
+CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    enrollment_date DATE DEFAULT CURRENT_DATE,
+    gpa REAL CONSTRAINT positive_gpa CHECK (gpa >= 0)
+);
+
+-- 创建另一个表用于测试外键约束
+CREATE TABLE IF NOT EXISTS courses (
+    course_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_name TEXT UNIQUE,
+    credits INTEGER NOT NULL,
+    student_id INTEGER,
+    FOREIGN KEY(student_id) REFERENCES students(id)
+);
+
+-- 插入一些测试数据，包含边界值和特殊字符
+INSERT INTO students (name, age, enrollment_date, gpa) 
+VALUES 
+('Alice', 20, '2023-01-15', 4.0),
+('Bob', 22, '2022-09-01', 3.8),
+('', 0, NULL, -1), -- 测试边界值和空值
+('Charlie', 25, '2020-06-30', 2.7);
+
+-- 插入课程数据，包含外键引用
+INSERT INTO courses (course_name, credits, student_id)
+VALUES 
+('Mathematics', 4, 1),
+('Physics', 3, 2),
+('Computer Science', 5, NULL); -- 测试外键为空的情况
+
+-- 创建索引以测试查询性能
+CREATE INDEX IF NOT EXISTS idx_student_age ON students(age);
+
+-- 复杂的查询，包含连接、子查询和聚合函数
+SELECT s.name AS student_name,
+       c.course_name,
+       AVG(s.gpa) OVER (PARTITION BY c.credits) AS avg_gpa_by_credit,
+       COUNT(*) OVER () AS total_students
+FROM students s
+JOIN courses c ON s.id = c.student_id
+WHERE s.age > 20 AND c.credits >= ALL (
+    SELECT credits FROM courses WHERE student_id = s.id
+)
+ORDER BY s.gpa DESC, c.course_name ASC;
+
+-- 测试事务控制和回滚
+BEGIN TRANSACTION;
+INSERT INTO students (name, age) VALUES ('Test Transaction', 18);
+SAVEPOINT sp1;
+DELETE FROM students WHERE name = 'Test Transaction';
+ROLLBACK TO SAVEPOINT sp1;
+COMMIT;
+
+-- 创建触发器以测试数据库响应机制
+CREATE TRIGGER IF NOT EXISTS trigger_after_insert
+AFTER INSERT ON students
+FOR EACH ROW
+BEGIN
+    INSERT INTO courses (course_name, credits, student_id)
+    VALUES ('New Student Course', 3, NEW.id);
+END;

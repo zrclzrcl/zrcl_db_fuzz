@@ -1,0 +1,5 @@
+DROP TABLE t4
+
+PRAGMA auto_vacuum
+
+PRAGMA encoding = 'utf16';

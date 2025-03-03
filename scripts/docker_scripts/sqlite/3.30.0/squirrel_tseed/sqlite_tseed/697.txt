@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(a,b,c);
+
+SELECT count(*) FROM t1;
+
+SELECT count(*) FROM t1;
+
+CREATE TABLE t01(x, y);
+  CREATE TABLE t02(x, y);

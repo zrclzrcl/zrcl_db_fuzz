@@ -1,0 +1,19 @@
+INSERT INTO t1 VALUES($id,$u1,zeroblob($z),$u2)
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id
+
+SELECT md5sum(u1), md5sum(u2) FROM t1 ORDER BY id

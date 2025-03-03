@@ -1,0 +1,5 @@
+PRAGMA lock_status
+
+SELECT * FROM foo
+
+CREATE TABLE t6(a, b);

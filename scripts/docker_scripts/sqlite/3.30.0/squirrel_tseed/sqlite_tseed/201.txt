@@ -1,0 +1,59 @@
+INSERT INTO sqlite_dbpage values($page_count, NULL);
+
+INSERT INTO sqlite_dbpage values($pgno, $data);
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage('main') ORDER BY pgno;
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage WHERE pgno=2;
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage WHERE pgno=4;
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage WHERE pgno=5;
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage WHERE pgno=0;
+
+CREATE TABLE aux1.x3(x,y,z);
+  INSERT INTO x3(x,y,z) VALUES(1,'main',1),(2,'aux1',1);
+  SELECT pgno, schema, substr(data,1,6)
+    FROM sqlite_dbpage, x3
+   WHERE sqlite_dbpage.schema=x3.y AND sqlite_dbpage.pgno=x3.z
+   ORDER BY x3.x;
+
+CREATE TEMP TABLE saved_content(x);
+  INSERT INTO saved_content(x) SELECT data FROM sqlite_dbpage WHERE pgno=4;
+  UPDATE sqlite_dbpage SET data=zeroblob(4096) WHERE pgno=4;
+
+SELECT pgno, quote(substr(data,1,5)) FROM sqlite_dbpage('main') ORDER BY pgno;
+
+UPDATE sqlite_dbpage SET data=(SELECT x FROM saved_content) WHERE pgno=4;
+
+DELETE FROM saved_content;
+  INSERT INTO saved_content(x) 
+     SELECT data FROM sqlite_dbpage WHERE schema='aux1' AND pgno=2;
+
+UPDATE sqlite_dbpage SET data=zeroblob(4096) WHERE pgno=2 AND schema='aux1';
+
+UPDATE sqlite_dbpage SET data=(SELECT x FROM saved_content)
+   WHERE pgno=2 AND schema='aux1';
+
+SELECT * FROM sqlite_temp_schema, sqlite_dbpage;
+
+PRAGMA auto_vacuum=NONE;
+  CREATE TABLE x1(a);
+  INSERT INTO x1 VALUES( hex(randomblob(2000)) );
+  INSERT INTO x1 VALUES( hex(randomblob(2000)) );
+  INSERT INTO x1 VALUES( hex(randomblob(2000)) );
+  INSERT INTO x1 VALUES( hex(randomblob(2000)) );
+  PRAGMA page_count;
+
+PRAGMA page_count;
+  SELECT * FROM t1;
+
+SELECT * FROM t2;
+
+CREATE TABLE t1(x);
+  INSERT INTO t1 VALUES( hex(randomblob(1000)) );
+  INSERT INTO t1 VALUES( hex(randomblob(1000)) );
+  INSERT INTO t1 VALUES( hex(randomblob(1000)) );
+
+PRAGMA integrity_check

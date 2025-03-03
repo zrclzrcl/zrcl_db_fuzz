@@ -1,0 +1,55 @@
+-- 创建一个包含多种字段类型的测试表
+CREATE TABLE IF NOT EXISTS test_fuzz (
+    id SERIAL PRIMARY KEY,
+    integer_col INTEGER,
+    text_col TEXT,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    boolean_col BOOLEAN,
+    numeric_col NUMERIC(10, 2),
+    jsonb_col JSONB,
+    array_col INTEGER[],
+    unique_col VARCHAR(50) UNIQUE
+);
+
+-- 插入一些测试数据，包含边界条件和特殊字符
+INSERT INTO test_fuzz (integer_col, text_col, timestamp_col, boolean_col, numeric_col, jsonb_col, array_col, unique_col)
+VALUES 
+    (-2147483648, 'test_string', '2024-01-01 00:00:00+00', TRUE, 9999.99, '{"key": "value"}', ARRAY[1, 2, 3], 'unique1'),
+    (2147483647, '', 'infinity', FALSE, 0.00, NULL, NULL, 'unique2');
+
+-- 创建索引以提高查询效率
+CREATE INDEX idx_integer_col ON test_fuzz(integer_col);
+CREATE UNIQUE INDEX idx_unique_col ON test_fuzz(unique_col);
+CREATE INDEX idx_partial ON test_fuzz(text_col) WHERE (boolean_col = TRUE);
+
+-- 创建一个触发器，用于测试触发机制
+CREATE OR REPLACE FUNCTION trigger_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.text_col IS NULL THEN
+        NEW.text_col := 'default_value';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger BEFORE INSERT ON test_fuzz
+FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+
+-- 添加约束条件以确保数据完整性
+ALTER TABLE test_fuzz ADD CONSTRAINT chk_numeric CHECK (numeric_col > 0);
+ALTER TABLE test_fuzz ADD CONSTRAINT fk_test FOREIGN KEY (integer_col) REFERENCES test_fuzz(id);
+
+-- 创建一个视图，用于测试复杂查询
+CREATE VIEW test_view AS 
+SELECT id, text_col, jsonb_col->>'key' AS extracted_value 
+FROM test_fuzz 
+WHERE boolean_col = TRUE;
+
+-- 创建一个函数，用于测试业务逻辑
+CREATE OR REPLACE FUNCTION calculate_sum(a INTEGER, b INTEGER)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;

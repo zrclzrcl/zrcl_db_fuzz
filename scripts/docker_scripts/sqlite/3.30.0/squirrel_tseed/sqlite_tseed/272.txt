@@ -1,0 +1,7 @@
+SELECT sqlite_rename_table(
+        'main', 'table', 't1', $zCreate, $zOld, $zNew, 0
+    )
+
+CREATE TABLE t3(x PRIMARY KEY REFERENCES t3 ON DELETE SET NULL);
+  INSERT INTO t3(x) VALUES(12345);
+  DROP TABLE t3;

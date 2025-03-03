@@ -1,0 +1,84 @@
+$sql
+
+CREATE TABLE t1(a);
+  INSERT INTO t1 VALUES(1);
+  INSERT INTO t1 VALUES(2);
+
+CREATE TABLE t2(i);
+  INSERT INTO t2 VALUES(2);
+  INSERT INTO t2 VALUES(3);
+  INSERT INTO t2 VALUES(5);
+
+  WITH x1   AS (SELECT i FROM t2),
+       i(a) AS (
+         SELECT min(i)-1 FROM x1 UNION SELECT a+1 FROM i WHERE a<10
+       )
+  SELECT a FROM i WHERE a NOT IN x1
+
+CREATE TABLE t3 AS SELECT 3 AS x;
+  CREATE TABLE t4 AS SELECT 4 AS x;
+
+  WITH x1 AS (SELECT * FROM t3),
+       x2 AS (
+         WITH t3 AS (SELECT * FROM t4)
+         SELECT * FROM x1
+       )
+  SELECT * FROM x2;
+
+DROP TABLE IF EXISTS t1;
+  DROP TABLE IF EXISTS t2;
+  CREATE TABLE t1(a, b);
+  CREATE TABLE t2(a, b);
+
+DROP TABLE IF EXISTS t1;
+  DROP TABLE IF EXISTS t2;
+  CREATE TABLE t1(a, b);
+  CREATE TABLE t2(a, b);
+
+CREATE TABLE t5(x INTEGER);
+  CREATE TABLE t6(y INTEGER);
+
+  WITH s(x) AS ( VALUES(7) UNION ALL SELECT x+7 FROM s WHERE x<49 )
+  INSERT INTO t5 
+  SELECT * FROM s;
+
+  INSERT INTO t6 
+  WITH s(x) AS ( VALUES(2) UNION ALL SELECT x+2 FROM s WHERE x<49 )
+  SELECT * FROM s;
+
+SELECT * FROM t6 WHERE y IN (SELECT x FROM t5)
+
+SELECT * FROM t6 WHERE y IN (
+    WITH ss(x) AS ( VALUES(7) UNION ALL SELECT x+7 FROM ss WHERE x<49 )
+    SELECT x FROM ss
+  )
+
+CREATE TABLE t7(y);
+  INSERT INTO t7 VALUES(NULL);
+  CREATE VIEW v AS SELECT * FROM t7 ORDER BY y;
+
+SELECT 1 AS c WHERE (
+    SELECT (
+      WITH t1(a) AS (VALUES( c ))
+      SELECT ( SELECT t1a.a FROM t1 AS t1a, t1 AS t1x )
+      FROM t1 AS xyz GROUP BY 1
+    )
+  )
+
+CREATE TABLE t1(a);
+    CREATE VIEW v2(c) AS
+        WITH x AS (
+          WITH y AS (
+             WITH z AS(SELECT * FROM t1)
+             SELECT * FROM v2
+          ) SELECT a
+        ) SELECT * from t1;
+    ALTER TABLE t1 RENAME COLUMN a TO b;
+    SELECT sql FROM sqlite_schema WHERE name='t1';
+
+CREATE TABLE t1(a);
+    INSERT INTO t1 VALUES(1),('hello'),(4.25),(NULL),(x'3c626c6f623e');
+    CREATE VIEW v2(c) AS WITH x AS (WITH y AS (WITH z AS(SELECT * FROM t1) SELECT * FROM v2) SELECT a) SELECT * from t1;
+    CREATE VIEW v3(c) AS WITH x AS (WITH y AS (WITH z AS(SELECT * FROM v2) SELECT * FROM v3) SELECT a) SELECT * from t1;
+    ALTER TABLE t1 RENAME TO t1x;
+    SELECT quote(c) FROM v3;

@@ -1,0 +1,118 @@
+-- 创建一个包含多种数据类型的示例表，并考虑外键约束和唯一性约束
+CREATE TABLE IF NOT EXISTS test_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash BLOB,
+    age INTEGER CHECK (age >= 0),
+    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- 创建一个带有外键的表，用于测试关联关系
+CREATE TABLE IF NOT EXISTS test_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES test_users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    views INTEGER DEFAULT 0
+);
+
+-- 插入一些初始数据，包括边界值和特殊字符
+INSERT INTO test_users (username, password_hash, age)
+VALUES 
+('test_user1', 'pbkdf2:sha256:...', 30),
+('test_user2', 'pbkdf2:sha256:...', 25),
+('test_user3', 'pbkdf2:sha256:...', 45),
+('edge_case_1', 'pbkdf2:sha256:...', 0), -- 年龄为0的边界情况
+('edge_case_2', 'pbkdf2:sha256:...', 999); -- 大年龄值
+
+-- 插入带有特殊字符和空值的数据
+INSERT INTO test_users (username, password_hash, age)
+VALUES 
+('special_char_user!', 'pbkdf2:sha256:...', 30),
+('', 'pbkdf2:sha256:...', 25), -- 空用户名测试
+('edge_case_3', NULL, 45); -- password_hash为空
+
+-- 创建一个包含索引的表，用于测试查询性能和索引机制
+CREATE TABLE IF NOT EXISTS test_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES test_users(id),
+    log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    log_level TEXT CHECK (log_level IN ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    message TEXT
+);
+
+-- 创建索引以加速查询
+CREATE INDEX IF NOT EXISTS idx_log_level ON test_logs (log_level);
+CREATE INDEX IF NOT EXISTS idx_user_id ON test_logs (user_id);
+
+-- 插入大量日志数据，用于测试数据库的处理能力
+INSERT INTO test_logs (user_id, log_level, message)
+VALUES 
+(1, 'INFO', 'System started'),
+(2, 'ERROR', 'Connection failed'),
+(3, 'WARNING', 'Low memory'),
+(1, 'DEBUG', 'Debugging information'),
+(4, 'CRITICAL', 'Critical error occurred');
+
+-- 更新操作，用于测试数据修改
+UPDATE test_users SET age = 35 WHERE username = 'test_user1';
+UPDATE test_logs SET message = 'Updated log' WHERE id = 5;
+
+-- 删除操作，测试数据删除和外键约束
+DELETE FROM test_users WHERE username = 'test_user4'; -- 测试不存在的记录删除
+DELETE FROM test_users WHERE username = 'edge_case_2';
+
+-- 复杂查询，用于测试数据库引擎的处理能力
+SELECT u.username, p.title, l.message 
+FROM test_users u
+JOIN test_posts p ON u.id = p.user_id
+LEFT JOIN test_logs l ON u.id = l.user_id
+WHERE u.is_active = TRUE AND (p.views > 100 OR l.log_level = 'ERROR')
+ORDER BY u.age DESC;
+
+-- 测试事务和回滚机制
+BEGIN;
+    INSERT INTO test_users (username, password_hash, age) VALUES ('transaction_test', 'pbkdf2:sha256:...', 30);
+    -- 故意制造一个错误以测试回滚
+    INSERT INTO test_users (username, password_hash, age) VALUES ('transaction_test', 'pbkdf2:sha256:...', 30); -- 冲突错误，因为 username 是唯一的
+ROLLBACK;
+
+-- 测试数据库的边界条件和异常处理
+INSERT INTO test_posts (user_id, title, content)
+VALUES 
+(999999999, 'Very long title that exceeds expectations', REPEAT('Long content ', 1000)), -- 长文本测试
+(-1, 'Negative user ID', 'Testing negative foreign key'), -- 外键约束测试
+(NULL, 'Null user ID', 'Testing NULL in foreign key'); -- 外键为NULL的测试
+
+-- 测试数据库引擎对复杂查询和子查询的支持
+SELECT * FROM test_posts 
+WHERE id IN (
+    SELECT id FROM test_posts 
+    WHERE views > (SELECT AVG(views) FROM test_posts)
+);
+
+-- 测试数据库引擎对事务和锁机制的支持
+BEGIN;
+    UPDATE test_users SET is_active = FALSE WHERE username = 'test_user1';
+    -- 保持事务打开以测试锁机制（在实际使用中需要适当处理）
+COMMIT;
+
+-- 创建一个包含触发器的表，用于测试数据库的触发机制
+CREATE TABLE IF NOT EXISTS test_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建触发器，用于记录用户的删除操作
+CREATE TRIGGER IF NOT EXISTS trg_user_delete AFTER DELETE ON test_users
+BEGIN
+    INSERT INTO test_audit (action, timestamp)
+    VALUES ('USER_DELETED', CURRENT_TIMESTAMP);
+END;
+
+-- 测试触发器是否生效
+DELETE FROM test_users WHERE username = 'test_user3';
+SELECT * FROM test_audit;

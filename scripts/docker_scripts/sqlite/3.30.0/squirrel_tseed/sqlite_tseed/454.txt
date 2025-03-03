@@ -1,0 +1,7 @@
+PRAGMA auto_vacuum=OFF;
+
+PRAGMA auto_vacuum=OFF;
+
+PRAGMA integrity_check
+
+PRAGMA integrity_check

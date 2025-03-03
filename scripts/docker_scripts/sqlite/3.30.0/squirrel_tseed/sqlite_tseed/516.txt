@@ -1,0 +1,104 @@
+CREATE TABLE abc(a, b, c)
+
+ATTACH 'test2.db' as aux;
+
+SELECT * FROM t1; 
+      SELECT * FROM t2;
+
+SELECT * FROM t1
+
+SELECT * FROM sqlite_master;
+
+CREATE TABLE t1(x);
+
+PRAGMA cache_size = 10;
+      PRAGMA locking_mode = exclusive;
+      BEGIN;
+      CREATE TABLE abc(a, b, c);
+      CREATE INDEX abc_i ON abc(a, b, c);
+      INSERT INTO abc 
+        VALUES(randstr(100,100), randstr(100,100), randstr(100,100));
+      INSERT INTO abc 
+        SELECT randstr(100,100), randstr(100,100), randstr(100,100) FROM abc;
+      INSERT INTO abc 
+        SELECT randstr(100,100), randstr(100,100), randstr(100,100) FROM abc;
+      INSERT INTO abc 
+        SELECT randstr(100,100), randstr(100,100), randstr(100,100) FROM abc;
+      INSERT INTO abc 
+        SELECT randstr(100,100), randstr(100,100), randstr(100,100) FROM abc;
+      INSERT INTO abc 
+        SELECT randstr(100,100), randstr(100,100), randstr(100,100) FROM abc;
+      COMMIT;
+
+UPDATE abc SET a = 0 WHERE oid%2
+
+ROLLBACK
+
+SELECT * FROM abc LIMIT 10
+
+PRAGMA integrity_check
+
+SELECT a FROM abc ORDER BY a
+
+UPDATE abc SET b = b - 1 WHERE a = $a
+
+INSERT INTO t1 VALUES(1, randomblob(210))
+
+CREATE TABLE t1(x PRIMARY KEY);
+    INSERT INTO t1 VALUES(randstr(500,500));
+    INSERT INTO t1 VALUES(randstr(500,500));
+    INSERT INTO t1 VALUES(randstr(500,500));
+
+BEGIN;
+      DELETE FROM t1;
+    ROLLBACK;
+
+PRAGMA locking_mode = normal;
+    BEGIN;
+    CREATE TABLE t1(a PRIMARY KEY, b);
+    INSERT INTO t1 VALUES(1, 'one');
+    INSERT INTO t1 VALUES(2, 'two');
+    INSERT INTO t1 VALUES(3, 'three');
+    COMMIT;
+    PRAGMA locking_mode = exclusive;
+
+UPDATE t1 SET a = a + 3
+
+PRAGMA locking_mode = normal;
+    UPDATE t1 SET a = a + 3;
+
+PRAGMA cache_size = 10
+
+CREATE TABLE abc(a, b)
+
+INSERT INTO abc VALUES(randstr(100,100), randstr(1000,1000))
+
+PRAGMA cache_size = 10
+
+CREATE TABLE abc(a PRIMARY KEY, b)
+
+INSERT INTO abc VALUES(randstr(100,100), randstr(1000,1000))
+
+PRAGMA locking_mode
+
+CREATE TABLE t1(a);
+  INSERT INTO t1 VALUES('fghij');
+  INSERT INTO t1 VALUES('pqrst');
+  INSERT INTO t1 VALUES('abcde');
+  INSERT INTO t1 VALUES('uvwxy');
+  INSERT INTO t1 VALUES('klmno');
+
+SELECT * FROM t1 ORDER BY 1 COLLATE utf16bin;
+
+DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(a COLLATE utf16bin);
+  INSERT INTO t1 VALUES('fghij' || $::big);
+  INSERT INTO t1 VALUES('pqrst' || $::big);
+  INSERT INTO t1 VALUES('abcde' || $::big);
+  INSERT INTO t1 VALUES('uvwxy' || $::big);
+  INSERT INTO t1 VALUES('klmno' || $::big);
+  CREATE INDEX i1 ON t1(a);
+
+CREATE TABLE t1(x INTEGER PRIMARY KEY, y, z);
+  CREATE TABLE t2(a, b);
+  CREATE VIEW a002 AS SELECT *, sum(b) AS m FROM t2 GROUP BY a;

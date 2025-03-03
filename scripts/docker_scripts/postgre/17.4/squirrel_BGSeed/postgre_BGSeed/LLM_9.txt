@@ -1,0 +1,98 @@
+-- 创建一个测试数据库
+CREATE DATABASE test_db;
+
+\c test_db;
+
+-- 创建一个用户
+CREATE USER test_user WITH PASSWORD 'test_password';
+
+-- 授予所有权限
+GRANT ALL PRIVILEGES ON DATABASE test_db TO test_user;
+
+-- 创建一个包含各种数据类型的表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN,
+    score DECIMAL(5,2)
+);
+
+-- 插入一些测试数据
+INSERT INTO test_table (name, age, is_active, score) VALUES
+('Alice', 30, true, 98.5),
+('Bob', 25, false, 87.6),
+('', 45, true, NULL),
+('Charlie', -1, false, 100.0);
+
+-- 测试边界条件：插入一个非常大的整数
+INSERT INTO test_table (name, age) VALUES ('Max Int', 2147483647);
+
+-- 创建另一个表用于测试外键约束
+CREATE TABLE related_table (
+    id SERIAL PRIMARY KEY,
+    test_id INT REFERENCES test_table(id)
+);
+
+-- 插入外键数据
+INSERT INTO related_table (test_id) VALUES (1), (2);
+
+-- 测试复杂查询：多表连接和聚合函数
+SELECT t.name, COUNT(r.id) as related_count
+FROM test_table t
+LEFT JOIN related_table r ON t.id = r.test_id
+GROUP BY t.name;
+
+-- 测试窗口函数和排序
+SELECT name, score,
+       ROW_NUMBER() OVER (ORDER BY score DESC) as rank
+FROM test_table
+WHERE is_active = true
+ORDER BY rank;
+
+-- 创建一个索引以测试查询性能
+CREATE INDEX idx_name ON test_table(name);
+
+-- 测试CTE（Common Table Expressions）
+WITH temp AS (
+    SELECT id, name, age FROM test_table WHERE age > 25
+)
+SELECT COUNT(*) from temp;
+
+-- 测试触发器和函数
+CREATE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.create_time = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_timestamp
+BEFORE UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+
+-- 测试事务控制
+BEGIN;
+    INSERT INTO test_table (name, age) VALUES ('Transaction Test', 10);
+    ROLLBACK;
+
+-- 创建一个视图以测试复杂查询和权限
+CREATE VIEW test_view AS
+SELECT name, age FROM test_table WHERE is_active = true;
+
+-- 插入一些异常数据以测试错误处理
+INSERT INTO test_table (name, age) VALUES ('Error Test', NULL);
+
+-- 测试UNION操作
+(SELECT id, name FROM test_table WHERE age > 25)
+UNION
+(SELECT id, name FROM related_table JOIN test_table ON id = test_id);
+
+-- 复杂查询：包含多个条件和排序
+SELECT t.name, r.id as related_id
+FROM test_table t
+JOIN related_table r ON t.id = r.test_id
+WHERE t.age > 25 AND t.is_active = true
+ORDER BY t.create_time DESC;

@@ -1,0 +1,1 @@
+SELECT count(*), md5sum(x) FROM t3

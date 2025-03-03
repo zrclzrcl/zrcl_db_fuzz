@@ -1,0 +1,73 @@
+-- 创建一个包含多种数据类型的表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    value REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN,
+    data BLOB
+);
+
+-- 插入一些测试数据，包括边缘条件和特殊值
+INSERT INTO test_table (name, value, created_at, status, data)
+VALUES 
+('', 0.0, '2024-01-01 00:00:00', 1, X'00'),
+('test', NULL, CURRENT_TIMESTAMP, 0, X'FF'),
+('', -9223372036854775808, '2000-01-01 00:00:00', 1, X'ABCD');
+
+-- 创建一个索引以测试查询性能
+CREATE INDEX idx_test_table_name ON test_table(name);
+
+-- 测试复杂的查询，包括子查询和聚合函数
+SELECT 
+    id,
+    name,
+    value,
+    created_at,
+    status,
+    (SELECT COUNT(*) FROM test_table WHERE status = 1) as total_status_1,
+    SUM(value) OVER (ORDER BY created_at DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_sum
+FROM 
+    test_table
+WHERE 
+    name LIKE '%test%'
+GROUP BY 
+    id, name, value, created_at, status
+HAVING 
+    COUNT(*) > 0;
+
+-- 测试更新操作，包括类型转换和边界条件
+UPDATE test_table SET 
+    name = '',
+    value = NULL,
+    status = NOT status,
+    data = X'1234'
+WHERE id IN (SELECT id FROM test_table WHERE value < 0);
+
+-- 测试删除操作，包括子查询和复杂条件
+DELETE FROM test_table 
+WHERE 
+    id NOT IN (SELECT id FROM test_table ORDER BY created_at DESC LIMIT 1)
+    AND status = 0;
+
+-- 测试事务和回滚
+BEGIN TRANSACTION;
+    INSERT INTO test_table (name, value) VALUES ('rollback_test', 9999.99);
+    -- 故意触发错误以测试回滚机制
+    INSERT INTO non_existent_table VALUES (1, 'error');
+COMMIT;
+
+-- 测试复杂的联合查询和视图
+CREATE VIEW test_view AS 
+SELECT 
+    t1.id,
+    t1.name || ' - ' || t2.name as combined_name,
+    t1.value + t2.value as total_value
+FROM 
+    test_table t1
+JOIN 
+    test_table t2 ON t1.id = t2.id;
+
+-- 测试索引的创建和删除
+CREATE INDEX idx_test_view_combined_name ON test_view(combined_name);
+DROP INDEX idx_test_view_combined_name;

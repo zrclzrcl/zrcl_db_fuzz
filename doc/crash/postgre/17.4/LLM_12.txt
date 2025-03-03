@@ -1,0 +1,63 @@
+-- 创建一个包含各种数据类型的测试表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN,
+    data JSONB,
+    tags TEXT[],
+    description TEXT
+);
+
+-- 插入一些示例数据，包含边界条件和特殊字符
+INSERT INTO test_table (name, age, is_active, data, tags, description)
+VALUES 
+('Alice', 25, true, '{"key": "value"}', '{''tag1'', ''tag2''}', 'This is a description.'),
+('Bob', -1, false, NULL, NULL, ''),
+('Charlie', 999999999, true, '{"name": "Charlie", "age": 30}', '{''tag3''}', 'Test case with special characters: !@#$%^&*()_+');
+
+-- 创建索引以测试查询性能
+CREATE INDEX idx_name ON test_table (name);
+CREATE UNIQUE INDEX idx_unique_age ON test_table (age);
+
+-- 测试事务控制
+BEGIN;
+INSERT INTO test_table (name, age) VALUES ('Diana', 30);
+SAVEPOINT sp1;
+INSERT INTO test_table (name, age) VALUES ('Edward', 35);
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 创建一个函数以测试存储过程和自定义逻辑
+CREATE OR REPLACE FUNCTION calculate_age(birth_year INT)
+RETURNS INT AS $$
+BEGIN
+    RETURN EXTRACT(YEAR FROM CURRENT_DATE) - birth_year;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 调用函数并插入结果
+DO $$
+DECLARE 
+    result INT;
+BEGIN
+    result := calculate_age(1990);
+    INSERT INTO test_table (name, age) VALUES ('Test Function', result);
+END $$;
+
+-- 复杂查询，包含子查询、连接和聚合
+SELECT t.name, t.age, COUNT(*) as total_records,
+       SUM(t2.age) as sum_ages,
+       MAX(t3.age) as max_age
+FROM test_table t
+JOIN (
+    SELECT id, age FROM test_table WHERE is_active = true
+) t2 ON t.id = t2.id
+LEFT JOIN (
+    SELECT id, age FROM test_table WHERE age > 100
+) t3 ON t.id = t3.id
+WHERE t.description LIKE '%special characters%'
+GROUP BY t.name, t.age
+HAVING COUNT(*) > 5
+ORDER BY t.name DESC;

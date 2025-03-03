@@ -1,0 +1,15 @@
+CREATE VIRTUAL TABLE t1 USING fts5(a, b, c);
+  INSERT INTO t1 VALUES('one', 'two', 'three');
+
+SELECT * FROM t1;
+
+CREATE TABLE t4(hello);
+
+CREATE TABLE t1(x);
+  CREATE TABLE t2(y);
+  INSERT INTO t1 VALUES('one');
+  INSERT INTO t2 VALUES('two');
+
+CREATE virtual TABLE r1 USING fts5(x);
+
+CREATE TABLE t4(hello, check( hello IS NOT "xyz") );

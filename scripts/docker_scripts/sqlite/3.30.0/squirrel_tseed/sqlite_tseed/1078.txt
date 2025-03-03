@@ -1,0 +1,7 @@
+SELECT * FROM b
+
+INSERT INTO b VALUES('Qazvin')
+
+PRAGMA journal_mode = wal;
+  CREATE TABLE x(y);
+  INSERT INTO x VALUES('z');

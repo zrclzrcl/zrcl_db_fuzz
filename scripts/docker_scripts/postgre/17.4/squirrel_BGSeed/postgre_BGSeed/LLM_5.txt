@@ -1,0 +1,70 @@
+-- 创建数据库和模式
+CREATE DATABASE test_db;
+\c test_db;
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- 创建表，包含各种数据类型和约束
+CREATE TABLE test_schema.test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    salary NUMERIC(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    type ENUM('A', 'B', 'C'),
+    data JSONB,
+    tags TEXT[],
+    UNIQUE (name)
+);
+
+-- 插入测试数据
+INSERT INTO test_schema.test_table(name, age, salary, created_at, updated_at, is_active, type, data, tags)
+VALUES
+('Alice', 30, 10000.50, '2024-01-01 00:00:00', NULL, TRUE, 'A', '{"key": "value"}', ARRAY['tag1', 'tag2']),
+('Bob', 25, 8000.75, '2024-01-02 00:00:00', '2024-01-03 00:00:00', FALSE, 'B', '{"name": "Bob"}', ARRAY['tag3']);
+
+-- 复杂查询
+SELECT t.id, t.name, (
+    SELECT COUNT(*) FROM test_schema.test_table WHERE is_active = TRUE
+) as active_count,
+ROW_NUMBER() OVER (ORDER BY t.age DESC) AS row_num
+FROM test_schema.test_table t
+WHERE t.salary > 5000 AND t.type IN ('A', 'B')
+ORDER BY t.created_at ASC;
+
+-- 使用事务控制和锁机制
+BEGIN;
+    SELECT * FROM test_schema.test_table WHERE name = 'Alice' FOR UPDATE;
+    UPDATE test_schema.test_table SET salary = 12000.50 WHERE name = 'Alice';
+COMMIT;
+
+-- 创建存储过程和函数
+CREATE PROCEDURE test_schema.test_proc()
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO test_schema.test_table(name, age) VALUES('TestProc', 35);
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'An error occurred: %', SQLERRM;
+END;
+$$;
+
+CREATE FUNCTION test_schema.test_func(text) RETURNS text AS $$
+DECLARE
+    result text := '';
+BEGIN
+    IF $1 = 'test' THEN
+        RETURN 'Success';
+    ELSE
+        RETURN 'Failure';
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN 'Error occurred';
+END;
+$$ LANGUAGE plpgsql;
+
+-- 调用存储过程和函数
+CALL test_schema.test_proc();
+SELECT test_schema.test_func('test');

@@ -1,0 +1,37 @@
+-- 创建一个包含多种数据类型的表，并插入一些示例数据
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    value REAL,
+    data BLOB,
+    status BOOLEAN DEFAULT FALSE
+);
+
+-- 插入初始数据，包括各种类型的数据和边缘值
+INSERT INTO test_table (id, name, value, data) VALUES 
+(1, 'Test Name 1', 100.5, X'ABCDEF'),
+(2, 'Test Name 2', -123.456, X'1234ABCD'),
+(3, 'Test Name 3', NULL, X''),
+(4, '', 0, X'0000');
+
+-- 创建一个索引以测试索引相关的功能
+CREATE INDEX idx_name ON test_table(name);
+
+-- 更新语句，包含条件判断和可能的边缘情况
+UPDATE test_table SET status = TRUE WHERE id > 2;
+
+-- 测试事务处理
+BEGIN;
+INSERT INTO test_table (id, name) VALUES (5, 'Transaction Test');
+COMMIT;
+
+-- 测试回滚操作
+BEGIN;
+DELETE FROM test_table WHERE id = 5;
+ROLLBACK;
+
+-- 使用子查询测试复杂查询
+SELECT * FROM test_table WHERE value > (SELECT AVG(value) FROM test_table);
+
+-- 删除语句，包含条件判断
+DELETE FROM test_table WHERE status = FALSE;

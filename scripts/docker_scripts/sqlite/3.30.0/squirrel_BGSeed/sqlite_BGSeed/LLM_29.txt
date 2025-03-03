@@ -1,0 +1,46 @@
+-- 创建测试表
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    value REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+-- 插入测试数据
+INSERT INTO test_table (id, name, value, created_at, is_active) VALUES 
+(1, 'Test1', 100.5, '2023-01-01 00:00:00', TRUE),
+(2, 'Test2', NULL, '2023-01-02 00:00:00', FALSE),
+(3, 'Test3', 50.25, '2023-01-03 00:00:00', TRUE);
+
+-- 测试复杂查询
+SELECT 
+    t1.id,
+    t1.name || ' - ' || t2.name AS combined_name,
+    COALESCE(t1.value, 0) + COALESCE(t2.value, 0) AS total_value,
+    COUNT(*) OVER (PARTITION BY is_active) AS active_count,
+    RANK() OVER (ORDER BY value DESC) AS rank_value
+FROM test_table t1
+JOIN test_table t2 ON t1.id != t2.id
+WHERE t1.is_active = TRUE
+GROUP BY t1.id, t1.name, t1.value, t1.created_at, t1.is_active;
+
+-- 测试事务控制
+BEGIN;
+    UPDATE test_table SET is_active = FALSE WHERE id = 1;
+    SAVEPOINT sp1;
+        DELETE FROM test_table WHERE id = 2;
+        ROLLBACK TO sp1;
+COMMIT;
+
+-- 创建视图和触发器
+CREATE VIEW v_test AS
+SELECT name, value, created_at 
+FROM test_table
+WHERE is_active = TRUE;
+
+CREATE TRIGGER trg_after_update AFTER UPDATE ON test_table
+FOR EACH ROW BEGIN
+    INSERT INTO audit_log (table_name, action, old_value, new_value)
+    VALUES ('test_table', 'UPDATE', OLD.value, NEW.value);
+END;

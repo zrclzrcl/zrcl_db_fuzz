@@ -1,0 +1,69 @@
+-- 创建测试用的数据库对象
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100),
+    age INT CHECK(age >= 0 AND age <= 120),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    order_date DATE DEFAULT CURRENT_DATE,
+    amount DECIMAL(10,2) CHECK(amount > 0)
+);
+
+-- 插入测试数据
+INSERT INTO users (username, email, age) VALUES 
+('test_user1', 'user1@example.com', 30),
+('test_user2', 'user2@example.com', NULL), -- 测试NULL值
+('test_user3', 'user3@example.com', 25);
+
+INSERT INTO orders (user_id, amount) VALUES 
+(1, 100.00),
+(1, 200.50),
+(2, 75.75);
+
+-- 复杂查询语句
+SELECT u.username, o.order_date, o.amount 
+FROM users u 
+JOIN orders o ON u.id = o.user_id 
+WHERE u.age > 25 AND o.amount < 200.00 
+ORDER BY o.order_date DESC 
+LIMIT 2;
+
+-- 测试边界条件
+SELECT COUNT(*) FROM users WHERE age >= 120;
+SELECT * FROM orders WHERE amount = 0.00; -- 测试检查约束
+
+-- 测试NULL值处理
+SELECT username, email 
+FROM users 
+WHERE email IS NULL OR is_active = FALSE;
+
+-- 测试事务控制
+BEGIN;
+    UPDATE users SET is_active = FALSE WHERE id = 3;
+    DELETE FROM orders WHERE user_id = 3;
+COMMIT;
+
+-- 测试复杂条件查询
+SELECT u.username,
+       (SELECT COUNT(*) FROM orders WHERE user_id = u.id) AS order_count,
+       COALESCE((SELECT SUM(amount) FROM orders WHERE user_id = u.id), 0) AS total_amount
+FROM users u
+WHERE u.age > 25 AND 
+      u.username NOT LIKE '%test%'
+ORDER BY total_amount DESC;
+
+-- 测试UNION操作
+(SELECT id, username FROM users WHERE age > 25)
+UNION
+(SELECT user_id, 'Order by ' || (SELECT username FROM users WHERE id = o.user_id) AS username FROM orders o);
+
+-- 清理数据（谨慎使用）
+DELETE FROM orders;
+DELETE FROM users;
+
+VACUUM; -- 测试数据库维护操作

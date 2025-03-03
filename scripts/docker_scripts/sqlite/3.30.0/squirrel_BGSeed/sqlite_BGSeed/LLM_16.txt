@@ -1,0 +1,150 @@
+-- 创建不同类型的表以覆盖多种数据类型和约束条件
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    salary REAL,
+    is_active BOOLEAN
+);
+
+-- 插入测试数据，包括边界值和特殊值
+INSERT INTO test_table VALUES 
+(1, 'Alice', 30, '2024-01-01 00:00:00', 80000.5, 1),
+(2, 'Bob', 25, '2024-01-01 00:00:00', 75000.3, 0),
+(3, 'Charlie', NULL, '2024-01-01 00:00:00', 90000.7, 1);
+
+-- 创建包含外键约束的表以测试关系型数据库特性
+CREATE TABLE related_table (
+    id INTEGER PRIMARY KEY,
+    test_id INTEGER REFERENCES test_table(id) ON DELETE CASCADE,
+    description TEXT
+);
+
+-- 插入相关数据，包括可能触发外键操作的数据
+INSERT INTO related_table VALUES 
+(1, 1, 'Related to Alice'),
+(2, 2, 'Related to Bob');
+
+-- 创建包含自增主键的表以测试自动增量功能
+CREATE TABLE auto_increment_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    value TEXT
+);
+
+-- 插入数据以触发自增主键行为
+INSERT INTO auto_increment_table (value) VALUES 
+('Value 1'),
+('Value 2');
+
+-- 创建包含不同数据类型的表以覆盖更多测试场景
+CREATE TABLE various_types (
+    tinyint_col INTEGER CHECK (value >= -128 AND value <= 127),
+    smallint_col INTEGER CHECK (value >= -32768 AND value <= 32767),
+    int_col INTEGER,
+    bigint_col INTEGER,
+    float_col REAL,
+    double_col REAL,
+    decimal_col TEXT, -- SQLite doesn't have a specific DECIMAL type
+    char_col TEXT(10),
+    varchar_col TEXT,
+    text_col TEXT,
+    blob_col BLOB,
+    date_col DATE,
+    datetime_col DATETIME,
+    time_col TIME
+);
+
+-- 插入各种类型的数据以测试数据库的处理能力
+INSERT INTO various_types VALUES 
+(
+    127, -- tinyint_col
+    32767, -- smallint_col
+    2147483647, -- int_col
+    9223372036854775807, -- bigint_col
+    1.23, -- float_col
+    123456789012345.6789, -- double_col
+    '123.45', -- decimal_col
+    'Char Data', -- char_col
+    'VarChar Data', -- varchar_col
+    'Text Data', -- text_col
+    X'ABCD', -- blob_col
+    '2024-01-01', -- date_col
+    '2024-01-01 12:34:56', -- datetime_col
+    '12:34:56'  -- time_col
+);
+
+-- 创建包含索引的表以测试查询优化器的行为
+CREATE TABLE indexed_table (
+    id INTEGER PRIMARY KEY,
+    value TEXT,
+    index_test INTEGER
+);
+CREATE INDEX idx_index_test ON indexed_table(index_test);
+
+-- 插入大量数据以触发索引相关操作（假设N为一个较大的数字）
+INSERT INTO indexed_table (value, index_test) 
+SELECT 'Test Value', i FROM generate_series(1, 1000) AS t(i);
+
+-- 创建包含视图的表以测试数据库的视图处理能力
+CREATE VIEW test_view AS 
+SELECT id, name, age FROM test_table WHERE is_active = 1;
+
+-- 创建包含触发器的表以测试数据库的触发机制
+CREATE TABLE trigger_test (
+    id INTEGER PRIMARY KEY,
+    value TEXT,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TRIGGER update_trigger
+BEFORE UPDATE ON trigger_test
+FOR EACH ROW
+BEGIN
+    SET NEW.last_updated = CURRENT_TIMESTAMP;
+END;
+
+-- 插入数据以触发触发器行为
+INSERT INTO trigger_test (value) VALUES ('Initial Value');
+
+-- 创建包含存储过程的表（虽然SQLite对存储过程的支持有限，但可以测试相关功能）
+CREATE TABLE stored_proc_test (
+    id INTEGER PRIMARY KEY,
+    value TEXT
+);
+
+-- 创建包含事务的结构以测试数据库的事务处理能力
+BEGIN TRANSACTION;
+INSERT INTO test_table VALUES (4, 'Dave', 35, CURRENT_TIMESTAMP, 85000.0, 1);
+SAVEPOINT sp1;
+INSERT INTO related_table VALUES (3, 4, 'Related to Dave');
+ROLLBACK TO sp1;
+COMMIT;
+
+-- 创建包含复杂查询的结构以测试数据库的查询优化器和执行引擎
+SELECT 
+    t.id,
+    t.name,
+    t.age,
+    rt.description,
+    at.value AS auto_increment_value,
+    vt.tinyint_col,
+    SUM(vt.int_col) OVER (ORDER BY vt.id) AS cumulative_sum
+FROM test_table t
+LEFT JOIN related_table rt ON t.id = rt.test_id
+LEFT JOIN auto_increment_table at ON t.id = at.id
+LEFT JOIN various_types vt ON t.id = vt.id
+WHERE t.age > 25
+GROUP BY t.id, t.name, t.age, rt.description, at.value, vt.tinyint_col;
+
+-- 创建包含复杂约束的表以测试数据库的约束检查能力
+CREATE TABLE complex_constraints (
+    id INTEGER PRIMARY KEY,
+    unique_field TEXT UNIQUE,
+    check_field INTEGER CHECK (check_field > 0 AND check_field < 100),
+    not_null_field TEXT NOT NULL,
+    foreign_key_id INTEGER REFERENCES test_table(id)
+);
+
+-- 插入数据以测试约束的触发
+INSERT INTO complex_constraints VALUES 
+(1, 'Unique Value', 50, 'Required Data', 1);
