@@ -326,7 +326,7 @@ def save_testcase(testcase_queue,save_path):
 
 def main():
     #===================定义区===================
-    api_key = 'sk-zk24aba6ad3b8fd4a0e90ad7e28e19c0e046712507bcc931'    #LLM-apikey
+   #LLM-apikey
     model = 'gpt-3.5-turbo' #LLM-模型
     base_url = 'https://api.zhizengzeng.com/v1/'    #LLM所在的基本地址
     testcase_path = "/tmp/fuzz/default/queue/" #定义测试用例文件地址
@@ -363,6 +363,9 @@ def main():
     parser.add_argument('-t', help='发送阈值设置', required=True)
     parser.add_argument('-db', help='目标数据库设置，可以是sqlite,mysql,postgresql,duckdb,mariadb', required=True)
     parser.add_argument('-o', help='单次请求生成的测试用例数',default=1)
+    parser.add_argument('-k', help='LLM-apikey',required=True)
+    parser.add_argument('-bu', help='LLM-baseurl',default='https://api.zhizengzeng.com/v1/')
+    parser.add_argument('-mo', help='LLM-model',default='deepseek-reasoner')
     # 解析命令行参数
     args = parser.parse_args()
     
@@ -370,6 +373,9 @@ def main():
     target_db = args.db #目标数据库
     number_of_generate_testcase = args.o    #单次请求生成的测试用例数
 
+    api_key = args.k
+    base_url = args.bu
+    model = args.mo
     #===================主过程区===================
 
     init()

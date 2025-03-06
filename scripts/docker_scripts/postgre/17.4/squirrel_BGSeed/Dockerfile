@@ -1,9 +1,10 @@
+# syntax=docker/dockerfile:1.2
 from ubuntu:22.04
 LABEL maintainer="Squirrel"
 
 # common config
 RUN apt-get update
-RUN apt-get -y install make cmake build-essential vim sudo git \
+RUN apt-get -y install make cmake build-essential vim sudo git openssh-client\
     clang ninja-build pkg-config clang-format libpq-dev llvm libyaml-cpp-dev zlib1g-dev \
     libreadline8 libreadline-dev bison flex python3-fire
 
@@ -19,8 +20,10 @@ RUN chmod +w /etc/sudoers && \
 
 USER dobigthing
 WORKDIR /home
+RUN mkdir -p -m 0700 ~/.ssh && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  && \
+RUN --mount=type=ssh git clone git@github.com:zrclzrcl/zrcl_db_fuzz.git  &&  \
     cd zrcl_db_fuzz && git submodule update --init && \
     cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPOSTGRESQL=ON && \
