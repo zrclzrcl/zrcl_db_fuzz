@@ -23,7 +23,7 @@ WORKDIR /home
 RUN mkdir -p -m 0700 ~/.ssh && \
     ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-RUN --mount=type=ssh git clone git@github.com:zrclzrcl/zrcl_db_fuzz.git  &&  \
+RUN --mount=type=ssh git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  &&  \
     cd zrcl_db_fuzz && git submodule update --init && \
     cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPOSTGRESQL=ON && \
