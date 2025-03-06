@@ -1,0 +1,80 @@
+-- 创建一个包含各种数据类型的表，用于测试不同的数据类型和约束
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    price NUMERIC(10, 2),
+    data JSONB
+);
+
+-- 创建一个索引，用于测试索引功能和性能
+CREATE INDEX idx_name ON test_table (name);
+
+-- 创建一个视图，用于测试视图的创建和查询
+CREATE VIEW test_view AS
+SELECT id, name, created_at FROM test_table WHERE is_active = TRUE;
+
+-- 插入一些测试数据
+INSERT INTO test_table (name, description, price, data)
+VALUES 
+('Test Item 1', 'This is a test item.', 100.50, '{"key": "value"}'),
+('Test Item 2', 'Another test item.', 200.75, '{"array": [1, 2, 3]}');
+
+-- 测试窗口函数和复杂查询
+SELECT 
+    id,
+    name,
+    created_at,
+    ROW_NUMBER() OVER (ORDER BY created_at) as row_num,
+    RANK() OVER (ORDER BY price DESC) as price_rank
+FROM test_table;
+
+-- 测试CTE（公共表达式表）
+WITH temp_data AS (
+    SELECT 
+        id, 
+        name, 
+        created_at, 
+        EXTRACT(YEAR FROM created_at) as year
+    FROM test_table
+)
+SELECT * FROM temp_data WHERE year = EXTRACT(YEAR FROM CURRENT_TIMESTAMP);
+
+-- 测试事务控制
+BEGIN;
+INSERT INTO test_table (name, description) VALUES ('Transaction Test', 'Testing transactions');
+SAVEPOINT my_savepoint;
+UPDATE test_table SET is_active = FALSE WHERE name = 'Transaction Test';
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- 测试JSONB操作和更新
+UPDATE test_table 
+SET data = jsonb_set(data, '{new_key}', '"new_value"', true)
+WHERE id = 1;
+
+-- 创建一个触发器，用于测试触发器功能
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.price < 0 THEN
+        NEW.price = 0;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER positive_price_trigger
+BEFORE INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_function();
+
+-- 测试权限管理
+GRANT SELECT, INSERT ON test_table TO test_user;
+REVOKE INSERT ON test_table FROM test_user;
+
+-- 清理数据（如果需要）
+-- DROP TABLE test_table;
+-- DROP VIEW test_view;
+-- DROP FUNCTION trigger_function();
+-- DROP TRIGGER positive_price_trigger ON test_table;

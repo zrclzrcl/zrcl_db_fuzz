@@ -1,0 +1,70 @@
+-- 创建一个包含多种数据类型的测试表
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT CHECK (age >= 0),
+    salary NUMERIC(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+-- 插入一些初始数据，包含边界值和特殊字符
+INSERT INTO test_table (name, age, salary, is_active) 
+VALUES 
+('Alice', 30, 5000.50, true),
+('Bob', 25, 4000.75, false),
+('Charlie', 40, 6000.00, true),
+('', NULL, NULL, NULL);
+
+-- 测试更新操作
+UPDATE test_table SET salary = 7000.00 WHERE name = 'Alice';
+
+-- 测试删除操作
+DELETE FROM test_table WHERE age > 35;
+
+-- 创建一个分区表以测试PostgreSQL的分区功能
+CREATE TABLE sales (
+    id SERIAL,
+    sale_date DATE,
+    amount NUMERIC
+) PARTITION BY RANGE (sale_date);
+
+-- 创建一个继承表来测试PostgreSQL的继承特性
+CREATE TABLE inherited_table () INHERITS (test_table);
+
+-- 测试PostgreSQL的约束和触发器
+ALTER TABLE test_table ADD CONSTRAINT unique_name UNIQUE (name);
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.created_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_timestamp
+BEFORE UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+
+-- 测试PostgreSQL的窗口函数和CTE（公共表达式）
+WITH ranked_employees AS (
+    SELECT name, salary,
+           RANK() OVER (ORDER BY salary DESC) as salary_rank
+    FROM test_table
+)
+SELECT * FROM ranked_employees WHERE salary_rank <= 3;
+
+-- 测试PostgreSQL的事务控制
+BEGIN;
+INSERT INTO test_table (name, age, salary, is_active) 
+VALUES ('Diana', 35, 8000.00, true);
+SAVEPOINT my_savepoint;
+UPDATE test_table SET salary = 9000.00 WHERE name = 'Diana';
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- 测试PostgreSQL的索引优化
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+
+-- 清理测试数据（注释掉以避免在初始种子中执行清理操作）
+-- DROP TABLE IF EXISTS test_table, sales, inherited_table;

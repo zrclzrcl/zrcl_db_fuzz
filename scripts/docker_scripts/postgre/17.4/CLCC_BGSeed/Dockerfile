@@ -39,4 +39,3 @@ RUN cd bld/ && make -j && sudo make install &&  \
 RUN AFL_DEBUG=1 __AFL_SHM_ID=1234 /usr/local/pgsql/bin/postgres 2>&1 | grep "__afl_map_size" | tail -n 1 | cut -d"," -f8 | cut -d" " -f 3 > /tmp/mapsize
 ADD postgre_BGSeed/  /home/zrcl_db_fuzz/Squirrel/data/fuzz_root/postgre_BGSeed/
 WORKDIR /home/zrcl_db_fuzz/Squirrel/scripts/utils
-ENTRYPOINT AFL_MAP_SIZE=$(cat /tmp/mapsize) python3 run.py postgresql ../../data/fuzz_root/postgre_BGSeed/
