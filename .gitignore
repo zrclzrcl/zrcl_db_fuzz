@@ -8,3 +8,5 @@ util/transform_duckdb_seed/duckdb_dseed/
 util/transform_mysql_seed/mysql_dseed/
 util/transform_mysql_seed/mysql_dseed_1/
 util/transform_sqlite_seed/sqlite_dseed/
+util/GSeed_generate_by_BSeed/postgre_bseed/
+util/GSeed_generate_by_BSeed/output_postgresql/

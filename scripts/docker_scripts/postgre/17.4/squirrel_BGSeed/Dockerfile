@@ -21,7 +21,7 @@ RUN chmod +w /etc/sudoers && \
 USER dobigthing
 WORKDIR /home
 
-RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  &&  \
+RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  &&   \
     cd zrcl_db_fuzz && git submodule update --init && \
     cd Squirrel && git submodule update --init && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPOSTGRESQL=ON && \
@@ -40,4 +40,4 @@ RUN cd bld/ && make -j && sudo make install &&  \
 RUN AFL_DEBUG=1 __AFL_SHM_ID=1234 /usr/local/pgsql/bin/postgres 2>&1 | grep "__afl_map_size" | tail -n 1 | cut -d"," -f8 | cut -d" " -f 3 > /tmp/mapsize
 ADD postgre_BGSeed/  /home/zrcl_db_fuzz/Squirrel/data/fuzz_root/postgre_BGSeed/
 WORKDIR /home/zrcl_db_fuzz/Squirrel/scripts/utils
-ENTRYPOINT AFL_MAP_SIZE=$(cat /tmp/mapsize) python3 run.py postgresql ../../data/fuzz_root/postgre_BGSeed/
+ENTRYPOINT AFL_MAP_SIZE=$(cat /tmp/mapsize) python3 run_squirrel_zrcl_mutator.py postgresql ../../data/fuzz_root/postgre_BGSeed/
