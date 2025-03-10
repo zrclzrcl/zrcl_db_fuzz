@@ -1,11 +1,11 @@
 from ubuntu:22.04
-LABEL maintainer="Squirrel"
+LABEL maintainer="Zrcl"
 
 # common config
-RUN apt-get update
+RUN apt-get  update 
 RUN apt-get -y install make cmake build-essential vim sudo git \
     clang ninja-build pkg-config clang-format libpq-dev llvm libyaml-cpp-dev zlib1g-dev \
-    libreadline8 libreadline-dev bison flex python3-fire
+    libreadline8 libreadline-dev bison flex python3-fire python3-pip && pip3 install openai && pip3 install colorama
 
 RUN mkdir -p /home && \
     groupadd dobigthing && \
@@ -28,7 +28,6 @@ RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  && \
     cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
 
 RUN git clone --depth=1 https://github.com/postgres/postgres.git postgres/ && \
-    git checkout REL_14_0 && \
     mkdir bld/ && cd bld/ && \
     CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++ \
     ../postgres/configure
@@ -40,3 +39,4 @@ RUN cd bld/ && make -j && sudo make install &&  \
 RUN AFL_DEBUG=1 __AFL_SHM_ID=1234 /usr/local/pgsql/bin/postgres 2>&1 | grep "__afl_map_size" | tail -n 1 | cut -d"," -f8 | cut -d" " -f 3 > /tmp/mapsize
 ADD postgre_BGSeed/  /home/zrcl_db_fuzz/Squirrel/data/fuzz_root/postgre_BGSeed/
 WORKDIR /home/zrcl_db_fuzz/Squirrel/scripts/utils
+RUN sudo chmod -R 777 /home/

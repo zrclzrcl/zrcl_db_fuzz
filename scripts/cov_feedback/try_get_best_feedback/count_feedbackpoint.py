@@ -283,7 +283,7 @@ def llm_worker(samples, api_key, base_url, model, save_queue,target_db,one_time_
 def passively_llm_worker(selection_queue, api_key, base_url, model, save_queue,target_db,one_time_generete):
     global passively_llm_generate
     while True:
-        start_time = time.time
+        start_time = time.time()
         testcases,samples = selection_queue.pop_one_combo()
         output = ''
         for testcases in testcases:
@@ -373,9 +373,9 @@ def main():
     target_db = args.db #目标数据库
     number_of_generate_testcase = args.o    #单次请求生成的测试用例数
 
-    api_key = args.k
-    base_url = args.bu
-    model = args.mo
+    api_key = args.k    #定义LLM-apikey
+    base_url = args.bu  #有默认值的基本url
+    model = args.mo     #有默认值的模型
     #===================主过程区===================
 
     init()
