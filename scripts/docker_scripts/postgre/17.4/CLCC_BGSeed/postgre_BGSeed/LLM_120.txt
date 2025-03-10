@@ -1,0 +1,23 @@
+BEGIN;
+SAVEPOINT sp1;
+
+CREATE TEMPORARY TABLE temp_test (id int, name text);
+INSERT INTO temp_test VALUES (1, 'test');
+
+EXPLAIN ANALYZE SELECT * FROM temp_test WHERE id = 1;
+
+PREPARE stmt AS SELECT * FROM temp_test WHERE id = $1;
+EXECUTE stmt(1);
+DEALLOCATE stmt;
+
+SELECT version();
+VACUUM ANALYZE temp_test;
+
+SELECT relname, relpages FROM pg_class WHERE relkind = 'r' AND relname LIKE 'temp%';
+
+SELECT pg_advisory_lock(1234);
+
+SELECT locktype, virtualxid FROM pg_locks WHERE granted = true;
+
+SELECT pid, usename FROM pg_stat_activity;
+COMMIT;

@@ -1,0 +1,44 @@
+-- Create a table with various data types to test edge cases
+CREATE TABLE edge_cases (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT NOT NULL DEFAULT 'default_text',
+    numeric_value NUMERIC(10, 2),
+    boolean_flag BOOLEAN,
+    date_created DATE,
+    timestamp_updated TIMESTAMP,
+    json_data JSONB,
+    uuid_column UUID,
+    bytea_data BYTEA
+);
+
+-- Create a table with foreign key constraints to test referential integrity
+CREATE TABLE fkey_table (
+    id SERIAL PRIMARY KEY,
+    ref_id INTEGER REFERENCES edge_cases(id) ON DELETE CASCADE,
+    name VARCHAR(50) NOT NULL
+);
+
+-- Create a sequence for testing auto-increment functionality
+CREATE SEQUENCE seq_test INCREMENT BY 2 START WITH 1 NO MAXVALUE CACHE 10;
+
+-- Insert sample data into the tables to test DML operations
+INSERT INTO edge_cases (text_field, numeric_value, boolean_flag, date_created, timestamp_updated, json_data, uuid_column, bytea_data)
+VALUES 
+('test1', 123.45, TRUE, '2023-01-01', NOW(), '{"key": "value"}', gen_random_uuid(), E'\\xDEADBEEF'),
+('test2', NULL, FALSE, '2023-02-02', NOW() - INTERVAL '1 day', NULL, gen_random_uuid(), E'\\x48656C6C6F');
+
+-- Update a row to test conditional updates
+UPDATE edge_cases SET boolean_flag = NOT boolean_flag WHERE id = 1;
+
+-- Create a complex query using CTE to test execution paths
+WITH cte AS (
+    SELECT id, text_field FROM edge_cases WHERE boolean_flag IS TRUE
+)
+SELECT * FROM cte JOIN fkey_table ON cte.id = fkey_table.ref_id;
+
+-- Create a function with parameters to test stored procedure functionality
+CREATE OR REPLACE FUNCTION multiply_numbers(a INT, b INT) RETURNS INT AS $$
+BEGIN
+    RETURN a * b;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

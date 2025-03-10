@@ -1,0 +1,56 @@
+CREATE TYPE employee_type AS (id int, name text, salary numeric, hire_date date);
+
+CREATE TABLE employees OF employee_type (
+    id WITH OPTIONS PRIMARY KEY,
+    name NOT NULL DEFAULT '',
+    salary CHECK (salary > 0),
+    hire_date DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE departments (
+    dept_id int PRIMARY KEY,
+    dept_name text UNIQUE NOT NULL,
+    budget numeric(12,2)
+);
+
+CREATE INDEX idx_emp_salary ON employees USING btree (salary DESC);
+
+ALTER TABLE employees ADD COLUMN manager_id int REFERENCES departments(dept_id) ON DELETE SET NULL;
+
+CREATE VIEW emp_view AS SELECT id, name, salary FROM employees WHERE salary > 50000;
+
+CREATE MATERIALIZED VIEW emp_matview AS SELECT dept_name, COUNT(*) as emp_count FROM departments d JOIN employees e ON d.dept_id = e.manager_id GROUP BY dept_name;
+
+CREATE FUNCTION calculate_total_salary() RETURNS numeric LANGUAGE SQL STABLE AS $$
+    SELECT COALESCE(SUM(salary), 0) FROM employees;
+$$;
+
+CREATE TRIGGER update_emp_stats AFTER INSERT OR UPDATE ON employees FOR EACH ROW EXECUTE PROCEDURE notify_changes();
+
+CREATE EVENT TRIGGER log_ddl_events ON ddl_command_end WHEN TAG IN ('CREATE', 'ALTER', 'DROP') EXECUTE PROCEDURE log_event_details();
+
+CREATE TABLE jsonb_data (
+    id int PRIMARY KEY,
+    data jsonb
+);
+
+INSERT INTO jsonb_data VALUES (1, '{"name": "Alice", "age": 30}'), (2, '{"name": "Bob", "age": null}');
+
+SELECT * FROM jsonb_data WHERE data @> '{"age": 30}' AND data ->> 'name' = 'Alice';
+
+CREATE TABLE sales (
+    sale_id int PRIMARY KEY,
+    amount numeric(10,2),
+    sale_date date DEFAULT CURRENT_DATE
+) PARTITION BY RANGE (sale_date);
+
+CREATE TABLE sales_2023 PARTITION OF sales FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+BEGIN;
+    INSERT INTO sales VALUES (1, 100.00, '2023-05-01');
+    UPDATE departments SET budget = 500000 WHERE dept_id = 1;
+COMMIT;
+
+SELECT * FROM emp_view WHERE salary > (SELECT calculate_total_salary() / 10);
+
+\d employees

@@ -1,0 +1,50 @@
+-- Initial seed for PostgreSQL testing environment setup
+
+-- Create necessary roles
+CREATE ROLE regress_test_role;
+CREATE ROLE regress_unprivileged_role;
+CREATE ROLE regress_test_indirect;
+
+-- Create foreign data wrappers
+CREATE FOREIGN DATA WRAPPER postgresql HANDLER 'postgresql_fdw' VALIDATOR 'postgresql_validator';
+CREATE FOREIGN DATA WRAPPER dummy HANDLER 'dummy_handler';
+
+-- Create foreign servers
+CREATE SERVER s1 FOREIGN DATA WRAPPER postgresql OPTIONS (
+    host 'localhost',
+    port '5432'
+);
+CREATE SERVER s6 FOREIGN DATA-wrapper postgresql OPTIONS (
+    host 'localhost',
+    dbname 'testdb'
+);
+
+-- Create user mappings for testing roles
+CREATE USER MAPPING FOR regress_test_role SERVER s1 WITH (
+    options '...'
+);
+CREATE USER MAPPING FOR regress_unprivileged_role SERVER s1;
+
+-- Create foreign schema and tables
+CREATE SCHEMA foreign_schema;
+ALTER SCHEMA foreign_schema OWNER TO regress_test_role;
+
+-- Create foreign table definitions
+CREATE FOREIGN TABLE ft1 (
+    id integer,
+    name text
+) SERVER s1 OPTIONS (
+    table_name 'remote_table'
+);
+
+CREATE FOREIGN TABLE ft2 (
+    col1 text,
+    col2 integer
+) SERVER s6 OPTIONS (
+    table_name 'another_remote_table'
+);
+
+-- Create temporary partitioned tables for testing
+CREATE TEMPORARY TABLE temp_parted (
+    a int
+) PARTITION BY LIST (a);

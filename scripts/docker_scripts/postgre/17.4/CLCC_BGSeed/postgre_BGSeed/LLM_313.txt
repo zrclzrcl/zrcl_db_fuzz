@@ -1,0 +1,52 @@
+create table employees (
+    id serial primary key,
+    name varchar(100),
+    salary numeric(10,2) not null,
+    hire_date date default current_date,
+    is_active boolean default true
+);
+
+insert into employees (name, salary, hire_date, is_active)
+values ('John Doe', 75000.00, '2023-01-15', true),
+       ('Jane Smith', 85000.00, '2023-02-20', false),
+       (null, null, null, null);
+
+alter table employees add column department_id int;
+
+update employees set department_id = 
+    (select id from departments where name = 'Engineering') limit 1
+where id = 1;
+
+create index idx_name on employees(name);
+
+create unique index idx_unique_salary on employees(salary)
+where salary > 50000.00;
+
+begin;
+savepoint sp1;
+delete from employees 
+where is_active = false and exists (
+    select 1 from departments where department_id = id
+);
+rollback to sp1;
+
+insert into employees (name, salary, hire_date, is_active)
+values ('Test User', 50000.00, current_date, true);
+
+create index idx_hire_date on employees(hire_date desc);
+
+update employees set salary = salary * 1.1
+where department_id = (
+    select id from departments where name = 'Marketing'
+) and is_active = true;
+
+savepoint sp2;
+delete from employees where id = 5;
+rollback to sp2;
+
+insert into employees (name, salary, hire_date, is_active)
+values ('New Employee', 60000.00, current_date, true);
+
+create index idx_combined on employees(name, department_id);
+
+analyze employees;

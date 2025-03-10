@@ -1,0 +1,64 @@
+-- Create extension for UUID generation
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create extension for trigram operations
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index on username column for faster lookups
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+
+-- Create index on email column for faster lookups
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+
+-- Create posts table with foreign key to users
+CREATE TABLE IF NOT EXISTS posts (
+    post_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    author_id UUID NOT NULL REFERENCES users(user_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_published BOOLEAN DEFAULT FALSE
+);
+
+-- Create index on is_published column for faster filtering
+CREATE INDEX IF NOT EXISTS idx_posts_is_published ON posts (is_published);
+
+-- Create trigram indexes for full-text search capabilities
+CREATE INDEX IF NOT EXISTS idx_users_username_trgm ON users USING gin (username gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_users_email_trgm ON users USING gin (email gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_posts_title_trgm ON posts USING gin (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_posts_content_trgm ON posts USING gin (content gin_trgm_ops);
+
+-- Insert sample data
+INSERT INTO users (username, email, password_hash, full_name)
+VALUES 
+('john_doe', 'john@example.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Doe'),
+('jane_smith', 'jane@example.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane Smith');
+
+-- Insert sample posts
+INSERT INTO posts (title, content, author_id)
+SELECT 
+'First Post', 'This is the first post by John Doe.', user_id
+FROM users WHERE username = 'john_doe';
+
+-- Create sequence for id generation if needed
+CREATE SEQUENCE IF NOT EXISTS seq_users
+INCREMENT BY 1
+START WITH 1
+RESTART;
+
+-- Add unique constraint to ensure data integrity
+ALTER TABLE IF EXISTS users ADD CONSTRAINT uc_users UNIQUE (username, email);

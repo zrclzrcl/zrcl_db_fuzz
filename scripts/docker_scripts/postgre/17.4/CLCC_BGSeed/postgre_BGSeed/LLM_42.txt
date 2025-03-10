@@ -1,0 +1,49 @@
+-- Create a schema if not exists
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Set the search path to include the new schema
+SET search_path TO test_schema, public;
+
+-- Create sample tables
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    user_id INT REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create sample functions
+CREATE OR REPLACE FUNCTION get_current_timestamp()
+RETURNS TIMESTAMP AS $$
+SELECT CURRENT_TIMESTAMP;
+$$ LANGUAGE SQL IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION add_numbers(a INT, b INT)
+RETURNS INT AS $$
+SELECT a + b;
+$$ LANGUAGE SQL STRICT;
+
+-- Create user with limited privileges
+CREATE USER test_user WITH PASSWORD 'test_password';
+GRANT CONNECT ON DATABASE postgres TO test_user;
+GRANT USAGE ON SCHEMA test_schema TO test_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA test_schema TO test_user;
+
+-- Insert sample data
+INSERT INTO users (username, email)
+VALUES ('john_doe', 'john@example.com'),
+       ('jane_smith', 'jane@example.com');
+
+-- Create an index for faster queries
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+-- Verify the setup
+SELECT 'Setup completed successfully' AS status;

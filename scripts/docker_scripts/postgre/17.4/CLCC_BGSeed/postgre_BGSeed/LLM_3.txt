@@ -1,73 +1,23 @@
--- 创建一个包含各种字段类型的示例表，用于测试不同的数据类型和边界条件
-CREATE TABLE IF NOT EXISTS employees (
+CREATE SCHEMA test_schema;
+CREATE TABLE test_schema.test_table (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    salary DECIMAL(15,2) CHECK (salary >= 0),
-    hire_date DATE DEFAULT CURRENT_DATE,
-    is_active BOOLEAN DEFAULT TRUE
+    name TEXT NOT NULL,
+    value INT CHECK (value > 0),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- 创建一个继承表，用于测试PostgreSQL的继承功能
-CREATE TABLE IF NOT EXISTS part_time_employees (
-    hours_worked INTEGER CHECK (hours_worked <= 40)
-) INHERITS (employees);
-
--- 插入示例数据，包括边界条件和NULL值
-INSERT INTO employees(name, salary, hire_date, is_active)
-VALUES
-('John Doe', 50000.00, '2023-01-01', TRUE),
-('Jane Smith', NULL, DEFAULT, FALSE),
-('', 999999999999999.99, CURRENT_DATE - INTERVAL '10 years', TRUE);
-
--- 插入继承表数据
-INSERT INTO part_time_employees(name, salary, hours_worked)
-VALUES
-('Mike Johnson', 25000.00, 30),
-('Sarah Williams', NULL, DEFAULT);
-
--- 使用CTE和窗口函数进行复杂查询，测试PostgreSQL的高级功能
-WITH salary_stats AS (
-    SELECT 
-        id,
-        name,
-        salary,
-        ROW_NUMBER() OVER (ORDER BY salary DESC) as salary_rank,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) OVER () as median_salary
-    FROM employees
-)
-SELECT 
-    s.id,
-    s.name,
-    s.salary,
-    s.salary_rank,
-    s.median_salary,
-    e.is_active
-FROM salary_stats s
-JOIN employees e ON s.id = e.id
-WHERE s.salary > (
-    SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY salary)
-    FROM employees
-);
-
--- 测试PostgreSQL特有的JSON功能和复杂查询
-SELECT 
-    id,
-    name,
-    salary,
-    jsonb_build_object(
-        'employee', jsonb_strip_nulls(jsonb_build_object(
-            'name', name,
-            'salary', salary,
-            'isActive', is_active
-        )),
-        'hireDate', TO_CHAR(hire_date, 'YYYY-MM-DD')
-    ) as employee_info
-FROM employees
-WHERE 
-    id IN (
-        SELECT id FROM part_time_employees WHERE hours_worked > 35
-    )
-ORDER BY name DESC;
-
--- 清理测试数据（仅在测试环境中使用）
-DELETE FROM part_time_employees WHERE is_active = FALSE AND salary < (SELECT AVG(salary) FROM employees);
+ALTER TABLE test_schema.test_table ADD COLUMN description TEXT;
+ALTER TABLE test_schema.test_table ADD CONSTRAINT unique_name UNIQUE (name);
+CREATE INDEX idx_value ON test_schema.test_table (value) WHERE value > 100;
+CREATE ROLE test_role WITH LOGIN PASSWORD 'test_password';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA test_schema TO test_role;
+REVOKE UPDATE ON test_schema.test_table FROM test_role;
+CREATE FUNCTION test_schema.trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.value < 1 THEN
+        RAISE EXCEPTION 'Value must be greater than 0';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE TRIGGER test_trigger BEFORE INSERT OR UPDATE ON test_schema.test_table FOR EACH ROW EXECUTE FUNCTION test_schema.trigger_func();
+ALTER TABLE test_schema.test_table ADD CONSTRAINT fk_test FOREIGN KEY (id) REFERENCES test_schema.parent_table(id);

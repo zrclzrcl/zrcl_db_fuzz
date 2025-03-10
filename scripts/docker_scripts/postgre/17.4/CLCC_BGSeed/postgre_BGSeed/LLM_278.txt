@@ -1,0 +1,104 @@
+-- Initial Seed for PostgreSQL Test Case Setup
+
+-- Create auxiliary functions
+CREATE OR REPLACE FUNCTION dump_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Inserting new record';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION dump_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Updating record: %', OLD.*;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION dump_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Deleting record: %', OLD.*;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create test tables
+CREATE TABLE trigger_parted (
+    id SERIAL,
+    data TEXT,
+    CONSTRAINT trigger_parted_pkey PRIMARY KEY (id)
+) PARTITION BY RANGE (id);
+
+CREATE TABLE convslot_test_parent (
+    id SERIAL NOT NULL,
+    name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT parent_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE convslot_test_child (
+    id SERIAL NOT NULL,
+    parent_id INTEGER REFERENCES convslot_test_parent(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT child_pkey PRIMARY KEY (id)
+);
+
+-- Create functions for triggers
+CREATE OR REPLACE FUNCTION trigger_function1()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger function 1 executed';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION trigger_function2()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger function 2 executed';
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION trigger_function3()
+RETURNS TRIGGER AS $$
+DECLARE
+    row RECORD;
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        row := OLD.*;
+    ELSEIF TG_OP = 'DELETE' THEN
+        row := OLD.*;
+    END IF;
+    RAISE NOTICE '%', row;
+    RETURN row;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create indexes
+CREATE INDEX idx_convslot_child_parent_id ON convslot_test_child(parent_id);
+
+-- Create partitions for trigger_parted table
+CREATE TABLE trigger_parted_1 PARTITION OF trigger_parted FOR VALUES FROM (0) TO (100);
+CREATE TABLE trigger_parted_2 PARTITION OF trigger_parted FOR VALUES FROM (100) TO (200);
+
+-- Create triggers on tables
+CREATE TRIGGER trigger_insert BEFORE INSERT ON trigger_parted 
+FOR EACH ROW EXECUTE FUNCTION dump_insert();
+
+CREATE TRIGGER trigger_update AFTER UPDATE ON trigger_parted 
+FOR EACH ROW EXECUTE FUNCTION dump_update();
+
+CREATE TRIGGER trigger_delete INSTEAD OF DELETE ON trigger_parted 
+FOR EACH ROW EXECUTE FUNCTION dump_delete();
+
+-- Additional setup (optional sample data)
+INSERT INTO convslot_test_parent(name) VALUES('Parent 1');
+INSERT INTO convslot_test_child(parent_id, details) VALUES(1, 'Child Details');
+
+-- Vacuum to clean up
+VACUUM;

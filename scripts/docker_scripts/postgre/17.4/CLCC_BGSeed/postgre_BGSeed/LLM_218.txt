@@ -1,0 +1,63 @@
+-- Create table test1 with various data types
+CREATE TABLE test1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age SMALLINT,
+    balance NUMERIC(10, 2),
+    last_login TIMESTAMP
+);
+
+-- Insert sample data into test1 including NULL values for edge cases
+INSERT INTO test1 (name, age, balance, last_login)
+VALUES 
+('Alice', 30, 1000.50, '2023-01-01 00:00:00'),
+('Bob', NULL, NULL, '2023-01-02 00:00:00');
+
+-- Test DISTINCT ON with ordering
+SELECT DISTINCT ON (age) name, age, balance 
+FROM test1 
+ORDER BY age ASC, name DESC;
+
+-- Create table test2 for testing joins
+CREATE TABLE test2 (
+    id SERIAL PRIMARY KEY,
+    test1_id INT REFERENCES test1(id),
+    score INT
+);
+
+-- Insert data into test2 including NULL values
+INSERT INTO test2 (test1_id, score)
+VALUES 
+(1, 90),
+(2, NULL);
+
+-- Test LEFT JOIN to handle possible NULLs in related table
+SELECT t1.name, t2.score 
+FROM test1 t1 
+LEFT JOIN test2 t2 ON t1.id = t2.test1_id 
+ORDER BY t1.name;
+
+-- Use CTE for complex queries
+WITH cte AS (
+    SELECT name, age, balance 
+    FROM test1
+)
+SELECT * 
+FROM cte 
+WHERE age > 25;
+
+-- Test window function RANK()
+SELECT name, RANK() OVER (ORDER BY balance DESC) as rank 
+FROM test1 
+ORDER BY rank;
+
+-- Count recent logins using date functions
+SELECT COUNT(*) 
+FROM test1 
+WHERE last_login >= CURRENT_TIMESTAMP - INTERVAL '7 days';
+
+-- Update records and return updated rows
+UPDATE test1 
+SET balance = balance + 100 
+WHERE age IS NOT NULL 
+RETURNING *;

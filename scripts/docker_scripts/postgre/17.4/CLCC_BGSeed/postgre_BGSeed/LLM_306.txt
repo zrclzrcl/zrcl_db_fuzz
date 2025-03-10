@@ -1,0 +1,51 @@
+-- Create a table with various data types to test edge cases
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT NOT NULL,
+    numeric_column NUMERIC(10, 2),
+    boolean_column BOOLEAN DEFAULT FALSE,
+    datetime_column TIMESTAMP WITH TIME ZONE,
+    uuid_column UUID,
+    jsonb_column JSONB
+);
+
+-- Insert sample data with edge cases (NULLs, defaults)
+INSERT INTO test_table (text_column, numeric_column, boolean_column, datetime_column, uuid_column, jsonb_column)
+VALUES 
+('test', 123.45, TRUE, '2023-10-01 12:34:56+00', gen_random_uuid(), '{"key": "value"}'),
+('another test', NULL, FALSE, NULL, NULL, NULL);
+
+-- Test unique constraints and indexes
+ALTER TABLE test_table ADD CONSTRAINT unique_text_constraint UNIQUE (text_column);
+CREATE INDEX IF NOT EXISTS idx_text_column ON test_table (text_column);
+
+-- Test JSON operations
+INSERT INTO test_table (text_column, jsonb_column)
+VALUES ('json_test', '{"array": [1,2,3], "object": {"a": "b"}}');
+
+-- Test window functions and CTEs
+WITH cte AS (
+    SELECT id, text_column,
+           ROW_NUMBER() OVER (ORDER BY id) as row_num
+    FROM test_table
+)
+SELECT * FROM cte WHERE row_num % 2 = 0;
+
+-- Test advanced queries with subqueries
+SELECT t1.text_column 
+FROM test_table t1
+WHERE t1.numeric_column > (
+    SELECT AVG(numeric_column) 
+    FROM test_table 
+    WHERE datetime_column > CURRENT_TIMESTAMP - INTERVAL '1 day'
+);
+
+-- Test transaction and savepoints
+BEGIN;
+SAVEPOINT sp1;
+UPDATE test_table SET boolean_column = NOT boolean_column;
+ROLLBACK TO sp1;
+COMMIT;
+
+-- Cleanup (optional)
+-- DROP TABLE test_table;

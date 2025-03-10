@@ -1,57 +1,54 @@
--- 创建一个包含多种数据类型的表
-CREATE TABLE test_table (
+-- Create a table if it doesn't exist to ensure proper context for subsequent operations
+CREATE TABLE IF NOT EXISTS test_table (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    age INTEGER CHECK (age >= 0),
-    salary NUMERIC(10,2) DEFAULT 0.00,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    name TEXT,
     data JSONB,
-    status ENUM('active', 'inactive', 'pending') DEFAULT 'active'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    unique_field VARCHAR(50) UNIQUE
 );
 
--- 插入测试数据
-INSERT INTO test_table (name, age, salary, data)
-VALUES 
-    ('Alice', 30, 5000.00, '{"job": "Engineer", "department": "Tech"}'),
-    ('Bob', 25, 4000.00, '{"job": "Developer", "department": "DevOps"}'),
-    ('Charlie', NULL, 6000.00, '{"job": "Designer", "department": "UI/UX"}');
+-- Test various NOTIFY and LISTEN scenarios including edge cases
+NOTIFY notify_test_channel;
+SELECT pg_notify('notify_test_channel', 'test message');
+SELECT pg_notify('notify_test_channel', '');
+SELECT pg_notify('notify_test_channel', NULL);
+SELECT pg_notify('', 'test message');
+SELECT pg_notify(NULL, 'test message');
+SELECT pg_notification_queue_usage();
 
--- 更新操作
-UPDATE test_table SET salary = salary * 1.1 WHERE age > 25;
+-- Test UUID functions with edge cases
+SELECT uuid_generate_v4();
+SELECT uuid_nil();
+SELECT uuid_generate_v1mc();
 
--- 删除操作
-DELETE FROM test_table WHERE name LIKE 'C%';
+-- Test JSONB operations including edge cases and complex queries
+INSERT INTO test_table (name, data) VALUES ('json_test', '{"key": "value"}');
+INSERT INTO test_table (data) VALUES ('null'::jsonb);
+UPDATE test_table SET data = data || '{"new_key": 42}' WHERE name = 'json_test';
+SELECT * FROM test_table WHERE data @> '{"key": "value"}';
 
--- 复杂查询：使用窗口函数和CTE
-WITH ranked_employees AS (
-    SELECT 
-        id, 
-        name, 
-        salary,
-        RANK() OVER (ORDER BY salary DESC) as salary_rank
-    FROM test_table
+-- Test transaction management
+BEGIN;
+    INSERT INTO test_table (name) VALUES ('transaction_test');
+COMMIT;
+
+BEGIN;
+    INSERT INTO test_table (unique_field) VALUES (NULL);
+ROLLBACK;
+
+-- Test index creation and constraint checks
+CREATE INDEX IF NOT EXISTS idx_unique_field ON test_table(unique_field);
+INSERT INTO test_table (unique_field) VALUES ('duplicate_value');
+INSERT INTO test_table (unique_field) VALUES ('duplicate_value');
+
+-- Test Common Table Expressions (CTEs) with complex logic
+WITH cte AS (
+    SELECT id, name FROM test_table WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '1 day'
 )
-SELECT 
-    name, 
-    salary, 
-    salary_rank,
-    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) OVER () as median_salary
-FROM ranked_employees;
+SELECT * FROM cte;
 
--- 使用JSONB类型进行复杂查询
-SELECT * FROM test_table 
-WHERE data @> '{"job": "Engineer"}'::jsonb 
-AND created_at > CURRENT_TIMESTAMP - INTERVAL '1 month';
+-- Test window functions and advanced queries
+SELECT id, name, ROW_NUMBER() OVER (ORDER BY created_at) FROM test_table;
 
--- 测试边界条件：空值和大数值
-INSERT INTO test_table (name, age, salary)
-VALUES ('NULL_Test', NULL, 999999.99);
-
--- 使用PostgreSQL特有的操作符和函数
-SELECT 
-    id,
-    name,
-    MD5(name) as name_hash,
-    TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as formatted_time
-FROM test_table
-ORDER BY id DESC;
+-- Test vacuum to ensure database maintenance operations are covered
+VACUUM ANALYZE test_table;

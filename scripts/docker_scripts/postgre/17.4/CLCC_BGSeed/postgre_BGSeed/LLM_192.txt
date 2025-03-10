@@ -1,0 +1,24 @@
+-- Create base table and inherited tables
+CREATE TABLE current_check (
+    currentid int,
+    payload text
+);
+
+CREATE TABLE current_check_1 () INHERITS (current_check);
+CREATE TABLE current_check_2 () INHERITS (current_check);
+
+-- Insert sample data
+INSERT INTO current_check_1 
+SELECT i, 'p' || i FROM generate_series(1,9) i;
+INSERT INTO current_check_2 
+SELECT i, 'P' || i FROM generate_series(10,19) i;
+
+-- Create view and rule for testing
+CREATE TEMP VIEW ucview AS SELECT * FROM uctest;
+
+CREATE RULE ucrule AS ON DELETE TO ucview DO INSTEAD 
+DELETE FROM uctest WHERE f1 = OLD.f1;
+
+-- Create helper function
+CREATE FUNCTION nochange(int) RETURNS int 
+AS 'SELECT 1 LIMIT 1' LANGUAGE sql STABLE;

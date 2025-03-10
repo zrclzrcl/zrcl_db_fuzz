@@ -1,0 +1,33 @@
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INTEGER,
+    date_col DATE,
+    bool_col BOOLEAN,
+    num_col NUMERIC(10, 2)
+);
+
+INSERT INTO test_fuzz (text_col, int_col, date_col, bool_col, num_col) VALUES 
+('', NULL, '0001-01-01', TRUE, 9999.99),
+('test_string_with_special_chars!@#$%^&*()', -2147483648, '9999-12-31', FALSE, -9999.99),
+('', 2147483647, CURRENT_DATE, TRUE, 0.00),
+('long_string_that_exceeds_normal_limits', 0, '2024-01-01', NULL, NULL);
+
+SELECT * FROM test_fuzz WHERE int_col = -2147483648;
+SELECT text_col || num_col::text AS combined_col FROM test_fuzz;
+SELECT COUNT(*) FROM test_fuzz WHERE date_col >= '2024-01-01' AND bool_col IS TRUE;
+
+CREATE INDEX idx_int_col ON test_fuzz (int_col);
+CREATE INDEX idx_text_col ON test_fuzz USING GIN (text_col);
+
+BEGIN;
+    INSERT INTO test_fuzz (text_col, int_col) VALUES ('transaction_test', 123);
+    SAVEPOINT sp1;
+    UPDATE test_fuzz SET text_col = 'updated_transaction_test' WHERE id = 4;
+    ROLLBACK TO sp1;
+COMMIT;
+
+SELECT num_col / int_col FROM test_fuzz WHERE id = 1; -- Division by zero
+SELECT bool_col::text FROM test_fuzz WHERE id = 5; -- Invalid cast
+
+DROP TABLE test_fuzz;

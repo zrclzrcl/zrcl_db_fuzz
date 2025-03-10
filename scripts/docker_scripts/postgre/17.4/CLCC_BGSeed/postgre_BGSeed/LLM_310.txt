@@ -1,0 +1,57 @@
+create schema fuzz_test;
+create table fuzz_test.users (
+    id serial primary key,
+    name text not null,
+    email text unique,
+    is_active boolean default true,
+    balance numeric(10,2) check (balance >= 0),
+    created_at timestamp with time zone default current_timestamp
+);
+create table fuzz_test.orders (
+    order_id serial primary key,
+    user_id integer references fuzz_test.users(id),
+    product_name text not null,
+    quantity integer not null check (quantity > 0),
+    order_date date not null
+) partition by range (order_date);
+create index idx_users_name on fuzz_test.users(name);
+create unique index idx_orders_product_quantity on fuzz_test.orders(product_name, quantity);
+create view fuzz_test.user_stats as 
+    select u.name, count(o.order_id) as total_orders,
+           sum(o.quantity) as total_products_purchased,
+           row_number() over (order by count(o.order_id) desc) as ranking
+    from fuzz_test.users u
+    left join fuzz_test.orders o on u.id = o.user_id
+    group by u.name;
+insert into fuzz_test.users(name, email, balance)
+values 
+    ('Alice', 'alice@example.com', 100.50),
+    ('Bob', 'bob@example.com', 200.75),
+    ('Charlie', 'charlie@example.com', 300.99);
+insert into fuzz_test.orders(user_id, product_name, quantity, order_date)
+values 
+    (1, 'Laptop', 1, '2024-01-01'),
+    (2, 'Phone', 2, '2024-01-02'),
+    (3, 'Tablet', 3, '2024-01-03');
+update fuzz_test.users 
+set balance = balance - 50.00 
+where name = 'Alice' and is_active = true
+limit 1;
+create function fuzz_test.calculate_total_orders()
+returns integer as $$
+declare
+    total integer;
+begin
+    select count(order_id) into total from fuzz_test.orders;
+    return total;
+end;
+$$ language plpgsql;
+alter table fuzz_test.users add column last_login timestamp with time zone;
+
+select u.name, o.product_name, o.quantity, 
+       (o.order_date::text || 'T' || u.created_at::time) as combined_timestamp,
+       case when o.quantity > 2 then 'Bulk purchase' else 'Single purchase' end as purchase_type
+from fuzz_test.users u
+join fuzz_test.orders o on u.id = o.user_id
+where u.balance > 100.00 and o.order_date >= current_date - interval '7 days'
+order by u.name desc, o.quantity asc;

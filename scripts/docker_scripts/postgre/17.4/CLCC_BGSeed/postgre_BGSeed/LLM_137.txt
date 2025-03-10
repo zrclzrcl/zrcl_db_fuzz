@@ -1,0 +1,51 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    int_col INT NOT NULL,
+    text_col TEXT,
+    bool_col BOOLEAN DEFAULT FALSE,
+    num_col NUMERIC(10, 2),
+    ts_col TIMESTAMP WITHOUT TIME ZONE
+);
+
+INSERT INTO test_table (int_col, text_col, bool_col, num_col, ts_col) VALUES 
+(2147483647, 'test', TRUE, 999.99, '2024-01-01 00:00:00'),
+(0, '', FALSE, 0.00, '1970-01-01 00:00:00'),
+(-2147483648, NULL, TRUE, -999.99, '2038-01-19 03:14:07');
+
+CREATE UNIQUE INDEX unique_int_col ON test_table (int_col);
+CREATE INDEX composite_index ON test_table (text_col, bool_col);
+
+SELECT t1.id, t2.int_col FROM test_table t1 JOIN test_table t2 ON t1.id = t2.id WHERE t1.bool_col = TRUE;
+
+WITH cte AS (
+    SELECT id, int_col 
+    FROM test_table 
+    WHERE num_col > 500.00
+)
+SELECT t.id, cte.int_col 
+FROM test_table t JOIN cte ON t.id = cte.id;
+
+SELECT COUNT(*) as total_rows, SUM(int_col) as sum_int, AVG(num_col) as avg_num 
+FROM test_table 
+WHERE ts_col >= '2024-01-01' GROUP BY bool_col ORDER BY total_rows DESC LIMIT 5;
+
+BEGIN;
+INSERT INTO test_table (int_col, text_col, bool_col, num_col, ts_col) VALUES 
+(1, 'test_transaction', TRUE, 100.50, CURRENT_TIMESTAMP);
+ROLLBACK;
+
+CREATE OR REPLACE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.int_col > 2000 THEN
+        RAISE NOTICE 'int_col exceeds threshold: %', NEW.int_col;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger BEFORE INSERT ON test_table FOR EACH ROW EXECUTE FUNCTION trigger_func();
+
+CREATE VIEW test_view AS 
+SELECT id, text_col, bool_col FROM test_table WHERE int_col > 100;
+
+SELECT id, ROW_NUMBER() OVER (ORDER BY ts_col) as row_num FROM test_table ORDER BY ts_col;

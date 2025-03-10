@@ -1,0 +1,67 @@
+BEGIN;
+
+-- Set configuration parameters for testing
+SET work_mem TO '64kB';
+SET random_page_cost TO 10;
+
+-- Create a test table with various data types and constraints
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT CHECK (name <> ''),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN NOT NULL,
+    value INT CHECK (value >= -2147483648 AND value <= 2147483647)
+);
+
+-- Insert test data including edge cases
+INSERT INTO test_table (name, status, value)
+VALUES 
+('Test1', TRUE, 100),
+('', FALSE, -2147483648), -- Minimum integer value
+('Test3', TRUE, NULL),
+('Test4', FALSE, 2147483647); -- Maximum integer value
+
+-- Create an index to test query performance
+CREATE INDEX idx_name_ci ON test_table USING btree (name text_pattern_ops);
+
+-- Use a CTE to group data by status
+WITH grouped_data AS (
+    SELECT status, COUNT(*) as count
+    FROM test_table
+    GROUP BY status
+)
+SELECT * FROM grouped_data;
+
+-- Utilize window functions for ranking and numbering
+SELECT id, name, created_at,
+       ROW_NUMBER() OVER (ORDER BY created_at) as row_num,
+       RANK() OVER (PARTITION BY status ORDER BY value DESC) as rank
+FROM test_table;
+
+-- Prepare a complex query using CTE
+PREPARE complex_query AS
+WITH data_subset AS (
+    SELECT id, name, status, value
+    FROM test_table
+    WHERE status = TRUE
+)
+SELECT COUNT(*) FROM data_subset;
+
+-- Execute the prepared statement with explanation
+EXPLAIN ANALYZE EXECUTE complex_query;
+
+-- Create a result table from CTE output
+CREATE TABLE cte_result AS 
+WITH data_subset AS (
+    SELECT id, name, status, value
+    FROM test_table
+    WHERE status = TRUE
+)
+SELECT COUNT(*) as count_true FROM data_subset;
+
+-- Clean up by dropping created objects
+DROP TABLE IF EXISTS cte_result;
+DROP INDEX IF EXISTS idx_name_ci;
+DROP TABLE IF EXISTS test_table;
+
+ROLLBACK;

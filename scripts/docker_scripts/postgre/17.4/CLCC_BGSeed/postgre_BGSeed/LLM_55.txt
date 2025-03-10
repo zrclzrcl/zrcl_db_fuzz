@@ -1,0 +1,53 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value NUMERIC(10, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    data JSONB
+);
+
+CREATE INDEX idx_gin_text ON test_table USING GIN (name gin_trgm_ops);
+
+CREATE OR REPLACE FUNCTION update_value()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.value = OLD.value + 10;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_value BEFORE UPDATE ON test_table FOR EACH ROW EXECUTE PROCEDURE update_value();
+
+CREATE SEQUENCE seq_test INCREMENT BY 5 START WITH 100;
+
+CREATE VIEW view_test AS SELECT id, name, value FROM test_table WHERE status = TRUE;
+
+CREATE ROLE test_user LOGIN PASSWORD 'securepassword';
+
+GRANT SELECT, INSERT ON test_table TO test_user;
+
+CREATE TABLE partitioned_table (
+    id SERIAL,
+    date_column DATE NOT NULL
+) PARTITION BY RANGE (date_column);
+
+CREATE TABLE partition_2023 PARTITION OF partitioned_table FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+CREATE OR REPLACE PROCEDURE proc_test(IN param1 INT, OUT result TEXT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    result := 'Procedure executed with parameter: ' || param1;
+END;
+$$;
+
+CREATE TYPE composite_type AS (
+    name TEXT,
+    age INT,
+    salary NUMERIC
+);
+
+CREATE TYPE status_enum AS ENUM ('active', 'inactive', 'pending');
+
+CREATE TYPE int_range AS RANGE (SUBTYPE = INTEGER, COLLATE "default");

@@ -1,0 +1,79 @@
+-- Create a table with various data types
+CREATE TABLE test_data (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    value INT,
+    is_active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    uuid_col UUID,
+    tags TEXT[],
+    metadata JSONB
+);
+
+-- Insert sample data into test_data
+INSERT INTO test_data (name, value, is_active, uuid_col, tags, metadata)
+VALUES 
+('Alice', 100, TRUE, '550e8400-e29b-41d4-a716-446655440000', '{tag1, tag2}', '{"age": 30, "city": "New York"}'),
+('Bob', NULL, FALSE, '550e8400-e29b-41d4-a716-446655440001', '{}', '{"age": NULL, "city": "London"}');
+
+-- Create an index on the name column
+CREATE INDEX idx_name ON test_data (name);
+
+-- Create a table with JSONB data type
+CREATE TABLE json_data (
+    id SERIAL PRIMARY KEY,
+    content JSONB
+);
+
+-- Insert sample JSON data
+INSERT INTO json_data (content)
+VALUES 
+('{"key": "value", "array": [1, 2, 3]}'),
+('{}');
+
+-- Create a partitioned table by date
+CREATE TABLE logs (
+    log_id BIGINT,
+    log_date DATE NOT NULL,
+    message TEXT
+) PARTITION BY RANGE (log_date);
+
+-- Create partitions for the logs table
+CREATE TABLE logs_2023 PARTITION OF logs 
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Insert sample data into the partitioned table
+INSERT INTO logs (log_id, log_date, message)
+VALUES 
+(1, '2023-05-01', 'Sample log message 1'),
+(2, '2023-06-01', 'Sample log message 2');
+
+-- Complex query using join
+SELECT t1.name, t2.name 
+FROM test_data t1 
+JOIN test_data t2 ON t1.id = t2.id 
+WHERE t1.is_active = TRUE;
+
+-- Aggregate query
+SELECT name, COUNT(*) as count 
+FROM test_data 
+GROUP BY name 
+HAVING COUNT(*) > 0;
+
+-- Subquery example
+SELECT id 
+FROM test_data 
+WHERE value > (SELECT AVG(value) FROM test_data);
+
+-- Window function example
+SELECT id, name, ROW_NUMBER() OVER (PARTITION BY is_active ORDER BY id) as row_num 
+FROM test_data;
+
+-- Common Table Expression (CTE)
+WITH cte AS (
+    SELECT * 
+    FROM test_data 
+    WHERE value > 50
+)
+SELECT COUNT(*) 
+FROM cte;

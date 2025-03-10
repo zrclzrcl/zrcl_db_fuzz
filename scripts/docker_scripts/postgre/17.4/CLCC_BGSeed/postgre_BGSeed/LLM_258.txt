@@ -1,0 +1,58 @@
+CREATE ROLE test_role WITH LOGIN PASSWORD 'testpass';
+GRANT ALL PRIVILEGES ON DATABASE postgres TO test_role;
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+CREATE INDEX idx_text_search ON test_table USING gin (to_tsvector('english', name || ' ' || description));
+CREATE INDEX idx_jsonb_path ON test_table ((data->>'key'));
+
+ALTER TABLE test_table ADD CONSTRAINT chk_positive_id CHECK (id > 0);
+
+CREATE VIEW test_view AS
+SELECT id, name, created_at FROM test_table WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '1 day';
+
+CREATE MATERIALIZED VIEW test_matview AS
+SELECT COUNT(*) as total, date_trunc('day', created_at) as day
+FROM test_table GROUP BY day;
+
+CREATE SEQUENCE seq_test INCREMENT 1 START 100;
+
+CREATE FUNCTION increment_value() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.value = OLD.value + 1;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_increment BEFORE UPDATE ON test_table FOR EACH ROW EXECUTE PROCEDURE increment_value();
+
+ALTER TABLE test_table ADD COLUMN value INTEGER DEFAULT 0;
+UPDATE test_table SET value = nextval('seq_test');
+
+GRANT SELECT, INSERT (name, description) ON test_table TO test_role;
+GRANT USAGE ON SEQUENCE seq_test TO test_role;
+GRANT SELECT ON test_view TO test_role;
+
+REVOKE INSERT ON test_table FROM test_role;
+ALTER TABLE test_table DISABLE TRIGGER trg_increment;
+
+ANALYZE test_table;
+
+DROP TRIGGER trg_increment ON test_table;
+DROP FUNCTION increment_value();
+DROP MATERIALIZED VIEW test_matview;
+DROP VIEW test_view;
+DROP SEQUENCE seq_test;
+DROP TABLE test_table;
+REVOKE ALL PRIVILEGES ON DATABASE postgres FROM test_role;
+DROP ROLE test_role;

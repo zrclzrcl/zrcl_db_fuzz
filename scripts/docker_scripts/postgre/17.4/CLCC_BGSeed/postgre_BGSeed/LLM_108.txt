@@ -1,0 +1,61 @@
+-- Create a test table with various data types
+CREATE TABLE IF NOT EXISTS fuzz_test (
+    id SERIAL PRIMARY KEY,
+    point_col POINT,
+    box_col BOX,
+    circle_col CIRCLE,
+    text_col TEXT,
+    int_col INT,
+    date_col DATE,
+    bool_col BOOLEAN
+);
+
+-- Insert sample data including edge cases
+INSERT INTO fuzz_test (point_col, box_col, circle_col, text_col, int_col, date_col, bool_col)
+VALUES 
+    ((0,0), '(0,0),(1,1)', '<(0,0),1>', 'test', 42, '2023-01-01', TRUE),
+    ((-1,-1), '(-1,-1),(0,0)', '<(0,0),0>', '', NULL, '1970-01-01', FALSE),
+    ((1000,1000), '(500,500),(1000,1000)', '<(500,500),500>', 'boundary', 2147483647, '9999-12-31', TRUE),
+    ((-1000,-1000), '(-1000,-1000),(0,0)', '<(0,0),1>', 'edge', -2147483648, '0001-01-01', FALSE);
+
+-- Create indexes for testing
+CREATE INDEX idx_point_gist ON fuzz_test USING GIST (point_col);
+CREATE INDEX idx_box_gist ON fuzz_test USING GIST (box_col);
+CREATE INDEX idx_circle_gist ON fuzz_test USING GIST (circle_col);
+CREATE INDEX idx_text_btree ON fuzz_test (text_col);
+CREATE INDEX idx_int_btree ON fuzz_test (int_col);
+
+-- Test various queries
+SELECT id FROM fuzz_test WHERE point_col <@ '(0,0),(1,1)';
+SELECT id FROM fuzz_test WHERE box_col @> '(0.5,0.5)'::POINT;
+SELECT id FROM fuzz_test WHERE circle_col @> '(2,2)'::POINT;
+SELECT text_col FROM fuzz_test WHERE text_col LIKE 'test%';
+SELECT int_col FROM fuzz_test WHERE int_col BETWEEN -100 AND 100;
+
+-- Test nearest neighbor queries
+SELECT point_col <-> '(500,500)' AS distance FROM fuzz_test ORDER BY distance LIMIT 1;
+SELECT box_col <-> '(500,500)'::POINT AS distance FROM fuzz_test ORDER BY distance LIMIT 1;
+SELECT circle_col <-> '(500,500)'::POINT AS distance FROM fuzz_test ORDER BY distance LIMIT 1;
+
+-- Test combination of conditions
+SELECT id FROM fuzz_test WHERE (point_col <@ '(0,0),(100,100)') AND (int_col > 10);
+SELECT id FROM fuzz_test WHERE (box_col @> '(50,50)'::POINT) OR (text_col = 'test');
+
+-- Test aggregate functions
+SELECT COUNT(*) FROM fuzz_test;
+SELECT MAX(int_col) FROM fuzz_test;
+SELECT MIN(date_col) FROM fuzz_test;
+
+-- Test joins and subqueries
+SELECT t1.id, t2.id FROM fuzz_test t1 JOIN fuzz_test t2 ON t1.point_col = t2.point_col;
+SELECT id FROM fuzz_test WHERE int_col IN (SELECT int_col FROM fuzz_test WHERE bool_col = TRUE);
+
+-- Cleanup indexes
+DROP INDEX idx_point_gist;
+DROP INDEX idx_box_gist;
+DROP INDEX idx_circle_gist;
+DROP INDEX idx_text_btree;
+DROP INDEX idx_int_btree;
+
+-- Cleanup table
+DROP TABLE IF EXISTS fuzz_test;

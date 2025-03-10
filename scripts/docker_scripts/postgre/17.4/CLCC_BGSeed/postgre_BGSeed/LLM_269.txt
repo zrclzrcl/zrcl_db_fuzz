@@ -1,0 +1,32 @@
+SELECT 'Hello' || ' World'; -- Simple string concatenation
+SELECT concat('Hello', ' ', 'World'); -- Using concat function with multiple arguments
+SELECT format('%s, %s!', 'Hello', 'World'); -- Basic formatting with placeholders
+SELECT substring('Hello, World!' FROM 8); -- Extracting a substring starting from position 8
+SELECT reverse('Hello') AS reversed_string; -- Reversing a string
+SELECT left('Hello', 3) AS first_three_chars; -- Getting the first three characters
+SELECT right('World', 2) AS last_two_chars; -- Getting the last two characters
+SELECT format('%L is a %s', 'Apple', 'fruit'); -- Formatting with literal and string substitution
+SELECT length('PostgreSQL') AS string_length; -- Calculating the length of a string
+SELECT position('sql' IN 'PostgreSQL') AS substring_position; -- Finding the position of a substring
+SELECT concat_ws(', ', NULL, 'Hello', '', 'World'); -- Concatenation with separator and handling NULLs
+SELECT format('%*s', 10, 'Centered') AS centered_text; -- Centering text within a width
+SELECT format('%-10s', 'Left-aligned'); -- Left-aligning text with padding
+SELECT format('%10s', 'Right-aligned'); -- Right-aligning text with padding
+SELECT concat(true, ', ', false) AS boolean_concat; -- Concatenating boolean values as strings
+SELECT format('Number: %d, Decimal: %.2f', 42, 3.1415); -- Formatting numbers with different specifications
+SELECT format('%s', NULL) AS null_string; -- Handling NULL in string formatting
+SELECT substring('Hello' FROM -2 FOR 2); -- Using negative positions in substring extraction
+SELECT length('') AS empty_length; -- Testing the length of an empty string
+SELECT reverse(''); -- Reversing an empty string
+SELECT left('', 5) AS empty_left; -- Left function with empty string
+SELECT right('', 5) AS empty_right; -- Right function with empty string
+SELECT format('%s', array['a','b','c']::text[]); -- Formatting an array as a string
+SELECT concat('Hello', NULL, 'World'); -- Concatenation involving NULL
+SELECT substring('abcdef' FROM (position('cd' IN 'abcdef') - 1) FOR 4); -- Combining functions to extract a substring
+SELECT format('%I', 'table_name'); -- Formatting an identifier
+SELECT format('%L', 'This is a test'); -- Formatting a literal string with quotes
+SELECT concat_ws(', ', array['One','Two','Three']::text[]); -- Concatenating elements of an array with separator
+SELECT format('Hex: %x, Octal: %o', 255, 64); -- Formatting numbers in hex and octal
+SELECT substring('abcdef' FROM -3 FOR 2); -- Negative position in substring
+SELECT concat(true, ', ', 'yes') AS mixed_types; -- Concatenating boolean with string
+SELECT format('%s is %d years old.', 'Alice', NULL); -- Handling NULL in formatted output

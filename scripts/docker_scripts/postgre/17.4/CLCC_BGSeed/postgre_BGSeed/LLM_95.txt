@@ -1,0 +1,31 @@
+-- Initial seed for testing float4send functionality in PostgreSQL
+
+CREATE OR REPLACE FUNCTION test_float4send()
+RETURNS void AS $$
+DECLARE
+    test_data text[] := ARRAY[
+        '0x3f9e064b', -- 1.2345
+        '0x4c800001', -- 123456789
+        '0x5d4cccfb'  -- -1.2345
+    ];
+BEGIN
+    RAISE NOTICE 'Testing float4send functionality...';
+
+    FOR i IN 1..array_upper(test_data, 1) LOOP
+        -- Convert hex string to binary representation
+        PERFORM assert_eq(
+            condition => float4send(CAST(test_data[i]::bit(32)::int AS float4)),
+            expected => float4send(CAST(test_data[i]::bit(32)::int AS float4)),
+            message  => 'Test case ' || test_data[i]
+        );
+    END LOOP;
+
+    RAISE NOTICE 'All tests passed!';
+EXCEPTION
+    WHEN assertion_failure THEN
+        RAISE EXCEPTION 'Test failed: %', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the test function
+SELECT test_float4send();

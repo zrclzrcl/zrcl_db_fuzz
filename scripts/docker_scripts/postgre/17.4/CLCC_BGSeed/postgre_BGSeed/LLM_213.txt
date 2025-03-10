@@ -1,0 +1,50 @@
+-- Create a function with specific parameters and settings
+CREATE FUNCTION func_with_set_params() RETURNS integer
+    AS 'select 1;'
+    LANGUAGE SQL
+    SET search_path TO PG_CATALOG
+    SET extra_float_digits TO 2
+    SET work_mem TO '4MB'
+    SET datestyle to iso, mdy
+    SET local_preload_libraries TO "Mixed/Case", 'c:/''a"/path', '', '0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789'
+    IMMUTABLE STRICT;
+
+-- Create a partitioned table and its partitions
+CREATE TABLE rules_ parted_table (
+    a int
+) PARTITION BY LIST (a);
+
+CREATE TABLE rules_ parted_table_1 PARTITION OF rules_ parted_table FOR VALUES IN (1);
+
+-- Create and modify rules for the partitioned table
+CREATE RULE rules_ parted_table_insert AS ON INSERT TO rules_ parted_table
+    DO INSTEAD INSERT INTO rules_ parted_table_1 VALUES (NEW.*);
+
+ALTER RULE rules_ parted_table_insert ON rules_ parted_table RENAME TO rules_ parted_table_insert_redirect;
+
+-- Create tables for rule testing
+CREATE TABLE ruletest1 (
+    a int
+);
+
+CREATE TABLE ruletest2 (
+    b int
+);
+
+-- Create and modify rules for the test tables
+CREATE RULE rule1 AS ON INSERT TO ruletest1
+    DO INSTEAD INSERT INTO ruletest2 VALUES (NEW.*);
+
+ALTER TABLE ruletest1 DISABLE RULE rule1;
+
+ALTER TABLE ruletest1 ENABLE RULE rule1;
+
+SET session_ replication_ role = replica;
+
+ALTER TABLE ruletest1 ENABLE REPLICA RULE rule1;
+
+RESET session_ replication_ role;
+
+-- Verify the results
+SELECT * FROM ruletest1;
+SELECT * FROM ruletest2;

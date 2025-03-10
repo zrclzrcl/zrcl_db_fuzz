@@ -1,0 +1,66 @@
+-- Create a range-partitioned table for testing
+CREATE TABLE ptif_employees (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    join_date DATE NOT NULL
+) PARTITION BY RANGE (join_date);
+
+-- Create indexes on the partitioned table
+CREATE INDEX idx_ptif_employees_name ON ptif_employees(name);
+CREATE INDEX idx_ptif_employees_join_date ON ptif_employees(join_date);
+
+-- Insert test data into partitions
+INSERT INTO ptif_employees(name, join_date) VALUES
+('Alice', '2023-01-15'),
+('Bob', '2023-02-20'),
+('Charlie', '2023-03-25');
+
+-- Create specific partitions manually
+CREATE TABLE ptif_employees_p2023q1 PARTITION OF ptif_employees
+    FOR VALUES FROM ('2023-01-01') TO ('2023-04-01');
+
+-- Insert data into the created partition
+INSERT INTO ptif_employees_p2023q1(name, join_date) VALUES
+('David', '2023-01-25'),
+('Eve', '2023-02-10');
+
+-- Create a list-partitioned table for testing different scenarios
+CREATE TABLE ptif_regions (
+    id SERIAL PRIMARY KEY,
+    region VARCHAR(50) NOT NULL
+) PARTITION BY LIST (region);
+
+-- Create partitions based on regions
+CREATE TABLE ptif_regions_north PARTITION OF ptif_regions FOR VALUES IN ('North');
+CREATE TABLE ptif_regions_south PARTITION OF ptif_regions FOR VALUES IN ('South');
+
+-- Insert data into list partitions
+INSERT INTO ptif_regions(region) VALUES
+('North'),
+('South');
+
+-- Create indexes on the list-partitioned table
+CREATE INDEX idx_ptif_regions_region ON ptif_regions(region);
+
+-- Create a view based on the partitioned tables
+CREATE VIEW vw_ptif_employee_regions AS
+SELECT e.name, e.join_date, r.region
+FROM ptif_employees e
+JOIN ptif_regions r ON e.id = r.id;
+
+-- Create indexes on the view for better query performance
+CREATE INDEX idx_vw_ptif_employee_name ON vw_ptif_employee_regions(name);
+CREATE INDEX idx_vw_ptif_employee_region ON vw_ptif_employee_regions(region);
+
+-- Use inheritance to test interactions with partitioning
+CREATE TABLE ptif_employees_parent () INHERITS (ptif_employees);
+CREATE TABLE ptif_employees_child () INHERITS (ptif_employees_parent);
+
+-- Test the partitioning functions on various objects
+SELECT * FROM pg_partition_tree('ptif_employees');
+SELECT * FROM pg_partition_ancestors('ptif_employees_p2023q1');
+
+-- Drop all created objects to clean up the database
+DROP VIEW vw_ptif_employee_regions;
+DROP TABLE ptif_employees_child, ptif_employees_parent, ptif_employees_p2023q1, ptif_employees,
+          ptif_regions_north, ptif_regions_south, ptif_regions;

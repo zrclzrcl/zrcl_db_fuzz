@@ -1,53 +1,61 @@
--- 创建一个用于测试的表
-CREATE TABLE test_fuzz (
+CREATE USER test_user WITH PASSWORD 'test_password';
+SET allow_system_table_mods = on;
+
+CREATE TABLE pg_catalog.test_table (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    age INTEGER CHECK (age >= 0),
-    score DECIMAL(5,2) DEFAULT 0.00,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB,
-    tags TEXT[] 
+    data JSONB
 );
 
--- 插入测试数据
-INSERT INTO test_fuzz(name, age, score, metadata, tags)
-VALUES
-('Alice', 30, 98.76, '{"job": "Engineer", "hobby": ["reading", "music"]}', ARRAY['female', 'engineer']),
-('Bob', 25, 87.65, '{"job": "Developer", "hobby": ["gaming", "traveling"]}', ARRAY['male', 'developer']),
-('Charlie', 35, 89.01, '{"job": "Designer", "hobby": ["photography", "cooking"]}', ARRAY['male', 'designer']);
+ALTER TABLE pg_catalog.test_table ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE pg_catalog.test_table ADD CONSTRAINT unique_name UNIQUE (name);
 
--- 测试复杂查询
-WITH recursive_cte AS (
-    SELECT id, name, age,
-           ROW_NUMBER() OVER (ORDER BY age DESC) as row_num,
-           RANK() OVER (ORDER BY score DESC) as score_rank
-    FROM test_fuzz
+INSERT INTO pg_catalog.test_table(name, data)
+VALUES ('Test1', '{"key": "value"}');
+
+CREATE INDEX idx_test_data ON pg_catalog.test_table USING GIN (data);
+CREATE TRIGGER trg_after_insert AFTER INSERT ON pg_catalog.test_table
+FOR EACH ROW EXECUTE FUNCTION test_trigger();
+
+CREATE OR REPLACE FUNCTION test_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'New record inserted: %', NEW.name;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+WITH cte_test AS (
+    SELECT id, name FROM pg_catalog.test_table WHERE name LIKE 'Test%'
 )
-SELECT * FROM recursive_cte WHERE row_num <= 3 AND score_rank > 1;
+SELECT * FROM cte_test;
 
--- 测试更新操作
-UPDATE test_fuzz 
-SET score = score + 2.00, age = age + 1 
-WHERE id IN (SELECT id FROM test_fuzz ORDER BY RANDOM() LIMIT 2);
-
--- 测试删除操作
-DELETE FROM test_fuzz 
-WHERE metadata ? 'hobby' AND jsonb_array_length(metadata->'hobby') > 1;
-
--- 测试 JSONB 操作
-SELECT name, metadata->>'job' as job, tags[1] as first_tag
-FROM test_fuzz
-WHERE metadata ?& 'hobby'
-AND metadata @> '{"job": "Engineer"}';
-
--- 测试窗口函数和复杂排序
 SELECT 
     id,
     name,
-    age,
-    score,
-    created_at,
-    LEAD(score, 1, 0.00) OVER (ORDER BY created_at) as next_score,
-    LAG(score, 1, 0.00) OVER (ORDER BY created_at) as prev_score
-FROM test_fuzz
-ORDER BY created_at DESC;
+    created_at AT TIME ZONE 'UTC' AS utc_time
+FROM 
+    pg_catalog.test_table
+ORDER BY 
+    created_at DESC LIMIT 5;
+
+REVOKE INSERT ON pg_catalog.test_table FROM test_user;
+GRANT SELECT, INSERT ON pg_catalog.test_table TO test_user;
+
+BEGIN;
+    INSERT INTO pg_catalog.test_table(name, data)
+    VALUES ('TestTransaction', '{"transaction": true}');
+    SAVEPOINT my_savepoint;
+    DELETE FROM pg_catalog.test_table WHERE name = 'TestTransaction';
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+SET client_min_messages TO error;
+CREATE TABLESPACE test_tablespace LOCATION '/nonexistent/path';
+RESET client_min_messages;
+
+DROP TRIGGER trg_after_insert ON pg_catalog.test_table;
+DROP FUNCTION test_trigger();
+DROP TABLE pg_catalog.test_table;
+REVOKE ALL PRIVILEGES ON SCHEMA pg_catalog FROM test_user;
+DROP USER test_user;

@@ -1,0 +1,91 @@
+-- Initial seed for PostgreSQL fuzz testing
+
+-- Create a sample table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age INTEGER,
+    score FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (name, age, score) VALUES
+('Alice', 30, 95.5),
+('Bob', 25, 87.0),
+('Charlie', 40, NULL), -- Testing NULL values
+('David', 35, 100.1);
+
+-- Test SELECT with various clauses and functions
+SELECT 
+    id,
+    name,
+    age,
+    score,
+    EXTRACT(YEAR FROM created_at) AS year_created,
+    CONCAT(name, ' (age: ', age, ')') AS formatted_name
+FROM test_table
+WHERE age > 25 AND score IS NOT NULL
+ORDER BY age DESC, name ASC
+LIMIT 3 OFFSET 1;
+
+-- Test aggregate functions and GROUP BY
+SELECT 
+    age,
+    COUNT(*) AS total_count,
+    AVG(score) AS average_score,
+    MAX(score) AS max_score
+FROM test_table
+WHERE score IS NOT NULL
+GROUP BY age
+HAVING COUNT(*) > 1
+ORDER BY average_score DESC;
+
+-- Test JOIN operation with another table
+CREATE TABLE IF NOT EXISTS related_table (
+    id SERIAL PRIMARY KEY,
+    test_id INTEGER REFERENCES test_table(id),
+    value TEXT
+);
+
+INSERT INTO related_table (test_id, value) VALUES
+(1, 'Related to Alice'),
+(2, 'Related to Bob');
+
+SELECT 
+    t.name AS test_name,
+    r.value AS related_value
+FROM test_table t
+JOIN related_table r ON t.id = r.test_id
+ORDER BY t.name;
+
+-- Test Common Table Expressions (CTE)
+WITH cte_test AS (
+    SELECT 
+        id,
+        name,
+        ROW_NUMBER() OVER (ORDER BY age DESC) as rn
+    FROM test_table
+)
+SELECT * FROM cte_test WHERE rn <= 2;
+
+-- Test array operations
+SELECT 
+    ARRAY[id, age] AS id_age_array,
+    ARRAY_AGG(name) AS names_array
+FROM test_table
+GROUP BY id, age;
+
+-- Test UPDATE statement
+UPDATE test_table
+SET score = 90.0
+WHERE name = 'Charlie';
+
+-- Test DELETE statement with subquery
+DELETE FROM test_table
+WHERE id IN (
+    SELECT id FROM test_table WHERE score < 85
+);
+
+-- Cleanup (optional)
+-- DROP TABLE test_table, related_table;

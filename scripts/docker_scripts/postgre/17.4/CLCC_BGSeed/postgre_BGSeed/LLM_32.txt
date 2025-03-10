@@ -1,0 +1,90 @@
+CREATE USER test_user WITH PASSWORD 'test_password';
+SET SESSION AUTHORIZATION test_user;
+
+-- Create a table with various data types to test edge cases
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    status BOOLEAN DEFAULT FALSE,
+    data JSONB,
+    UNIQUE (email)
+);
+
+-- Create indexes to test different index types
+CREATE INDEX idx_name ON test_table (name);
+CREATE BRIN INDEX brin_idx_created_at ON test_table (created_at);
+CREATE GiST INDEX gist_idx_data ON test_table USING GiST (data);
+
+-- Create a table for testing full-text search
+CREATE TABLE ft_search (
+    id SERIAL PRIMARY KEY,
+    content TEXT,
+    ts_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
+);
+
+-- Create an extension and test its functionality
+CREATE EXTENSION IF NOT EXISTS cube;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Test triggers and functions
+CREATE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger fired';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE audit_table (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT,
+    action TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER test_trigger
+BEFORE INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE FUNCTION trigger_func();
+
+-- Test partitioned tables
+CREATE TABLE parted_test (
+    id INT,
+    region TEXT,
+    amount DECIMAL
+) PARTITION BY RANGE (id);
+
+CREATE TABLE parted_test_1 PARTITION OF parted_test FOR VALUES FROM (0) TO (100);
+CREATE TABLE parted_test_2 PARTITION OF parted_test FOR VALUES FROM (100) TO (200);
+
+-- Insert test data with edge cases
+INSERT INTO test_table (name, email, created_at)
+VALUES ('Test User', 'test@example.com', '2023-01-01 00:00:00+00'),
+       ('Another Test', '', '2999-12-31 23:59:59+00');
+
+-- Test JSONB functionality
+INSERT INTO test_table (name, data)
+VALUES ('JSON Test', '{"key": "value", "array": [1, 2, 3]}');
+
+-- Test full-text search
+INSERT INTO ft_search (content) VALUES ('This is a test document for full-text search');
+UPDATE ft_search SET content = 'Updated test document' WHERE id = 1;
+
+-- Test edge cases with indexes
+SELECT * FROM test_table WHERE name @@ 'test';
+SELECT * FROM ft_search WHERE ts_vector @@ to_tsquery('english', 'test');
+
+-- Test triggers and logging
+SELECT * FROM audit_table;
+SELECT pg_trgm.similarity('hello', 'world');
+
+-- Clean up
+ALTER TABLE test_table DROP COLUMN email;
+DROP INDEX gist_idx_data;
+DROP TRIGGER test_trigger ON test_table;
+DROP FUNCTION trigger_func();
+DROP TABLE ft_search, test_table, audit_table;
+DROP EXTENSION cube, pg_trgm;
+RESET SESSION AUTHORIZATION;
+DROP USER test_user;

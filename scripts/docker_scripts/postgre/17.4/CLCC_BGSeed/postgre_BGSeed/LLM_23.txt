@@ -1,0 +1,30 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INT,
+    text_col TEXT,
+    timestamp_col TIMESTAMP,
+    boolean_col BOOLEAN,
+    numeric_col NUMERIC(10, 2)
+);
+
+ALTER TABLE test_table ADD CONSTRAINT positive_integer CHECK (integer_col >= 0);
+
+INSERT INTO test_table (integer_col, text_col, timestamp_col, boolean_col, numeric_col) VALUES
+(2147483647, 'maximum integer', CURRENT_TIMESTAMP, TRUE, 9999999.99),
+(-2147483648, 'minimum integer', TIMESTAMP '2000-01-01', FALSE, -9999999.99),
+(0, NULL, NULL, NULL, NULL);
+
+SELECT t1.id, t1.text_col || ' ' || t2.text_col AS combined_text
+FROM test_table t1
+JOIN test_table t2 ON t1.id = t2.id
+WHERE t1.integer_col > 0 AND t2.timestamp_col IS NOT NULL;
+
+WITH recursive_numbers(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM recursive_numbers WHERE n < 10
+)
+SELECT * FROM recursive_numbers;
+
+SELECT id, integer_col, RANK() OVER (ORDER BY numeric_col DESC) as rank
+FROM test_table;

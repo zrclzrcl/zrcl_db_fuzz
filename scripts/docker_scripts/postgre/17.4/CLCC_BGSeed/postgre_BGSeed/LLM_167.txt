@@ -1,0 +1,30 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age INTEGER,
+    description TEXT,
+    active BOOLEAN
+);
+
+INSERT INTO test_table (name, age, description, active) VALUES
+('', 0, '', true),
+('a', 1, 'short', false),
+('verylongstring' || repeat('x', 255), 99, 'longdescription' || repeat('x', 255), true),
+('special!@#$%^&*()_+', NULL, 'desc with special chars', NULL),
+(NULL, -1, 'negative age', false);
+
+SELECT * FROM test_table WHERE name = '';
+SELECT * FROM test_table WHERE length(description) > 250;
+SELECT * FROM test_table WHERE description LIKE '%x%';
+SELECT * FROM test_table WHERE active IS NULL;
+
+SELECT parse_ident('test.table');
+SELECT parse_ident('.table');
+SELECT parse_ident('table.');
+SELECT parse_ident('table.schema');
+SELECT parse_ident(repeat('a', 64) || '.column');
+
+SELECT pg_sleep(0.1);
+SELECT version();
+
+DROP TABLE test_table;

@@ -1,77 +1,55 @@
--- 创建一个测试表并插入一些数据
-CREATE TABLE test_table (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    value INT,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO test_table (name, value, description) VALUES 
-('Test1', 100, 'This is a test record.'),
-('Test2', 200, 'Another test record with higher value.'),
-('', -1, 'Edge case: empty name and negative value.'),
-('MaxInt', 2147483647, 'Maximum integer value for testing edge cases.');
-
--- 复杂查询示例
-WITH cte AS (
-    SELECT 
-        id,
-        name,
-        value,
-        created_at,
-        ROW_NUMBER() OVER (ORDER BY created_at DESC) as row_num
-    FROM test_table
+WITH complex_cte AS (
+    SELECT e.employee_id, d.department_name, s.salary
+    FROM employees e
+    JOIN departments d ON e.department_id = d.department_id
+    LEFT JOIN salaries s ON e.employee_id = s.employee_id
+    WHERE e.start_date >= '2023-01-01'
+),
+aggregated_data AS (
+    SELECT department_name, AVG(salary) as avg_salary
+    FROM complex_cte
+    GROUP BY department_name
 )
-SELECT 
-    cte.id,
-    cte.name,
-    cte.value,
-    cte.created_at,
-    json_build_object(
-        'id', cte.id,
-        'name', cte.name,
-        'value', cte.value,
-        'created_at', cte.created_at
-    ) as json_data
-FROM cte
-WHERE row_num <= 5;
+SELECT cte.employee_id, cte.department_name, cte.salary, ad.avg_salary
+FROM complex_cte cte
+JOIN aggregated_data ad ON cte.department_name = ad.department_name
+WHERE cte.salary > ad.avg_salary;
 
--- 测试聚合函数和子查询
-SELECT 
-    MAX(value) as max_value,
-    MIN(value) as min_value,
-    COUNT(*) as total_records,
-    AVG(value) as average_value
-FROM test_table
-WHERE value > (SELECT value FROM test_table WHERE name = 'Test1');
+INSERT INTO employees (employee_id, first_name, last_name, department_id)
+VALUES (1001, 'John', 'Doe', 1),
+       (1002, 'Jane', 'Smith', 2),
+       (1003, 'Bob', 'Johnson', 1);
 
--- 测试窗口函数和排序
-SELECT 
-    id,
-    name,
-    value,
-    created_at,
-    RANK() OVER (ORDER BY value DESC) as rank_by_value,
-    DENSE_RANK() OVER (ORDER BY value ASC) as dense_rank_by_value
-FROM test_table
-ORDER BY value DESC;
+UPDATE employees
+SET salary = salary + 1000,
+    last_updated = CURRENT_TIMESTAMP
+WHERE department_id IN (
+    SELECT department_id
+    FROM departments
+    WHERE department_name LIKE 'Sales%'
+)
+RETURNING employee_id, first_name, salary;
 
--- 测试UNION操作符和复杂查询
-SELECT 
-    id,
-    name,
-    value,
-    'Low' as category
-FROM test_table
-WHERE value < 150
+ALTER TABLE sales_data ADD COLUMN json_column JSONB;
+UPDATE sales_data SET json_column = '{"key1": "value1", "key2": 42}'::JSONB
+WHERE transaction_id > 1000;
 
-UNION
+CREATE INDEX idx_json_column ON sales_data USING GIN (json_column);
+ANALYZE sales_data;
 
-SELECT 
-    id,
-    name,
-    value,
-    'High' as category
-FROM test_table
-WHERE value >= 150;
+WITH recursive_cte AS (
+    SELECT employee_id, first_name, manager_id
+    FROM employees
+    WHERE employee_id = 1001
+    UNION ALL
+    SELECT e.employee_id, e.first_name, e.manager_id
+    FROM employees e
+    INNER JOIN recursive_cte rc ON e.manager_id = rc.employee_id
+)
+SELECT * FROM recursive_cte;
+
+EXPLAIN ANALYZE SELECT COUNT(*) 
+FROM (
+    SELECT DISTINCT employee_id 
+    FROM employees
+) subquery;

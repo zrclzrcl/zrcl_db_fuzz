@@ -1,0 +1,68 @@
+-- Create a table with various data types to test edge cases
+CREATE TABLE IF NOT EXISTS test_fuzz (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INTEGER,
+    float_col FLOAT,
+    bool_col BOOLEAN,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    json_col JSONB,
+    enum_col ENUM('option1', 'option2', 'option3')
+);
+
+-- Insert some test data with edge cases
+INSERT INTO test_fuzz (text_col, int_col, float_col, bool_col, timestamp_col, json_col, enum_col)
+VALUES 
+    ('Edge case text', -2147483648, 1.7976931348623157E+308, TRUE, '2024-01-01 00:00:00+00', '{"key": "value"}', 'option1'),
+    (NULL, NULL, NULL, FALSE, NULL, NULL, NULL);
+
+-- Create a common table expression for complex queries
+WITH cte AS (
+    SELECT id, text_col, int_col,
+           ROW_NUMBER() OVER (ORDER BY id) as row_num
+    FROM test_fuzz
+)
+SELECT * FROM cte WHERE row_num % 2 = 0;
+
+-- Test window functions and ordering
+SELECT 
+    id,
+    text_col,
+    RANK() OVER (ORDER BY int_col DESC) as rank_desc,
+    DENSE_RANK() OVER (ORDER BY int_col ASC) as dense_rank_asc
+FROM test_fuzz
+ORDER BY id;
+
+-- Test JSON operations
+SELECT json_col->>'key' as extracted_value FROM test_fuzz WHERE json_col IS NOT NULL;
+
+-- Test partitioned tables for execution path coverage
+CREATE TABLE IF NOT EXISTS test_part (
+    id SERIAL,
+    region TEXT,
+    sales DECIMAL(10,2)
+) PARTITION BY RANGE (sales);
+
+-- Create partitions to test different ranges
+CREATE TABLE test_part_low PARTITION OF test_part FOR VALUES FROM (MINVALUE) TO (100.00);
+CREATE TABLE test_part_med PARTITION OF test_part FOR VALUES FROM (100.00) TO (1000.00);
+CREATE TABLE test_part_high PARTITION OF test_part FOR VALUES FROM (1000.00) TO (MAXVALUE);
+
+-- Insert data into partitioned table
+INSERT INTO test_part (region, sales)
+VALUES ('North', 50.0), ('South', 200.0), ('East', 1500.0);
+
+-- Test ALTER TABLE for schema changes
+ALTER TABLE test_fuzz ADD COLUMN new_col TEXT;
+ALTER TABLE test_fuzz RENAME COLUMN new_col TO renamed_col;
+
+-- Create a unique index to test constraints
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_text ON test_fuzz (text_col);
+
+-- Test database functions and triggers
+SELECT md5('test_string');
+SELECT pg_sleep(1); -- Introduce a small delay for concurrency testing
+
+-- Clean up the tables at the end
+DROP TABLE IF EXISTS test_part_high, test_part_med, test_part_low, test_part;
+DROP TABLE IF EXISTS test_fuzz;

@@ -1,0 +1,48 @@
+create table test_table (
+    id serial primary key,
+    name text not null,
+    age integer default 0,
+    active boolean,
+    metadata jsonb,
+    created_at timestamp with time zone default current_timestamp,
+    unique_uuid uuid default gen_random_uuid()
+);
+
+insert into test_table (name, age, active, metadata) values
+('Alice', 30, true, '{"role": "admin", "status": "active"}'),
+('Bob', NULL, false, '{}'),
+('', -123456789, true, '{"test": null}');
+
+create index idx_name on test_table (name);
+
+create or replace function calculate_age(birth_date date) returns integer as $$
+begin
+    return extract(year from age(birth_date));
+end;
+$$ language plpgsql;
+
+select id, name, active, metadata->>'role' as role
+from test_table
+where created_at > now() - interval '1 day'
+order by age desc
+limit 5 offset 2;
+
+with recursive numbers(n) as (
+    select 1
+    union all
+    select n + 1 from numbers where n < 10
+)
+select * from numbers;
+
+begin;
+insert into test_table (name, active) values ('Charlie', true);
+savepoint my_savepoint;
+update test_table set active = false where name = 'Charlie';
+rollback to my_savepoint;
+commit;
+
+create trigger log_updates before update on test_table for each row execute procedure pg_sleep(0.1);
+
+select * from pg_catalog.pg_tables where schemaname = 'public';
+
+drop table if exists test_table cascade;

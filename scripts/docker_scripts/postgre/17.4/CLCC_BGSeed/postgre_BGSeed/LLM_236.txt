@@ -1,0 +1,42 @@
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT,
+    int_column INT,
+    timestamp_column TIMESTAMP,
+    bool_column BOOLEAN,
+    null_column TEXT
+);
+INSERT INTO test_edge_cases (text_column, int_column, timestamp_column, bool_column, null_column)
+VALUES 
+('', 2147483647, '1970-01-01 00:00:01', TRUE, NULL),
+('test_string', -2147483648, '2023-10-05 12:34:56', FALSE, ''),
+('NULL test', 0, '2000-01-01 00:00:00', TRUE, 'NULL'),
+('', NULL, NULL, NULL, '');
+CREATE INDEX idx_text_column ON test_edge_cases (text_column);
+CREATE INDEX idx_int_column ON test_edge_cases (int_column);
+CREATE INDEX idx_timestamp_column ON test_edge_cases (timestamp_column);
+CREATE INDEX idx_null_column ON test_edge_cases (null_column);
+CREATE INDEX idx_expression ON test_edge_cases ((text_column || ' test'));
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger activated at %', now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER test_trigger AFTER INSERT ON test_edge_cases FOR EACH ROW EXECUTE PROCEDURE trigger_function();
+SELECT 
+    t1.text_column,
+    t2.int_column,
+    COUNT(*) AS total_rows,
+    SUM(t3.int_column) AS sum_int,
+    MAX(t4.timestamp_column) AS max_timestamp
+FROM test_edge_cases t1
+JOIN test_edge_cases t2 ON t1.id = t2.id
+JOIN test_edge_cases t3 ON t1.id = t3.id
+LEFT JOIN test_edge_cases t4 ON t1.id = t4.id
+WHERE t1.text_column LIKE '%test%'
+GROUP BY t1.text_column, t2.int_column;
+ALTER TABLE test_edge_cases ADD COLUMN new_column TEXT;
+ALTER TABLE test_edge_cases ADD CONSTRAINT unique_constraint UNIQUE (text_column);
+ALTER TABLE test_edge_cases ALTER COLUMN int_column TYPE BIGINT;

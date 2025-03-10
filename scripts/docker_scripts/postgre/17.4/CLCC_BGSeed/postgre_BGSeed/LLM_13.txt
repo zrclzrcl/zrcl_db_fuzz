@@ -1,82 +1,59 @@
--- 创建带有各种数据类型的测试表
-CREATE TABLE IF NOT EXISTS test_table (
-    id serial PRIMARY KEY,
-    name varchar(100),
-    description text,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    status status_enum,
-    price decimal(10, 2),
-    is_active boolean DEFAULT true,
-    tags jsonb
+-- Initial seed for PostgreSQL testing
+
+-- Create table for bit shift operations
+CREATE TABLE BIT_SHIFT_8 (
+    id SERIAL PRIMARY KEY,
+    b1 BIT(8),
+    b2 BIT VARYING(8)
 );
 
--- 插入测试数据，包含边界值和特殊字符
-INSERT INTO test_table (name, description, status, price, is_active, tags)
-VALUES 
-('Test Name', 'This is a test description with special characters: !@#$%^&*()', 'active', 100.5, true, '{"tag1", "tag2"}'),
-('', '', 'inactive', 0.0, false, '{}'),
-('Boundary Test', 'Testing boundary conditions', 'pending', 99999999.99, true, '{"boundary": true}');
+-- Insert initial data
+INSERT INTO BIT_SHIFT_8 (b1, b2) VALUES 
+(B'10100000', B'10100000');
 
--- 复杂查询，包含子查询、聚合和窗口函数
+-- Create table for varying bit shift operations
+CREATE TABLE VARBIT_SHIFT_8 (
+    id SERIAL PRIMARY KEY,
+    v BIT VARYING(20)
+);
+
+-- Insert initial data into varying bit table
+INSERT INTO VARBIT_SHIFT_8 (v) VALUES 
+(B'10100000');
+
+-- Create table for testing default values
+CREATE TABLE bit_defaults(
+  b1 BIT(4) DEFAULT '1001',
+  b2 BIT(4) DEFAULT B'0101',
+  b3 BIT VARYING(5) DEFAULT '1001',
+  b4 BIT VARYING(5) DEFAULT B'0101'
+);
+
+-- Insert default values
+INSERT INTO bit_defaults DEFAULT VALUES;
+
+-- Test bit functions and operations
 SELECT 
-    id,
-    name,
-    price,
-    ROW_NUMBER() OVER (ORDER BY price DESC) as row_num,
-    SUM(price) OVER () as total_sum,
-    CASE 
-        WHEN price > 100 THEN 'High'
-        ELSE 'Low'
-    END as price_category
-FROM test_table
-WHERE status = 'active' AND is_active = true
-ORDER BY created_at DESC;
+    get_bit(B'0101011000100', 10),
+    set_bit(B'0101011000100100', 15, 1),
+    set_bit(B'0101011000100100', 16, 1);
 
--- 事务控制示例
-BEGIN;
-INSERT INTO test_table (name, description) VALUES ('Transaction Test', 'Testing transactions');
-SAVEPOINT my_savepoint;
-UPDATE test_table SET is_active = false WHERE name = 'Transaction Test';
-ROLLBACK TO my_savepoint;
-COMMIT;
+-- Test overlay function
+SELECT 
+    overlay(B'0101011100' placing '001' from 2 for 3),
+    overlay(B'0101011100' placing '101' from 6),
+    overlay(B'0101011100' placing '001' from 11);
 
--- 创建和调用存储过程
-CREATE OR REPLACE FUNCTION calculate_total_price(p_status status_enum)
-RETURNS decimal(10, 2) AS $$
-DECLARE
-    total decimal(10, 2);
-BEGIN
-    SELECT SUM(price) INTO total FROM test_table WHERE status = p_status;
-    RETURN COALESCE(total, 0.00);
-END;
-$$ LANGUAGE plpgsql;
+-- Test position function
+SELECT 
+    POSITION(B'1101' IN b), 
+    POSITION(B'11011' IN b) 
+FROM BIT_SHIFT_8;
 
-SELECT calculate_total_price('active');
-
--- 索引操作示例
-CREATE INDEX idx_name ON test_table (name);
-CREATE INDEX idx_gin_tags ON test_table USING gin(tags);
-
--- 测试约束和触发器
-ALTER TABLE test_table ADD CONSTRAINT chk_price CHECK (price >= 0.00);
-CREATE TRIGGER trg_status_update BEFORE UPDATE OF status ON test_table
-FOR EACH ROW EXECUTE FUNCTION trigger_function();
-
--- 复杂的CTE示例
-WITH cte AS (
-    SELECT 
-        id,
-        name,
-        price,
-        RANK() OVER (ORDER BY price DESC) as price_rank
-    FROM test_table
-)
-SELECT * FROM cte WHERE price_rank <= 10;
-
--- 测试 DISTINCT ON 和窗口函数的组合
-SELECT DISTINCT ON (status) 
-    status, 
-    COUNT(*) OVER (PARTITION BY status) as count_per_status,
-    AVG(price) OVER (PARTITION BY status) as avg_price
-FROM test_table
-GROUP BY status;
+-- Shift operations test
+SELECT 
+    b << 2, 
+    b >> 3 
+FROM (
+    VALUES (B'10100000')
+) AS t(b);

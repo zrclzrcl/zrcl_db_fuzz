@@ -1,0 +1,79 @@
+-- This initial seed is designed for PostgreSQL fuzz testing, focusing on various SQL operations, data types, and edge cases.
+
+-- Clean up existing tables if they exist to avoid conflicts
+DROP TABLE IF EXISTS test_table;
+DROP TABLE IF EXISTS another_test_table;
+
+-- Create a table with multiple columns of different data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    varchar_col VARCHAR(255),
+    char_col CHAR(10),
+    bool_col BOOLEAN,
+    date_col DATE,
+    timestamp_col TIMESTAMP,
+    numeric_col NUMERIC(10, 2)
+);
+
+-- Create another table to test foreign keys and relationships
+CREATE TABLE another_test_table (
+    id SERIAL PRIMARY KEY,
+    test_id INT REFERENCES test_table(id),
+    name VARCHAR(100)
+);
+
+-- Insert data with edge cases for each column type
+INSERT INTO test_table (text_col, varchar_col, char_col, bool_col, date_col, timestamp_col, numeric_col)
+VALUES 
+('', 'test_string', 'char10', TRUE, '2023-01-01', '2023-01-01 12:34:56', 100.5),
+('Another text', '', '', FALSE, NULL, NULL, 0),
+('边界情况测试', 'varchar_max'::VARCHAR(255), 'char_max'::CHAR(10), TRUE, '9999-12-31', '9999-12-31 23:59:59', 99999999.99),
+('Edge case test', 'varchar_edge', 'char_edge', FALSE, '0001-01-01', '0001-01-01 00:00:00', -99999999.99);
+
+-- Insert data into the second table
+INSERT INTO another_test_table (test_id, name)
+VALUES 
+(1, 'Related record 1'),
+(2, 'Related record 2');
+
+-- Create various indexes to test different index types and edge cases
+CREATE INDEX idx_text_col ON test_table USING BTREE(text_col);
+CREATE UNIQUE INDEX idx_unique_bool ON test_table(bool_col);
+CREATE INDEX idx_gin_text_col ON test_table USING GIN(to_tsvector('english', text_col));
+CREATE INDEX idx_hash_date_col ON test_table USING HASH(date_col);
+
+-- Test vacuum operations
+VACUUM ANALYZE test_table;
+
+-- SELECT statements with various WHERE conditions and edge cases
+SELECT * FROM test_table;
+SELECT * FROM test_table WHERE text_col LIKE 'test%';
+SELECT * FROM test_table WHERE varchar_col ILIKE '%string%';
+SELECT * FROM test_table WHERE char_col ~* '[a-zA-Z]';
+SELECT * FROM test_table WHERE bool_col IS TRUE;
+SELECT * FROM test_table WHERE date_col >= '2023-01-01';
+SELECT * FROM test_table WHERE timestamp_col > NOW() - INTERVAL '1 day';
+SELECT * FROM test_table WHERE numeric_col BETWEEN 50.0 AND 150.0;
+
+-- Test aggregate functions and group by
+SELECT COUNT(*) FROM test_table;
+SELECT AVG(numeric_col) FROM test_table;
+SELECT MAX(date_col), MIN(timestamp_col) FROM test_table GROUP BY bool_col;
+
+-- Test joins and relationships
+SELECT t.text_col, a.name FROM test_table t JOIN another_test_table a ON t.id = a.test_id;
+
+-- Test CASE statements for conditional logic
+SELECT id, 
+       CASE WHEN bool_col THEN 'True' ELSE 'False' END as bool_result,
+       CASE 
+           WHEN numeric_col > 100 THEN 'High'
+           WHEN numeric_col < 100 THEN 'Low'
+           ELSE 'Normal'
+       END as numeric_range
+FROM test_table;
+
+-- Test ALTER TABLE operations for schema changes
+ALTER TABLE test_table ADD COLUMN new_column TEXT;
+ALTER TABLE test_table ADD CONSTRAINT chk_numeric CHECK (numeric_col >= 0);

@@ -1,0 +1,31 @@
+\connect postgres;
+
+-- Create test collation objects
+CREATE COLLATION ctest_1 (LOCALE = 'en_US.utf8');
+CREATE DOMAIN text_domain AS TEXT COLLATE ctest_1;
+CREATE TYPE composite_type AS (
+    id INT,
+    name TEXT COLLATE ctest_1
+);
+CREATE TABLE collation_test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT COLLATE ctest_1
+);
+
+-- Create test range type with custom collation
+CREATE TYPE text_range_c AS RANGE (
+    SUBTYPE = TEXT,
+    COLLATION = "C"
+);
+CREATE TYPE text_range_en AS RANGE (
+    SUBTYPE = TEXT,
+    COLLATION = "en_US"
+);
+
+-- Insert sample data for testing
+INSERT INTO collation_test_table (name)
+VALUES ('Test Name 1'),
+       ('Test Name 2');
+
+-- Create indexes with specific collations
+CREATE INDEX idx_collation_test ON collation_test_table USING BTREE (name COLLATE ctest_1);

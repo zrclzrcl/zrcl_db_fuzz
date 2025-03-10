@@ -1,0 +1,64 @@
+-- Create a custom enum type for testing
+CREATE TYPE test_enum AS ENUM ('value1', 'value2', 'value3');
+
+-- Function to compare integers with edge cases
+CREATE FUNCTION int_compare(a int8, b int8) RETURNS bool
+AS $$
+BEGIN
+    RETURN a > b;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Operator for comparing integers using the custom function
+CREATE OPERATOR #> (
+    LEFTARG = int8,
+    RIGHTARG = int8,
+    PROCEDURE = int_compare,
+    COMMUTATOR = <#
+);
+
+-- Function to compare enums with edge cases
+CREATE FUNCTION enum_compare(a test_enum, b test_enum) RETURNS bool
+AS $$
+BEGIN
+    RETURN a > b;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Operator for comparing enums using the custom function
+CREATE OPERATOR #> (
+    LEFTARG = test_enum,
+    RIGHTARG = test_enum,
+    PROCEDURE = enum_compare,
+    COMMUTATOR = <#
+);
+
+-- Test edge cases with NULL values and boundary conditions
+SELECT NULL::int8 #> 1;
+SELECT -9223372036854775808 #> 9223372036854775807;
+
+-- PL/pgSQL block to test complex logic and error handling
+DO $$
+DECLARE
+    test_val int8 := -9223372036854775808;
+BEGIN
+    IF test_val #> 1 THEN
+        RAISE NOTICE 'Boundary condition test passed';
+    ELSE
+        RAISE EXCEPTION 'Boundary condition test failed';
+    END IF;
+
+    -- Test NULL comparison
+    IF NULL::int8 #> 1 THEN
+        RAISE NOTICE 'NULL comparison test passed';
+    ELSE
+        RAISE NOTICE 'NULL comparison test failed';
+    END IF;
+END$$;
+
+-- Clean up the custom enum type and functions
+DROP OPERATOR #> (int8, int8);
+DROP OPERATOR #> (test_enum, test_enum);
+DROP FUNCTION int_compare(int8, int8);
+DROP FUNCTION enum_compare(test_enum, test_enum);
+DROP TYPE test_enum;

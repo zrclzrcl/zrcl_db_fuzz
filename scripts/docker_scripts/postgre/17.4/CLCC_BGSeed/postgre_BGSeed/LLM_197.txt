@@ -1,0 +1,67 @@
+-- Initial seed for PostgreSQL database setup
+
+-- Create users and roles
+CREATE USER test_user WITH PASSWORD 'test_password';
+CREATE ROLE data_reader NOLOGIN;
+CREATE ROLE data_writer NOLOGIN;
+
+-- Create schemas
+CREATE SCHEMA app_data;
+CREATE SCHEMA audit_logs;
+
+-- Set schema privileges
+GRANT USAGE ON SCHEMA app_data TO data_reader, data_writer;
+GRANT CREATE ON SCHEMA app_data TO data_writer;
+
+-- Create tables
+CREATE TABLE app_data.customers (
+    customer_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE app_data.orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES app_data.customers(customer_id),
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL
+);
+
+-- Create indexes
+CREATE INDEX idx_customer_email ON app_data.customers(email);
+CREATE INDEX idx_order_date ON app_data.orders(order_date);
+
+-- Create constraints
+ALTER TABLE app_data.orders ADD CONSTRAINT chk_positive_total CHECK (total_amount > 0);
+
+-- Create triggers and functions
+CREATE OR REPLACE FUNCTION log_insertion()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_logs.insert_log (table_name, insert_time)
+    VALUES (TG_TABLE_NAME, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_customer_insert
+AFTER INSERT ON app_data.customers
+FOR EACH ROW EXECUTE FUNCTION log_insertion();
+
+-- Create views
+CREATE VIEW app_data.customer_summary AS
+SELECT 
+    customer_id,
+    first_name || ' ' || last_name AS full_name,
+    email,
+    COUNT(order_id) OVER (PARTITION BY customer_id) AS total_orders
+FROM 
+    app_data.customers c
+LEFT JOIN 
+    app_data.orders o ON c.customer_id = o.customer_id;
+
+-- Grant privileges
+GRANT SELECT ON ALL TABLES IN SCHEMA app_data TO data_reader;
+GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app_data TO data_writer;

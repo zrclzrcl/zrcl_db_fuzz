@@ -1,0 +1,43 @@
+-- Initial seed for PostgreSQL testing
+-- Creates a minimal schema with tables, indexes, materialized views, and temporary objects needed for reindexing tests.
+
+-- Create test schemas
+CREATE SCHEMA IF NOT EXISTS reindex_test;
+
+-- Set search path to include test schema
+SET search_path = reindex_test, public;
+
+-- Create table with primary key and index
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    data TEXT NOT NULL
+);
+
+-- Create another table with composite index
+CREATE TABLE test_table2 (
+    id SERIAL,
+    name TEXT NOT NULL,
+    value INT NOT NULL
+);
+CREATE INDEX idx_test_table2 ON test_table2 (name, value);
+
+-- Create materialized view and its index
+CREATE MATERIALIZED VIEW mv_test AS
+SELECT id FROM test_table;
+
+CREATE INDEX idx_mv_test ON mv_test (id);
+
+-- Create view for testing
+CREATE VIEW vw_test AS
+SELECT name FROM test_table2;
+
+-- Create temporary table with indexes
+CREATE TEMPORARY TABLE temp_test (
+    id SERIAL PRIMARY KEY,
+    data TEXT NOT NULL
+);
+CREATE INDEX idx_temp_test ON temp_test (data);
+
+-- Insert initial data to ensure tables are not empty
+INSERT INTO test_table (data) VALUES ('test1'), ('test2');
+INSERT INTO test_table2 (name, value) VALUES ('test', 1), ('example', 2);

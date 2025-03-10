@@ -1,0 +1,62 @@
+-- Initial Seed for PostgreSQL Text Search Configuration
+-- This seed sets up various text search dictionaries and configurations for testing purposes.
+
+-- Create base ispell dictionary
+CREATE TEXT SEARCH DICTIONARY ispell (
+    TEMPLATE = ispell,
+    DictFile = 'ispell_english',
+    AffFile = 'ispell_english'
+);
+
+-- Create hunspell dictionary with different affix files
+CREATE TEXT SEARCH DICTIONARY hunspell (
+    TEMPLATE = hunspell,
+    DictFile = 'hunspell_en_US',
+    AffFile = 'hunspell_en_US'
+);
+
+-- Create synonym dictionary for testing synonyms
+CREATE TEXT SEARCH DICTIONARY synonym (
+    TEMPLATE = synonym,
+    Synonyms = 'synonym_list'
+);
+
+-- Create thesaurus dictionary for testing related terms
+CREATE TEXT SEARCH DICTIONARY thesaurus (
+    TEMPLATE = thesaurus,
+    Thesaurus = 'thesaurus_en_US'
+);
+
+-- Create various text search configurations
+CREATE TEXT SEARCH CONFIGURATION ispell_ist (COPY = english);
+ALTER TEXT SEARCH CONFIGURATION ispell_ist 
+    ALTER MAPPING FOR word, numword, asciiword, hword, numhword, asciihword, hword_part, hword_numpart, hword_asciipart
+    WITH ispell, english_stem;
+
+CREATE TEXT SEARCH CONFIGURATION synonym_tst (COPY = english);
+ALTER TEXT SEARCH CONFIGURATION synonym_tst 
+    ALTER MAPPING FOR asciiword, hword_asciipart, asciihword 
+    WITH synonym, english_stem;
+
+CREATE TEXT SEARCH CONFIGURATION thesaurus_tst (COPY = synonym_tst);
+ALTER TEXT SEARCH CONFIGURATION thesaurus_tst 
+    ALTER MAPPING FOR asciiword, hword_asciipart, asciihword 
+    WITH synonym, thesaurus, english_stem;
+
+-- Additional configuration for case sensitivity testing
+CREATE TEXT SEARCH DICTIONARY tsdict_case (
+    TEMPLATE = ispell,
+    DictFile = 'ispell_english',
+    AffFile = 'ispell_english'
+);
+
+-- Create hunspell-based configurations
+CREATE TEXT SEARCH CONFIGURATION hunspell_ist (COPY = ispell_ist);
+ALTER TEXT SEARCH CONFIGURATION hunspell_ist 
+    ALTER MAPPING FOR word, numword, asciiword, hword, numhword, asciihword, hword_part, hword_numpart, hword_asciipart
+    WITH hunspell, english_stem;
+
+-- Finalize all configurations
+ALTER TEXT SEARCH CONFIGURATION ispell_ist RESET;
+ALTER TEXT SEARCH CONFIGURATION synonym_tst RESET;
+ALTER TEXT SEARCH CONFIGURATION thesaurus_tst RESET;

@@ -1,0 +1,7 @@
+CREATE TABLE fuzz_test (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    text_col TEXT,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    json_col JSONB
+);

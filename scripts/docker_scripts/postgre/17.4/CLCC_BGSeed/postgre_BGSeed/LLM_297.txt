@@ -1,0 +1,52 @@
+-- Create base table
+CREATE TABLE y (
+    a INT PRIMARY KEY
+);
+
+-- Create supporting tables
+CREATE TABLE int8_tbl (
+    q1 INT,
+    q2 INT
+);
+
+-- Create inheritance hierarchy
+CREATE TEMP TABLE parent (
+    id INT,
+    val TEXT
+);
+
+CREATE TEMP TABLE child1 () INHERITS (parent);
+CREATE TEMP TABLE child2 () INHERITS (parent);
+
+-- Insert sample data
+INSERT INTO y VALUES (1), (2), (3), (4), (5);
+INSERT INTO parent VALUES (1, 'p1');
+INSERT INTO child1 VALUES (11, 'c11'), (12, 'c12');
+INSERT INTO child2 VALUES (23, 'c21'), (24, 'c22');
+
+-- Create indexes
+CREATE INDEX y_a_idx ON y(a);
+
+-- Create function for testing
+CREATE FUNCTION y_trigger() RETURNS trigger AS $$
+BEGIN
+    RAISE NOTICE 'y_trigger: a = %', NEW.a;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger
+CREATE TRIGGER y_trig
+BEFORE INSERT ON y
+FOR EACH ROW
+EXECUTE PROCEDURE y_trigger();
+
+-- Insert additional test data using CTE
+WITH wcte AS (
+    INSERT INTO int8_tbl VALUES (42, 47)
+    RETURNING q2
+)
+DELETE FROM a USING wcte WHERE aa = q2;
+
+-- Create rule for testing
+CREATE RULE y_rule AS ON INSERT TO y WHERE a=0 DO INSTEAD DELETE FROM y;

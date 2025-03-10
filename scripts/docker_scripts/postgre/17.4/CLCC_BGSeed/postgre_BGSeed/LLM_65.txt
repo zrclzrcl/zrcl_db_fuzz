@@ -1,0 +1,59 @@
+-- Create a table with various data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    is_active BOOLEAN DEFAULT FALSE,
+    last_login TIMESTAMP WITH TIME ZONE,
+    preferences JSONB
+);
+
+-- Insert normal values
+INSERT INTO test_table (name, age, is_active, last_login, preferences)
+VALUES ('Alice', 30, TRUE, CURRENT_TIMESTAMP, '{"theme": "dark"}');
+
+-- Insert edge cases: NULLs and maximum values
+INSERT INTO test_table (name, age, is_active, last_login, preferences)
+VALUES ('Bob', 255, FALSE, '1970-01-01 00:00:01+00', '{"settings": null}');
+
+-- Update statement with edge case
+UPDATE test_table SET age = -1 WHERE name = 'Bob';
+
+-- Delete statement
+DELETE FROM test_table WHERE age < 0;
+
+-- Transaction control
+BEGIN;
+INSERT INTO test_table (name, age) VALUES ('Charlie', 45);
+SAVEPOINT my_savepoint;
+INSERT INTO test_table (name, age) VALUES ('Dave', 55);
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- Create an index on a column
+CREATE INDEX idx_name ON test_table(name);
+
+-- Add a unique constraint and test it
+ALTER TABLE test_table ADD CONSTRAINT unique_name UNIQUE (name);
+INSERT INTO test_table (name, age) VALUES ('Alice', 30); -- Should fail
+
+-- Advanced query using CTE
+WITH temp_cte AS (
+    SELECT id, name FROM test_table WHERE is_active = TRUE
+)
+SELECT * FROM temp_cte;
+
+-- Create a function
+CREATE OR REPLACE FUNCTION get_user_count()
+RETURNS INT AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM test_table);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test the function
+SELECT get_user_count();
+
+-- Drop the table and related objects
+DROP INDEX idx_name;
+DROP TABLE test_table;

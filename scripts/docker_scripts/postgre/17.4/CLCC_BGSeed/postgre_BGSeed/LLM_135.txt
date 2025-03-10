@@ -1,0 +1,58 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT NOT NULL,
+    num_col NUMERIC(10, 2),
+    date_col DATE DEFAULT CURRENT_DATE,
+    bool_col BOOLEAN,
+    uuid_col UUID DEFAULT uuid_generate_v4(),
+    arr_col INTEGER[],
+    jsonb_col JSONB,
+    nullable_col TEXT
+);
+
+CREATE INDEX idx_num_col ON test_edge_cases (num_col);
+CREATE INDEX idx_jsonb_col ON test_edge_cases USING GIN (jsonb_col);
+
+INSERT INTO test_edge_cases (text_col, num_col, bool_col, arr_col, jsonb_col)
+VALUES ('test', 123.45, TRUE, ARRAY[1,2,3], '{"key": "value"}')
+ON CONFLICT (id) DO NOTHING
+RETURNING *;
+
+WITH cte AS (
+    SELECT id, text_col, ROW_NUMBER() OVER (ORDER BY id) as rn
+    FROM test_edge_cases
+)
+SELECT c.id, c.text_col, c.rn
+FROM cte c
+WHERE c.rn % 2 = 0;
+
+SELECT unnest(arr_col) as elements
+FROM test_edge_cases
+LIMIT 5;
+
+SELECT jsonb_pretty(jsonb_col)
+FROM test_edge_cases
+WHERE jsonb_col @> '{"key": "value"}';
+
+SELECT to_char(date_col, 'YYYY-MM-DD HH24:MI:SS')
+FROM test_edge_cases
+ORDER BY date_col DESC NULLS LAST;
+
+CREATE OR REPLACE PROCEDURE example_procedure()
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE NOTICE 'Procedure executed';
+END $$;
+
+CALL example_procedure();
+
+SELECT ts_headline('english', text_col, plainto_tsquery('test'))
+FROM test_edge_cases
+WHERE text_col @@ to_tsquery('test:*');
+
+COMMIT;
+ROLLBACK;
+
+LOCK TABLE test_edge_cases IN ACCESS EXCLUSIVE MODE;
+
+VACUUM ANALYZE test_edge_cases;

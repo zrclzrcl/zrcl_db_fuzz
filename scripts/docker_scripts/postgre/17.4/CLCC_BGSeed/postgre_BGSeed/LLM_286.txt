@@ -1,0 +1,83 @@
+-- Initial seed for PostgreSQL testing
+-- Creates basic tables with proper constraints and relationships
+
+-- Table for testing basic data types and primary key constraints
+CREATE TABLE test_table1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for efficient querying
+CREATE INDEX idx_test_table1_name ON test_table1 USING GIN (name gin_trgm_ops);
+
+-- Table for testing foreign key relationships
+CREATE TABLE test_table2 (
+    id SERIAL PRIMARY KEY,
+    related_id INTEGER,
+    value DECIMAL NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (related_id) REFERENCES test_table1(id)
+);
+
+-- Table for testing unique constraints and partial indexes
+CREATE TABLE test_table3 (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    status BOOLEAN DEFAULT FALSE,
+    last_updated TIMESTAMP WITH TIME ZONE
+);
+
+-- Indexes for efficient querying on partial columns
+CREATE INDEX idx_test_table3_code ON test_table3 (code);
+CREATE INDEX idx_test_table3_status ON test_table3 (status);
+
+-- Table for testing range types and composite indexes
+CREATE TABLE test_table4 (
+    id SERIAL PRIMARY KEY,
+    int_range INT4RANGE,
+    num_range NUMRANGE,
+    ts_range TSRANGE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for efficient querying on range columns
+CREATE INDEX idx_test_table4_int_range ON test_table4 USING GIST (int_range);
+CREATE INDEX idx_test_table4_num_range ON test_table4 USING GIST (num_range);
+CREATE INDEX idx_test_table4_ts_range ON test_table4 USING GIST (ts_range);
+
+-- Table for testing JSONB and full-text search
+CREATE TABLE test_table5 (
+    id SERIAL PRIMARY KEY,
+    data JSONB,
+    text_search TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for efficient querying on JSONB and text columns
+CREATE INDEX idx_test_table5_data ON test_table5 USING GIN (data);
+CREATE INDEX idx_test_table5_text_search ON test_table5 USING GIN (text_search gin_trgm_ops);
+
+-- Set storage parameters for testing
+ALTER TABLE test_table1 SET (
+    fillfactor = 90,
+    autovacuum_analyze_threshold = 50
+);
+
+-- Table for testing partitioning
+CREATE TABLE test_table6 (
+    id SERIAL PRIMARY KEY,
+    amount DECIMAL NOT NULL,
+    transaction_date DATE NOT NULL
+) PARTITION BY RANGE (transaction_date);
+
+-- Partition creation for different date ranges
+CREATE TABLE test_table6_y2023m1 PARTITION OF test_table6
+    FOR VALUES FROM ('2023-01-01') TO ('2023-02-01');
+
+CREATE TABLE test_table6_y2023m2 PARTITION OF test_table6
+    FOR VALUES FROM ('2023-02-01') TO ('2023-03-01');
+
+-- Indexes for partitions
+CREATE INDEX idx_test_table6_amount ON test_table6 (amount);

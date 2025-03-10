@@ -1,0 +1,53 @@
+-- Create a table for storing test data with various data types
+CREATE TABLE IF NOT EXISTS test_hash_functions (
+    id SERIAL PRIMARY KEY,
+    int_array_col INT[],
+    text_col TEXT,
+    jsonb_col JSONB,
+    enum_col mood,  -- Using the previously defined mood ENUM type
+    UNIQUE (text_col)
+);
+
+-- Insert sample data for testing purposes
+INSERT INTO test_hash_functions (int_array_col, text_col, jsonb_col, enum_col) VALUES
+(
+    '{1,2,3}', 
+    'test_string_1',
+    '{"key1": "value1", "key2": [true, false]}',
+    'happy'
+),
+(
+    '{4,5,6}', 
+    'another_test_string',
+    '{"nested": {"object": "here"}}',
+    'sad'
+),
+(
+    '{7,8,9}', 
+    'test_string_3',
+    '[1, 2, 3]',
+    'ok'
+);
+
+-- Create an index for faster querying
+CREATE INDEX idx_text_col ON test_hash_functions (text_col);
+
+-- Add comments to the table and columns for better documentation
+COMMENT ON TABLE test_hash_functions IS 'Table used for testing hash functions with various data types.';
+COMMENT ON COLUMN test_hash_functions.id IS 'Primary key identifier for each record.';
+COMMENT ON COLUMN test_hash_functions.int_array_col IS 'Column storing integer arrays for testing purposes.';
+COMMENT ON COLUMN test_hash_functions.text_col IS 'Text column containing sample strings for hashing tests.';
+COMMENT ON COLUMN test_hash_functions.jsonb_col IS 'JSONB column storing structured data for JSON hashing tests.';
+COMMENT ON COLUMN test_hash_functions.enum_col IS 'ENUM column storing mood values (sad, ok, happy) for testing enum hashing.';
+
+-- Create a sequence for generating unique identifiers
+CREATE SEQUENCE IF NOT EXISTS hash_test_sequence
+    INCREMENT BY 1
+    START WITH 1
+    NO MAXVALUE
+    CACHE 1;
+
+-- Associate the sequence with the table's id column
+ALTER TABLE test_hash_functions ALTER COLUMN id SET DEFAULT nextval('hash_test_sequence');
+
+COMMIT;

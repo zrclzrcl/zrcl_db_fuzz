@@ -1,0 +1,27 @@
+CREATE TABLE test_partitioned (
+    id SERIAL PRIMARY KEY,
+    amount DECIMAL(10, 2),
+    transaction_date DATE NOT NULL
+) PARTITION BY RANGE (transaction_date);
+
+CREATE TABLE test_partition_2023_01 PARTITION OF test_partitioned
+FOR VALUES FROM ('2023-01-01') TO ('2023-02-01');
+
+CREATE UNLOGGED TABLE test_unlogged (
+    id INT PRIMARY KEY,
+    data TEXT
+);
+
+CREATE MATERIALIZED VIEW mv_test AS
+SELECT id, COUNT(*) as cnt
+FROM test_partitioned
+GROUP BY id;
+
+CREATE POLICY rls_policy ON test_unlogged
+USING (id = CURRENT_USER_ID())
+WITH CHECK (data <> 'sensitive');
+
+CREATE FOREIGN TABLE ext_table (
+    ext_id INT,
+    ext_data TEXT
+) SERVER foreign_srv OPTIONS (schema_name 'public', table_name 'remote_table');

@@ -1,0 +1,65 @@
+-- Create a table with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    status BOOLEAN DEFAULT TRUE,
+    price NUMERIC(10, 2) CHECK (price >= 0),
+    tags JSONB
+);
+
+-- Insert sample data using generate_series for efficiency
+INSERT INTO test_table (name, description, updated_at, status, price, tags)
+SELECT 
+    'Test Item ' || g,
+    'Description for Test Item ' || g,
+    CURRENT_TIMESTAMP - INTERVAL '1 day' * g,
+    TRUE,
+    100.0 + (random() * 50),
+    jsonb_build_object('category', 'test', 'priority', round(random() * 10))
+FROM generate_series(1, 1000) AS g;
+
+-- Create indexes to test query optimization
+CREATE INDEX idx_name ON test_table(name);
+CREATE INDEX idx_status_price ON test_table(status, price);
+CREATE INDEX idx_updated_at_desc ON test_table(updated_at DESC);
+CREATE GIN INDEX idx_tags_gin ON test_table USING gin(tags);
+
+-- Define functions for testing dynamic queries and execution paths
+CREATE OR REPLACE FUNCTION execute_query_with_index(query TEXT)
+RETURNS SETOF test_table AS $$
+BEGIN
+    SET enable_seqscan = OFF;
+    RETURN QUERY EXECUTE query;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION execute_query_without_index(query TEXT)
+RETURNS SETOF test_table AS $$
+BEGIN
+    SET enable_indexscan = OFF;
+    RETURN QUERY EXECUTE query;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test various SELECT statements with different conditions and joins
+SELECT * FROM test_table WHERE status = TRUE ORDER BY updated_at DESC LIMIT 10;
+SELECT name, price, status FROM test_table WHERE price > 150 AND status = FALSE;
+SELECT COUNT(*) FROM test_table GROUP BY status HAVING COUNT(*) > 50;
+
+-- Test aggregate functions and joins
+SELECT status, AVG(price), MAX(updated_at) FROM test_table GROUP BY status;
+SELECT * FROM test_table t1 JOIN test_table t2 ON t1.id = t2.id WHERE t1.status != t2.status;
+
+-- Use EXPLAIN to analyze query execution plans
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT id, name, price FROM test_table WHERE tags @> '{"category": "test"}';
+
+-- Reset settings after testing
+RESET enable_seqscan;
+RESET enable_indexscan;
+
+-- Clean up resources
+DROP TABLE IF EXISTS test_table CASCADE;

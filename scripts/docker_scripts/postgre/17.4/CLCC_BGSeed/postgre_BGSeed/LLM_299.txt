@@ -1,0 +1,106 @@
+-- Create test tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT,
+    timestamp_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    bool_col BOOLEAN
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (int_col, text_col, bool_col) VALUES 
+(2147483647, 'test_string', TRUE),
+(-2147483648, '', FALSE);
+
+-- Create a function to calculate the square of an integer
+CREATE OR REPLACE FUNCTION square_number(n INTEGER)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN n * n;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create another table for trigger testing
+CREATE TABLE IF NOT EXISTS audit_table (
+    id SERIAL PRIMARY KEY,
+    action TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a trigger function to log changes in test_table
+CREATE OR REPLACE FUNCTION log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_table (action) VALUES 
+        (CASE WHEN TG_OP = 'INSERT' THEN 'Inserted into test_table'
+              WHEN TG_OP = 'UPDATE' THEN 'Updated test_table'
+              ELSE 'Deleted from test_table'
+         END);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Set up the trigger on test_table
+CREATE TRIGGER track_changes AFTER INSERT OR UPDATE OR DELETE ON test_table
+FOR EACH ROW EXECUTE FUNCTION log_changes();
+
+-- Create a view that combines data from multiple sources
+CREATE VIEW combined_view AS
+SELECT 
+    t.id,
+    t.text_col,
+    sq.number_squared,
+    au.action
+FROM 
+    test_table t
+LEFT JOIN (
+    SELECT id, square_number(int_col) as number_squared FROM test_table
+) sq ON t.id = sq.id
+LEFT JOIN audit_table au ON t.id = au.id;
+
+-- Create an index on the text column for faster searches
+CREATE INDEX IF NOT EXISTS idx_text_search 
+ON test_table USING GIN (text_col gin_trgm_ops);
+
+-- Use a common table expression to process aggregated data
+WITH cte AS (
+    SELECT id, int_col, bool_col,
+           ROW_NUMBER() OVER (ORDER BY id) as row_num
+    FROM test_table
+)
+SELECT * FROM cte WHERE row_num % 2 = 0;
+
+-- Partitioned table for handling time-series data
+CREATE TABLE IF NOT EXISTS logs_partitioned (
+    log_id BIGINT,
+    log_time TIMESTAMP WITH TIME ZONE,
+    log_text TEXT
+) PARTITION BY RANGE (log_time);
+
+-- Create a partition for the first quarter of 2024
+CREATE TABLE logs_2024q1 PARTITION OF logs_partitioned 
+FOR VALUES FROM ('2024-01-01') TO ('2024-03-31');
+
+-- Insert sample data into the partitioned table
+INSERT INTO logs_partitioned (log_id, log_time, log_text) VALUES 
+(1, '2024-02-01', 'Initial log entry');
+
+-- Create a materialized view for optimized querying
+CREATE MATERIALIZED VIEW mv_test AS
+SELECT id, int_col, bool_col,
+       COUNT(*) OVER () as total_count
+FROM test_table;
+
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW mv_test;
+
+-- Transaction with savepoint to handle complex operations
+BEGIN;
+    INSERT INTO test_table (text_col) VALUES ('savepoint_test');
+    SAVEPOINT my_savepoint;
+    DELETE FROM test_table WHERE text_col = 'savepoint_test';
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- Vacuum command for database maintenance
+VACUUM ANALYZE test_table;

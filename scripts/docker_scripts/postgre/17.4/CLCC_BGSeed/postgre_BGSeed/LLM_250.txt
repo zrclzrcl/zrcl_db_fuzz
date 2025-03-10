@@ -1,0 +1,30 @@
+create domain posint as int check (value > 0);
+
+create table ext_test_table1 (
+    id serial primary key,
+    name text not null,
+    value posint,
+    created_at timestamp default current_timestamp
+);
+
+create table ext_test_table2 (
+    id bigserial primary key,
+    description text,
+    status boolean default false,
+    last_updated timestamptz
+);
+
+insert into ext_test_table1 (name, value) values ('test1', 42);
+insert into ext_test_table1 (name, value) values ('test2', 100);
+
+create function ext_test_func1(posint) returns bool as $$
+begin
+    return $1 % 2 = 0;
+end;
+$$ language plpgsql;
+
+create index idx_ext_test_value on ext_test_table1(value);
+
+create trigger ext_test_trigger before insert on ext_test_table1 for each row execute procedure ext_test_func1(NEW.value);
+
+create view ext_test_view as select id, name, value from ext_test_table1 where value > 50;

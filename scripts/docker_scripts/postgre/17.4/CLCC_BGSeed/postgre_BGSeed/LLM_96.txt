@@ -1,0 +1,61 @@
+CREATE TABLE TEST_FUZZ_TABLE (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    float_col FLOAT8,
+    text_col TEXT,
+    bool_col BOOLEAN
+);
+
+INSERT INTO TEST_FUZZ_TABLE (int_col, float_col, text_col, bool_col) VALUES 
+(0, 0.0, '', TRUE),
+(123456789, 123456789.123456789, 'test string', FALSE),
+(-123456789, -123456789.123456789, NULL::text, TRUE),
+(2147483647, 1e308, REPEAT('a', 1000), FALSE),
+(-2147483648, -1e308, '   ', TRUE),
+(9999999999::INTEGER, 1.23456789e+100::FLOAT8, '\x00', FALSE),
+(123, 123.456, REPEAT('a', 100000), TRUE),
+(123, 123.456, 'test with "quotes"', FALSE),
+(123, 123.456, E'line\\nfeed', TRUE),
+(123, 123.456, 'percent% sign', FALSE),
+(123, 123.456, 'ampersand& symbol', TRUE),
+(123, 123.456, 'plus+ sign', FALSE),
+(123, 123.456, 'minus- sign', TRUE),
+(123, 123.456, 'equals= sign', FALSE),
+(123, 123.456, 'colon: separator', TRUE),
+(123, 123.456, 'semi-colon; separator', FALSE),
+(123, 123.456, 'slash / path', TRUE),
+(123, 123.456, 'backslash \ escape', FALSE),
+(123, 123.456, 'hash # comment', TRUE),
+(123, 123.456, 'dollar $ symbol', FALSE),
+(123, 123.456, 'at @ symbol', TRUE),
+(123, 123.456, 'caret ^ symbol', FALSE),
+(123, 123.456, 'underscore _ symbol', TRUE),
+(123, 123.456, 'tilde ~ symbol', FALSE),
+(123, 123.456, 'exclamation ! mark', TRUE),
+(123, 123.456, 'question ? mark', FALSE),
+(123, 123.456, 'period . separator', TRUE),
+(123, 123.456, 'comma , separator', FALSE),
+(123, 123.456, 'asterisk * wildcard', TRUE),
+(123, 123.456, 'left ( parenthesis', FALSE),
+(123, 123.456, 'right ) parenthesis', TRUE),
+(123, 123.456, 'brace { start', FALSE),
+(123, 123.456, 'brace } end', TRUE),
+(123, 123.456, 'left [ bracket', FALSE),
+(123, 123.456, 'right ] bracket', TRUE),
+(123, 123.456, 'pipe | separator', FALSE),
+(123, 123.456, 'backtick ` symbol', TRUE),
+(123, 123.456, 'single quote '' character', FALSE),
+(123, 123.456, 'double quote "" character', TRUE),
+(123, 123.456, 'invalid number', FALSE),
+(123, 123.456, 'very long string to test buffer overflow', TRUE),
+(123, 123.456, 'another very long string that exceeds normal limits', FALSE);
+
+SELECT id FROM TEST_FUZZ_TABLE LIMIT 1 OFFSET 999999;
+SELECT COUNT(*) FROM TEST_FUZZ_TABLE WHERE text_col LIKE '%test%';
+SELECT bool_col::text FROM TEST_FUZZ_TABLE ORDER BY id DESC;
+
+CREATE INDEX IF NOT EXISTS idx_text_col ON TEST_FUZZ_TABLE USING HASH (text_col);
+ANALYZE TEST_FUZZ_TABLE;
+VACUUM TEST_FUZZ_TABLE;
+
+SELECT jsonb_pretty('{"key": "value"}'::jsonb);

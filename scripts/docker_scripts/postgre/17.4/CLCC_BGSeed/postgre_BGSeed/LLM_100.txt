@@ -1,0 +1,48 @@
+-- Create a schema for testing foreign keys with partitioning
+CREATE SCHEMA test_fk_part;
+
+-- Create a parent table with range partitioning
+CREATE TABLE test_fk_part.parent (
+    id INT PRIMARY KEY,
+    value INT NOT NULL
+) PARTITION BY RANGE (id);
+
+-- Create child partitions
+CREATE TABLE test_fk_part.parent_1 PARTITION OF test_fk_part.parent 
+FOR VALUES FROM (MINVALUE) TO (50);
+CREATE TABLE test_fk_part.parent_2 PARTITION OF test_fk_part.parent 
+FOR VALUES FROM (50) TO (MAXVALUE);
+
+-- Create a referencing table with foreign key
+CREATE TABLE test_fk_part.child (
+    id INT PRIMARY KEY,
+    parent_id INT REFERENCES test_fk_part.parent (id) ON DELETE CASCADE
+) PARTITION BY RANGE (parent_id);
+
+-- Create child partitions for the referencing table
+CREATE TABLE test_fk_part.child_1 PARTITION OF test_fk_part.child 
+FOR VALUES FROM (MINVALUE) TO (50);
+CREATE TABLE test_fk_part.child_2 PARTITION OF test_fk_part.child 
+FOR VALUES FROM (50) TO (MAXVALUE);
+
+-- Insert sample data into parent table
+INSERT INTO test_fk_part.parent (id, value)
+VALUES (1, 100), (2, 200), (51, 300);
+
+-- Insert corresponding data into child table
+INSERT INTO test_fk_part.child (id, parent_id)
+VALUES (1, 1), (2, 2), (3, 51);
+
+-- Test foreign key constraint with a transaction
+BEGIN;
+    -- This should fail due to foreign key constraint
+    DELETE FROM test_fk_part.parent WHERE id = 1;
+COMMIT;
+
+-- Verify data integrity
+SELECT * FROM test_fk_part.parent;
+SELECT * FROM test_fk_part.child;
+
+-- Clean up the schema and tables
+DROP TABLE test_fk_part.child, test_fk_part.parent CASCADE;
+DROP SCHEMA test_fk_part;

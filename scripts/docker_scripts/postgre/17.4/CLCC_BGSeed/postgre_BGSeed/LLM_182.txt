@@ -1,0 +1,97 @@
+-- Setup Roles
+CREATE ROLE role_superuser WITH SUPERUSER;
+CREATE ROLE role_user WITH LOGIN PASSWORD 'securepassword';
+CREATE ROLE role_no_login;
+
+-- Grant Privileges
+GRANT CREATE ON DATABASE postgres TO role_user;
+
+-- Create Schemas
+CREATE SCHEMA schema1 AUTHORIZATION role_user;
+CREATE SCHEMA schema2;
+
+-- Set Search Path
+SET search_path TO schema1, schema2, public;
+
+-- Table Creation in schema1
+CREATE TABLE table1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes and Constraints
+CREATE INDEX idx_name ON table1(name);
+ALTER TABLE table1 ADD CONSTRAINT unique_age UNIQUE(age);
+
+-- Data Insertion
+INSERT INTO table1 (name, age) VALUES ('Alice', 30), ('Bob', 25);
+
+-- Create Function
+CREATE OR REPLACE FUNCTION greet(name TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    RETURN 'Hello, ' || name || '!';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create Trigger Table
+CREATE TABLE log_deletions (
+    id INT,
+    name TEXT,
+    deletion_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger Function
+CREATE OR REPLACE FUNCTION log_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO log_deletions (id, name) VALUES (OLD.id, OLD.name);
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create Trigger
+CREATE TRIGGER delete_trigger
+BEFORE DELETE ON table1
+FOR EACH ROW EXECUTE FUNCTION log_delete();
+
+-- Create View
+CREATE VIEW view_table1 AS SELECT id, name FROM table1 WHERE age > 20;
+
+-- Transaction Test
+BEGIN;
+    INSERT INTO table1 (name, age) VALUES ('Charlie', 35);
+COMMIT;
+
+BEGIN;
+    DELETE FROM table1 WHERE name = 'Charlie';
+ROLLBACK;
+
+-- Verify Data
+SELECT * FROM table1;
+SELECT * FROM view_table1;
+SELECT * FROM log_deletions;
+
+-- Cleanup Privileges
+REVOKE CREATE ON DATABASE postgres FROM role_user;
+
+-- Drop Trigger and Function
+DROP TRIGGER delete_trigger ON table1;
+DROP FUNCTION log_delete();
+
+-- Drop View
+DROP VIEW view_table1;
+
+-- Drop Tables
+DROP TABLE table1, log_deletions;
+
+-- Drop Schemas
+DROP SCHEMA schema1, schema2 CASCADE;
+
+-- Drop Functions
+DROP FUNCTION greet(TEXT);
+
+-- Drop Roles
+DROP ROLE role_superuser, role_user, role_no_login;

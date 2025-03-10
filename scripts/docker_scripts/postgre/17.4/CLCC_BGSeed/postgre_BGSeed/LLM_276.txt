@@ -1,0 +1,80 @@
+-- Initial seed for PostgreSQL database setup
+
+-- Create tables
+CREATE TABLE IF NOT EXISTS user (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS product (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    category_id INTEGER REFERENCES category(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS order (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES user(id),
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('pending', 'completed', 'cancelled')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS category (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes
+CREATE INDEX idx_product_category ON product (category_id);
+CREATE INDEX idx_order_status ON order (status);
+CREATE INDEX idx_user_email ON user (email);
+
+-- Insert sample data
+INSERT INTO category (name, description) VALUES
+('Electronics', 'Electronic devices and accessories'),
+('Clothing', 'Apparel and fashion items'),
+('Home & Garden', 'Household items and decor');
+
+INSERT INTO product (name, price, stock, category_id) VALUES
+('Smartphone', 699.99, 100, 1),
+('T-Shirt', 29.99, 500, 2),
+('Coffee Table', 149.99, 75, 3);
+
+INSERT INTO user (email, password_hash) VALUES
+('john.doe@example.com', 'hashed_password_1'),
+('jane.smith@example.com', 'hashed_password_2');
+
+-- Create functions and triggers if needed
+CREATE OR REPLACE FUNCTION calculate_total_order_amount()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.total_amount = (
+        SELECT SUM(product.price * order_item.quantity)
+        FROM product
+        JOIN order_item ON product.id = order_item.product_id
+        WHERE order_item.order_id = NEW.id
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_order_total
+AFTER INSERT OR UPDATE ON order_item
+FOR EACH ROW
+EXECUTE FUNCTION calculate_total_order_amount();
+
+-- Initialize sequence values if necessary
+SELECT setval('user_id_seq', 100);
+SELECT setval('product_id_seq', 200);
+SELECT setval('order_id_seq', 300);
+SELECT setval('category_id_seq', 4);
+
+COMMIT;

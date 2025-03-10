@@ -1,0 +1,68 @@
+drop table if exists test_table;
+create table test_table (
+    id serial primary key,
+    name varchar(50),
+    age integer,
+    balance numeric(10,2),
+    is_active boolean default true,
+    created_at timestamp with time zone default current_timestamp,
+    description text,
+    data jsonb,
+    unique_id uuid
+);
+insert into test_table (name, age, balance, is_active, description, data, unique_id)
+values 
+('Alice', 30, 1000.50, true, 'Test description for Alice', '{"key": "value"}', uuid_generate_v4()),
+('Bob', 25, -500.75, false, null, '{"name": "Bob"}', uuid_generate_v4()),
+('', 0, 0.00, true, '', '{}', uuid_generate_v4());
+create unique index idx_unique_name on test_table (name);
+create index idx_age_balance on test_table (age, balance desc);
+create trigger trg_update_timestamp before update on test_table
+for each row execute function update_modified_at();
+create function update_modified_at() returns trigger as $$
+begin
+    new.created_at = current_timestamp;
+    return new;
+end;
+$$ language plpgsql;
+create procedure proc_test()
+language plpgsql
+as $$
+declare 
+    cnt integer;
+begin
+    select count(*) into cnt from test_table where age > 25;
+    raise notice 'Count of users older than 25: %', cnt;
+    if cnt = 0 then
+        insert into test_table (name, age) values ('Default User', 30);
+    end if;
+end;
+$$;
+call proc_test();
+create sequence seq_test start 100 increment by 5;
+insert into test_table (id, name) select nextval('seq_test'), 'Sequence Test' where not exists 
+(select 1 from test_table where id = nextval('seq_test'));
+with cte_test as (
+    select id, name, age from test_table where is_active = true
+)
+select * from cte_test where age > 20;
+begin;
+insert into test_table (name) values ('Transaction Test');
+savepoint sp1;
+update test_table set is_active = false where name = 'Transaction Test';
+rollback to sp1;
+commit;
+create extension if not exists pgcrypto;
+insert into test_table (name, data) 
+values ('Encrypted Data', pgp_sym_encrypt('Sensitive Info', 'key'));
+select id, pgp_sym_decrypt(data::bytea, 'key') as decrypted_data 
+from test_table where name = 'Encrypted Data';
+create table inheritance_test () inherits (test_table);
+insert into inheritance_test (name) values ('Inherited Record');
+select * from inheritance_test;
+drop sequence if exists seq_test cascade;
+drop function if exists update_modified_at();
+drop trigger if exists trg_update_timestamp on test_table;
+drop procedure if exists proc_test();
+drop index if exists idx_unique_name, idx_age_balance;
+drop table if exists inheritance_test, test_table cascade;

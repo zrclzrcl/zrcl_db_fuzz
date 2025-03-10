@@ -1,0 +1,68 @@
+-- Create tables
+CREATE TABLE serialTest1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE serialTest2 (
+    id SERIAL PRIMARY KEY,
+    f2 BIGINT DEFAULT nextval('serialtest2_f2_seq'),
+    f3 BIGINT DEFAULT nextval('serialtest2_f3_seq'),
+    f4 BIGINT DEFAULT nextval('serialtest2_f4_seq'),
+    f5 BIGINT DEFAULT nextval('serialtest2_f5_seq'),
+    f6 BIGINT DEFAULT nextval('serialtest2_f6_seq')
+);
+
+-- Create sequences
+CREATE SEQUENCE sequence_test1
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE SEQUENCE serialtest2_f2_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE SEQUENCE serialtest2_f3_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE SEQUENCE serialtest2_f4_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE SEQUENCE serialtest2_f5_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE SEQUENCE serialtest2_f6_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+-- Set sequence owners
+ALTER SEQUENCE sequence_test1 OWNED BY serialTest1.id;
+ALTER SEQUENCE serialtest2_f2_seq OWNED BY serialTest2.f2;
+ALTER SEQUENCE serialtest2_f3_seq OWNED BY serialTest2.f3;
+ALTER SEQUENCE serialtest2_f4_seq OWNED BY serialTest2.f4;
+ALTER SEQUENCE serialtest2_f5_seq OWNED BY serialTest2.f5;
+ALTER SEQUENCE serialtest2_f6_seq OWNED BY serialTest2.f6;
+
+-- Create user
+CREATE USER regress_ seq_user WITH NOCREATEDB NOCREATEROLE INHERIT LOGIN;

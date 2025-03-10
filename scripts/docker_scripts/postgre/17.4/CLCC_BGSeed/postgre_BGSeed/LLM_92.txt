@@ -1,0 +1,90 @@
+-- Create test tables with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    balance DECIMAL(10, 2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE,
+    status BOOLEAN DEFAULT TRUE,
+    tags TEXT[],
+    metadata JSONB
+);
+
+-- Create a table for testing inheritance and partitions
+CREATE TABLE IF NOT EXISTS parent_table (
+    id SERIAL PRIMARY KEY,
+    type TEXT NOT NULL,
+    value INT
+);
+
+CREATE TABLE IF NOT EXISTS child_table (
+    CHECK (type = 'child')
+) INHERITS (parent_table);
+
+-- Create indexes to test different index types
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_name ON test_table(name);
+CREATE INDEX IF NOT EXISTS idx_partial_age ON test_table(age) WHERE age > 18;
+CREATE INDEX IF NOT EXISTS idx_composite_status_balance ON test_table(status, balance DESC);
+
+-- Insert sample data
+INSERT INTO test_table (name, age, balance, updated_at, status, tags, metadata)
+VALUES
+    ('Alice', 30, 1000.50, '2023-01-01', TRUE, '{admin, user}', '{"country": "USA"}'),
+    ('Bob', 25, 850.75, '2023-01-02', FALSE, '{user}', '{"country": "Canada"}'),
+    ('Charlie', 45, 2000.00, '2023-01-03', TRUE, '{admin}', '{"country": "UK"}');
+
+-- Test stored procedures and functions
+CREATE OR REPLACE FUNCTION calculate_total_balance() RETURNS DECIMAL AS $$
+DECLARE
+    total DECIMAL := 0;
+BEGIN
+    FOR r IN SELECT balance FROM test_table WHERE status = TRUE LOOP
+        total := total + r.balance;
+    END LOOP;
+    RETURN total;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT calculate_total_balance();
+
+-- Test triggers and constraints
+CREATE TRIGGER update_timestamp
+BEFORE UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- Create views for testing query rewriting
+CREATE VIEW v_test AS
+SELECT id, name, age, balance, metadata->>'country' as country
+FROM test_table;
+
+-- Test window functions and CTEs
+WITH ranked_users AS (
+    SELECT name, balance,
+           RANK() OVER (ORDER BY balance DESC) as rank
+    FROM test_table
+)
+SELECT * FROM ranked_users WHERE rank <= 5;
+
+-- Test JSONB operations
+UPDATE test_table
+SET metadata = jsonb_set(metadata, '{address}', '"123 Street"', TRUE)
+WHERE id = 1;
+
+-- Test edge cases and error handling
+BEGIN;
+SAVEPOINT sp1;
+VACUUM ANALYZE test_table;
+ROLLBACK TO sp1;
+COMMIT;
+
+-- Test concurrency control
+SELECT pg_sleep(1) WHERE EXISTS (SELECT 1 FROM test_table LIMIT 1);
+
+-- Test vacuum and analyze
+VACUUM FULL ANALYZE parent_table;
+ANALYZE child_table;
+
+-- Cleanup (optional)
+-- DROP TABLE IF EXISTS test_table, parent_table, child_table CASCADE;

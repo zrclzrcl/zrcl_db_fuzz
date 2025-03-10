@@ -1,0 +1,75 @@
+-- Create a table with various data types to test edge cases
+CREATE TABLE IF NOT EXISTS test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    text_col TEXT,
+    bool_col BOOLEAN,
+    jsonb_col JSONB,
+    tsvector_col TSVECTOR,
+    timestamp_col TIMESTAMP WITH TIME ZONE
+);
+
+-- Insert test data with edge cases
+INSERT INTO test_edge_cases (int_col, text_col, bool_col, jsonb_col, tsvector_col, timestamp_col)
+VALUES 
+    (NULL, NULL, NULL, NULL, NULL, NULL),
+    (-2147483648, '', FALSE, '{}', to_tsvector(''), '1970-01-01 00:00:01+00'),
+    (2147483647, 'test_string', TRUE, '{"key": "value"}', to_tsvector('english', 'test string'), CURRENT_TIMESTAMP);
+
+-- Test complex SELECT statements with various conditions
+SELECT 
+    id,
+    int_col,
+    text_col,
+    bool_col,
+    jsonb_col,
+    tsvector_col,
+    timestamp_col
+FROM test_edge_cases
+WHERE 
+    (int_col IS NULL OR int_col > 0) 
+    AND (text_col LIKE '%test%' OR bool_col = TRUE)
+ORDER BY timestamp_col DESC;
+
+-- Test aggregate functions and grouping
+SELECT 
+    bool_col, 
+    COUNT(*) as count,
+    MAX(int_col) as max_int,
+    MIN(timestamp_col) as min_timestamp
+FROM test_edge_cases
+GROUP BY bool_col;
+
+-- Test Common Table Expressions (CTEs)
+WITH cte AS (
+    SELECT 
+        id,
+        int_col,
+        text_col,
+        bool_col,
+        jsonb_col,
+        tsvector_col,
+        timestamp_col
+    FROM test_edge_cases
+    WHERE bool_col = TRUE
+)
+SELECT * FROM cte;
+
+-- Test window functions
+SELECT 
+    id,
+    int_col,
+    ROW_NUMBER() OVER (ORDER BY timestamp_col) as row_num,
+    RANK() OVER (ORDER BY int_col DESC) as rank
+FROM test_edge_cases;
+
+-- Test JSONB operations
+SELECT 
+    jsonb_col,
+    jsonb_col -> 'key' as key_value,
+    exists(jsonb_col -> 'key') as key_exists
+FROM test_edge_cases
+WHERE jsonb_col IS NOT NULL;
+
+-- Clean up the table after testing
+DROP TABLE IF EXISTS test_edge_cases;

@@ -1,63 +1,31 @@
--- 创建包含PostgreSQL特有数据类型的表
 CREATE TABLE test_fuzz (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL DEFAULT 'test',
-    data BYTEA,
-    tags TEXT[],
-    metadata JSONB,
-    geom GEOMETRY(Geometry, 4326),
-    ts TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id INT4,
+    data TEXT,
+    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    flag BOOLEAN,
+    value NUMERIC(10,2)
 );
 
--- 创建索引，包括普通、唯一和PostgreSQL特有索引
-CREATE INDEX idx_test_fuzz_name ON test_fuzz(name);
-CREATE UNIQUE INDEX uniq_test_fuzz_data ON test_fuzz USING HASH (data);
-CREATE INDEX idx_test_fuzz_ts ON test_fuzz(ts DESC NULLS LAST);
-CREATE INDEX gist_idx ON test_fuzz USING GIST (geom);
+INSERT INTO test_fuzz VALUES (1, 'small text', DEFAULT, TRUE, 100.5);
+INSERT INTO test_fuzz SELECT generate_series(2, 100) as id, LPAD('', 1000, 'x') as data, CURRENT_TIMESTAMP, FALSE, random() * 1000;
 
--- 创建包含复杂条件的视图
-CREATE VIEW v_test AS 
-SELECT id, name, metadata->>'type' as type FROM test_fuzz 
-WHERE data IS NOT NULL AND metadata ? 'status'
-WITH CHECK OPTION;
+CREATE INDEX idx_id ON test_fuzz (id);
+CREATE INDEX idx_data_gin ON test_fuzz USING GIN (data gin_trgm_ops);
+CREATE UNIQUE INDEX idx_unique ON test_fuzz (id, flag);
 
--- 插入测试数据，包括边界值和特殊字符
-INSERT INTO test_fuzz (name, data, tags, metadata, geom)
-VALUES 
-('test1', '\x00ff', '{tag1, tag2}', '{"type":"test", "status":true}', ST_GeomFromText('POINT(1 2)', 4326)),
-('test2', NULL, '{}', '{"value":null, "array":[1,2,3]}', NULL);
+SET work_mem = '64kB';
+SET enable_seqscan = FALSE;
+SET enable_indexscan = TRUE;
 
--- 创建存储过程和函数
-CREATE OR REPLACE FUNCTION fn_test()
-RETURNS void AS $$
-DECLARE
-    cnt integer;
-BEGIN
-    SELECT COUNT(*) INTO cnt FROM test_fuzz WHERE metadata ? 'status';
-    IF cnt > 0 THEN
-        RAISE NOTICE 'Found % records with status', cnt;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+SELECT COUNT(*) FROM test_fuzz WHERE value > 500;
+SELECT * FROM test_fuzz JOIN (SELECT id FROM test_fuzz WHERE flag IS TRUE) t USING (id);
+SELECT data FROM test_fuzz WHERE id IN (SELECT id FROM test_fuzz WHERE value < 100);
+SELECT SUM(value), AVG(value) FROM test_fuzz GROUP BY flag;
+SELECT id, data, RANK() OVER (ORDER BY value DESC) FROM test_fuzz;
 
--- 创建触发器和规则
-CREATE TRIGGER trg_test BEFORE INSERT ON test_fuzz 
-FOR EACH ROW EXECUTE FUNCTION fn_trg_log();
+WITH cte AS (
+    SELECT * FROM test_fuzz WHERE ts > CURRENT_TIMESTAMP - INTERVAL '1 day'
+)
+SELECT COUNT(*) FROM cte;
 
-CREATE RULE rul_test AS 
-ON SELECT TO test_fuzz DO INSTEAD 
-SELECT * FROM v_test WHERE type = 'test';
-
--- 复杂查询，包含子查询、连接和窗口函数
-SELECT t.id, u.name, COUNT(*) OVER (PARTITION BY t.type) as cnt
-FROM (
-    SELECT id, metadata->>'type' as type 
-    FROM test_fuzz 
-    WHERE name LIKE 'test%'
-) t
-JOIN (
-    SELECT id, name FROM test_fuzz ORDER BY id DESC LIMIT 5
-) u ON t.id = u.id
-WHERE t.type IN (SELECT DISTINCT metadata->>'type' FROM test_fuzz)
-GROUP BY t.id, u.name
-HAVING COUNT(*) > 0;
+SELECT * FROM test_fuzz WHERE data IS NULL;

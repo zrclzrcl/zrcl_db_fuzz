@@ -1,0 +1,83 @@
+-- Create test tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL CHECK (email ~* '^[^\s@]+@[^\s@]+\.[^\s@]+$'),
+    password_hash BYTEA NOT NULL,
+    registration_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    failed_login_attempts INT DEFAULT 0 CHECK (failed_login_attempts >= 0),
+    profile_picture UUID,
+    settings JSONB
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    author_id INT REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    views INT DEFAULT 0 CHECK (views >= 0),
+    is_published BOOLEAN DEFAULT FALSE,
+    comments JSONB
+);
+
+-- Create indexes for faster querying
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Create sequence for auto-incrementing IDs
+CREATE SEQUENCE IF NOT EXISTS seq_users_id
+    INCREMENT BY 1
+    START WITH 1
+    OWNED BY users.id;
+
+-- Create functions for mathematical operations
+CREATE OR REPLACE FUNCTION gcd(a INT, b INT) RETURNS INT AS $$
+DECLARE
+    temp INT;
+BEGIN
+    WHILE b != 0 LOOP
+        temp := b;
+        b := a % b;
+        a := temp;
+    END LOOP;
+    RETURN ABS(a);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION lcm(a INT, b INT) RETURNS INT AS $$
+DECLARE
+    g INT;
+BEGIN
+    g := gcd(a, b);
+    IF g = 0 THEN
+        RETURN 0;
+    ELSE
+        RETURN (a / g) * b;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Insert sample data for testing
+INSERT INTO users (username, email, password_hash)
+VALUES 
+('test_user1', 'test1@example.com', '\x54686973206973206120746573742070617373776F7264'),
+('test_user2', 'test2@example.com', '\x54686973206973206120746573742070617373776F7264'),
+('test_user3', 'test3@example.com', '\x54686973206973206120746573742070617373776F7264');
+
+-- Insert test data using a loop for bulk inserts
+DO $$
+DECLARE 
+    i INT := 1;
+BEGIN
+    WHILE i <= 1000 LOOP
+        INSERT INTO posts (author_id, title, content)
+        VALUES (1, 'Test Post #' || i, 'This is the content of test post number ' || i);
+        i := i + 1;
+    END LOOP;
+END $$;
+
+-- Create indexes for faster querying on frequently searched columns
+CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);

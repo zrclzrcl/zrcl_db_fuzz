@@ -1,0 +1,67 @@
+-- Initial seed setup for PostgreSQL VACUUM/ANALYZE testing
+-- This seed creates test tables and necessary structures for vacuum/analyze testing
+
+-- Create test tables
+CREATE TABLE vaccluster (
+    id SERIAL PRIMARY KEY,
+    data TEXT
+);
+
+CREATE TABLE vactst (
+    id SERIAL PRIMARY KEY,
+    value INT,
+    description TEXT
+);
+
+CREATE TABLE vacparted (
+    id SERIAL PRIMARY KEY,
+    category INT,
+    details TEXT
+) PARTITION BY RANGE (category);
+
+-- Create partitions for vacparted table
+CREATE TABLE vacparted1 PARTITION OF vacparted FOR VALUES FROM (0) TO (100);
+CREATE TABLE vacparted2 PARTITION OF vacparted FOR VALUES FROM (100) TO (200);
+CREATE TABLE vacparted3 PARTITION OF vacparted DEFAULT;
+
+-- Create test role for ownership testing
+CREATE ROLE regress_vacuum NOINHERIT;
+
+-- Insert some dummy data for testing
+INSERT INTO vactst (value, description)
+VALUES (1, 'Test record 1'), (2, 'Test record 2');
+
+-- Set up initial table ownership
+ALTER TABLE vaccluster OWNER TO regress_vacuum;
+ALTER TABLE vactst OWNER TO regress_vacuum;
+ALTER TABLE vacparted OWNER TO regress_vacuum;
+
+-- Create necessary indexes for testing
+CREATE INDEX idx_vactst_value ON vactst (value);
+CREATE INDEX idx_vacparted_category ON vacparted (category);
+
+-- Initialize test data in partitioned table
+INSERT INTO vacparted (category, details)
+VALUES 
+(50, 'Category 50 - Test'),
+(150, 'Category 150 - Test'),
+(250, 'Category 250 - Test');
+
+-- Verify initial setup
+SELECT COUNT(*) FROM vactst; -- Should return 2
+SELECT COUNT(*) FROM vacparted; -- Should return 3
+
+-- Set up test environment for vacuum/analyze testing
+VACUUM ANALYZE pg_class;
+ANALYZE pg_statistics;
+
+-- Initialize test tables with specific settings for vacuum testing
+ALTER TABLE vaccluster SET (autovacuum_enabled = true);
+ALTER TABLE vactst SET (autovacuum_vacuum_scale_factor = 0.2);
+
+-- Set up initial permissions for testing
+GRANT SELECT ON vaccluster TO regress_vacuum;
+GRANT INSERT, UPDATE ON vactst TO regress_vacuum;
+
+-- Initialize test environment completion marker
+SELECT 'Initial seed setup completed successfully' AS status;

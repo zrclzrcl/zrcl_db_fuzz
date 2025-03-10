@@ -1,0 +1,47 @@
+-- Initial seed for PostgreSQL testing environment
+
+-- Create test users with different privileges
+CREATE USER regress_priv_user WITH PASSWORD 'regress';
+CREATE GROUP regress_priv_group;
+
+-- Create basic test tables
+CREATE TABLE atest1 (
+    id SERIAL PRIMARY KEY,
+    a INT NOT NULL
+);
+
+-- Add indexes for testing
+CREATE INDEX idx_atest1_a ON atest1(a);
+
+-- Create view for testing query expansion
+CREATE VIEW atestv0 AS SELECT * FROM atest1;
+
+-- Create test sequence
+CREATE SEQUENCE x_seq;
+ALTER TABLE atest1 ALTER COLUMN id SET DEFAULT nextval('x_seq');
+
+-- Create function for testing permissions
+CREATE FUNCTION priv_testfunc2(int) RETURNS INT LANGUAGE SQL AS $$ SELECT $1; $$;
+
+-- Create aggregate for testing
+CREATE AGGREGATE priv_testagg1 (int) (
+    SFUNC = int4_sum,
+    STYPE = int,
+    INITCOND = 0
+);
+
+-- Create procedure for testing
+CREATE PROCEDURE priv_testproc1(int)
+LANGUAGE SQL AS $$ SELECT $1; $$;
+
+-- Grant privileges for testing
+GRANT SELECT ON atest1 TO regress_priv_user;
+GRANT INSERT ON atest1 TO regress_priv_group;
+
+-- Lock configuration for testing
+LOCK TABLE atest1 IN ACCESS SHARE MODE;
+
+-- Cleanup objects after test run
+DROP FUNCTION IF EXISTS priv_testfunc2(int);
+DROP AGGREGATE IF EXISTS priv_testagg1(int);
+DROP PROCEDURE IF EXISTS priv_testproc1(int);

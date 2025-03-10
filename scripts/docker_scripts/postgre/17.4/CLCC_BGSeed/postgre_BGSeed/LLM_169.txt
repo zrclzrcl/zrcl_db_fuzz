@@ -1,0 +1,83 @@
+-- Initial seed for PostgreSQL testing environment setup
+-- This seed sets up initial data and test cases for numeric functions
+
+CREATE SCHEMA IF NOT EXISTS test;
+
+-- Create tables to store expected results for various functions
+CREATE TABLE IF NOT EXISTS test.expected_results_scale (
+    input_numeric NUMERIC,
+    expected_scale INTEGER
+);
+
+INSERT INTO test.expected_results_scale (input_numeric, expected_scale) VALUES
+    ('NaN', NULL),
+    (0::numeric, 0),
+    (1.12::numeric, 2),
+    (1.12345::numeric, 5),
+    (-1123.12471856128::numeric, 11);
+
+CREATE TABLE IF NOT EXISTS test.expected_results_min_scale (
+    input_numeric NUMERIC,
+    expected_min_scale INTEGER
+);
+
+INSERT INTO test.expected_results_min_scale (input_numeric, expected_min_scale) VALUES
+    ('NaN', NULL),
+    (0::numeric, 0),
+    (1.0::numeric, 0),
+    (1.12345::numeric, 1); 
+
+CREATE TABLE IF NOT EXISTS test.expected_results_trim_scale (
+    input_numeric NUMERIC,
+    expected_trimmed_scale INTEGER
+);
+
+INSERT INTO test.expected_results_trim_scale (input_numeric, expected_trimmed_scale) VALUES
+    ('NaN', NULL),
+    (0::numeric, 0),
+    (1.1234500::numeric, 3); 
+
+-- Create function to test scale calculations
+CREATE OR REPLACE FUNCTION test.test_scale_calculations()
+RETURNS VOID AS $$
+BEGIN
+    -- Test scale function against expected results
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM (
+            SELECT a.input_numeric, a.expected_scale, b.scale 
+            FROM test.expected_results_scale a
+            LEFT JOIN LATERAL (SELECT scale(a.input_numeric) as scale) b ON true
+            WHERE a.expected_scale != b.scale OR (a.expected_scale IS NULL AND b.scale IS NOT NULL) OR (a.expected_scale IS NOT NULL AND b.scale IS NULL)
+        ) x
+    ) THEN
+        RAISE NOTICE 'All scale calculations passed';
+    ELSE 
+        RAISE EXCEPTION 'Scale calculation test failed';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to test min_scale calculations
+CREATE OR REPLACE FUNCTION test.test_min_scale_calculations()
+RETURNS VOID AS $$
+BEGIN
+    -- Test min_scale function against expected results
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM (
+            SELECT a.input_numeric, a.expected_min_scale, b.min_scale 
+            FROM test.expected_results_min_scale a
+            LEFT JOIN LATERAL (SELECT min_scale(a.input_numeric) as min_scale) b ON true
+            WHERE a.expected_min_scale != b.min_scale OR (a.expected_min_scale IS NULL AND b.min_scale IS NOT NULL) OR (a.expected_min_scale IS NOT NULL AND b.min_scale IS NULL)
+        ) x
+    ) THEN
+        RAISE NOTICE 'All min_scale calculations passed';
+    ELSE 
+        RAISE EXCEPTION 'Min scale calculation test failed';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION test.test_scale_calculations() OWNER TO postgres;
+ALTER FUNCTION test.test_min_scale_calculations() OWNER TO postgres;

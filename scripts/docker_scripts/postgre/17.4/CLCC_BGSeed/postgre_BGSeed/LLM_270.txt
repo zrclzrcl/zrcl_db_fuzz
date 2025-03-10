@@ -1,0 +1,70 @@
+-- Create a table with various columns
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data
+INSERT INTO test_table (name, value) VALUES 
+('Alice', 100),
+('Bob', 200),
+('Charlie', 300);
+
+-- Select statements using aggregate functions
+SELECT MIN(value), MAX(value), COUNT(*) FROM test_table;
+
+-- Truncate the table to clear data
+TRUNCATE TABLE test_table;
+
+-- Create indexes on different columns
+CREATE INDEX idx_name ON test_table (name);
+CREATE UNIQUE INDEX uniq_value ON test_table (value);
+
+-- Partition the table based on value column (example for range partitioning)
+ALTER TABLE test_table ADD COLUMN value_range TEXT;
+UPDATE test_table SET value_range = 
+    CASE 
+        WHEN value < 100 THEN 'low'
+        WHEN value BETWEEN 100 AND 200 THEN 'medium'
+        ELSE 'high' 
+    END;
+
+-- Create a materialized view
+CREATE MATERIALIZED VIEW mv_test AS
+SELECT name, value FROM test_table WHERE value > 150;
+
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW mv_test;
+
+-- Create a regular view
+CREATE VIEW vw_test AS
+SELECT id, name, created_at 
+FROM test_table 
+WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '1 day';
+
+-- Use sequences for generating IDs (already using SERIAL in table creation)
+-- Inserting data again to populate after truncate
+INSERT INTO test_table (name, value) VALUES 
+('David', 400),
+('Eve', 500);
+
+-- Test dropping objects multiple times
+DROP INDEX IF EXISTS idx_name;
+DROP INDEX IF EXISTS uniq_value;
+
+-- Create a stored procedure
+CREATE OR REPLACE PROCEDURE insert_test()
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO test_table (name, value) VALUES 
+        ('Frank', 600),
+        ('Grace', 700);
+END $$;
+
+-- Call the stored procedure
+CALL insert_test();
+
+-- Clean up by dropping the table and dependent objects
+DROP TABLE IF EXISTS test_table CASCADE;

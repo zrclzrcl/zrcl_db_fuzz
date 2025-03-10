@@ -1,0 +1,51 @@
+CREATE SCHEMA test_schema;
+SET search_path TO test_schema;
+
+-- Create a table with various data types to cover different storage scenarios
+CREATE TABLE edge_cases (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INT,
+    float_col FLOAT,
+    bool_col BOOLEAN,
+    timestamp_col TIMESTAMP,
+    uuid_col UUID
+);
+
+-- Insert edge-case values including NULLs and extremes
+INSERT INTO edge_cases VALUES (DEFAULT, '', 2147483647, 1.7976931348623157E+308, TRUE, '1970-01-01', gen_uuid());
+INSERT INTO edge_cases VALUES (DEFAULT, NULL, -2147483648, -1.7976931348623157E+308, FALSE, CURRENT_TIMESTAMP, gen_uuid());
+
+-- Create an index to test indexing behavior
+CREATE INDEX idx_int_col ON edge_cases(int_col);
+
+-- Test constraints and triggers
+ALTER TABLE edge_cases ADD CONSTRAINT unique_text UNIQUE (text_col);
+CREATE FUNCTION update_timestamp() RETURNS trigger AS $$
+BEGIN
+    NEW.timestamp_col = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_trigger BEFORE UPDATE ON edge_cases FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+
+-- Complex query to test join and subquery handling
+SELECT e1.id, e2.text_col 
+FROM edge_cases AS e1
+JOIN (
+    SELECT id, text_col FROM edge_cases WHERE int_col > 0
+) AS e2 ON e1.id = e2.id;
+
+-- Test transactional behavior
+BEGIN;
+    INSERT INTO edge_cases VALUES (DEFAULT, 'test', 100, 100.5, TRUE, NOW(), gen_uuid());
+    COMMIT;
+
+-- Cleanup
+DROP TRIGGER update_trigger ON edge_cases;
+DROP FUNCTION update_timestamp();
+DROP INDEX idx_int_col;
+DROP TABLE edge_cases;
+RESET search_path;
+DROP SCHEMA test_schema;

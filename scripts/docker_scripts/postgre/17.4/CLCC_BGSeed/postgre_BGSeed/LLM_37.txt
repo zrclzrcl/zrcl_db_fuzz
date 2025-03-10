@@ -1,0 +1,5 @@
+-- Create the 'heap2' access method if it doesn't exist
+CREATE ACCESS METHOD IF NOT EXISTS heap2 TYPE TABLE HANDLER pg_heap_handler;
+
+-- Install required extension for foreign data wrapper
+ALTER EXTENSION postgresql_fdw ADD VALIDATOR postgresql_fdw_validator;

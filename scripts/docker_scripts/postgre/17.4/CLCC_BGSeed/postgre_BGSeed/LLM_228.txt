@@ -1,0 +1,31 @@
+-- Create a test schema
+CREATE SCHEMA IF NOT EXISTS test_stats;
+
+-- Create a test table with some sample data
+CREATE TABLE test_stats.mcv_test (
+    id SERIAL PRIMARY KEY,
+    category TEXT,
+    value INT
+);
+
+-- Insert some sample data
+INSERT INTO test_stats.mcv_test (category, value)
+VALUES
+('A', 1),
+('A', 2),
+('A', 3),
+('B', 4),
+('B', 5),
+('C', 6);
+
+-- Create MCV statistics on the category column
+CREATE STATISTICS mcv_stats (
+    type = 'mcv'
+) ON (category)
+FROM test_stats.mcv_test;
+
+-- Analyze the table to collect statistics
+ANALYZE test_stats.mcv_test;
+
+-- Basic query to verify setup
+SELECT category, COUNT(*) FROM test_stats.mcv_test GROUP BY category;

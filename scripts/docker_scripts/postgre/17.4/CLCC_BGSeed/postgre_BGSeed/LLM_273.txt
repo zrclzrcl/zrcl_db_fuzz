@@ -1,0 +1,150 @@
+-- Initial seed for PostgreSQL testing environment
+
+-- Create a table for basic entity storage
+CREATE TABLE IF NOT EXISTS entities (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing various data types
+CREATE TABLE IF NOT EXISTS data_types_test (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    integer_field INTEGER,
+    boolean_field BOOLEAN,
+    numeric_field NUMERIC(10, 2),
+    timestamp_field TIMESTAMP WITH TIME ZONE,
+    interval_field INTERVAL,
+    json_field JSONB,
+    uuid_field UUID DEFAULT gen_random_uuid()
+);
+
+-- Create a table for testing relationships
+CREATE TABLE IF NOT EXISTS attributes (
+    id SERIAL PRIMARY KEY,
+    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL
+);
+
+-- Create an index on frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
+CREATE INDEX IF NOT EXISTS idx_data_types_test_timestamp_field ON data_types_test(timestamp_field);
+
+-- Create a table for testing full-text search
+CREATE TABLE IF NOT EXISTS documents (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    title TEXT NOT NULL,
+    ts_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', title || ' ' || content)) STORED
+);
+
+-- Create a table for testing transactional operations
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    amount NUMERIC(10, 2) NOT NULL,
+    currency TEXT NOT NULL CHECK(currency IN ('USD', 'EUR', 'GBP')),
+    transaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing JSONB operations
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE,
+    preferences JSONB NOT NULL DEFAULT '{}'::JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing UUID primary keys
+CREATE TABLE IF NOT EXISTS uuid_entities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    metadata JSONB
+);
+
+-- Create a table for testing partitioning (can be used with pg_partman or similar)
+CREATE TABLE IF NOT EXISTS logs (
+    id BIGSERIAL PRIMARY KEY,
+    log_level TEXT NOT NULL CHECK(log_level IN ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    message TEXT NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing inheritance
+CREATE TABLE IF NOT EXISTS base_table (
+    id SERIAL PRIMARY KEY,
+    common_field TEXT
+);
+
+CREATE TABLE IF NOT EXISTS inherited_table (
+    INHERITS (base_table),
+    specific_field TEXT
+);
+
+-- Create a table for testing spatial operations (requires postgis extension)
+CREATE TABLE IF NOT EXISTS locations (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    geom GEOMETRY,
+    gist INDEX USING GIST(geom)
+);
+
+-- Create a table for testing user authentication
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- Create a table for testing index-only scans
+CREATE TABLE IF NOT EXISTS large_data (
+    id SERIAL PRIMARY KEY,
+    data BYTEA,
+    metadata JSONB,
+    ts_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', metadata::text)) STORED
+);
+
+-- Create a table for testing partitioning by date
+CREATE TABLE IF NOT EXISTS daily_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    details JSONB,
+    event_date DATE DEFAULT CURRENT_DATE
+);
+
+-- Add indexes for specific columns that may be used in WHERE clauses or joins
+CREATE INDEX IF NOT EXISTS idx_transactions_currency ON transactions(currency);
+CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_users_username_email ON users(username, email);
+
+-- Create a table for testing JSONB array operations
+CREATE TABLE IF NOT EXISTS tags (
+    id SERIAL PRIMARY KEY,
+    tag_array JSONB NOT NULL DEFAULT '[]'::JSONB
+);
+
+-- Create a table for testing UUID version 1 vs version 4
+CREATE TABLE IF NOT EXISTS uuid_versions (
+    id UUID PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing advisory locks
+CREATE TABLE IF NOT EXISTS lock_test (
+    id SERIAL PRIMARY KEY,
+    locked BOOLEAN DEFAULT FALSE
+);
+
+-- Create a table for testing row-level security (RLS)
+CREATE TABLE IF NOT EXISTS sensitive_data (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    data TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,87 @@
+-- Create the products table with various data types
+CREATE TABLE products (
+    product_id integer,
+    name text,
+    price numeric(10,2),
+    category text,
+    last_updated timestamp
+);
+
+-- Create indexes for efficient querying
+CREATE INDEX idx_product_id ON products (product_id);
+CREATE INDEX idx_category ON products USING gin (category);
+
+-- Insert sample data into the products table
+INSERT INTO products VALUES
+    (1, 'Laptop', 999.99, 'Electronics', CURRENT_TIMESTAMP),
+    (2, 'Smartphone', 699.99, 'Electronics', CURRENT_TIMESTAMP - INTERVAL '1 day'),
+    (3, 'Tablet', 499.99, 'Electronics', CURRENT_TIMESTAMP - INTERVAL '2 days'),
+    (4, 'Headphones', 149.99, 'Audio', CURRENT_TIMESTAMP),
+    (5, 'Speaker', 299.99, 'Audio', CURRENT_TIMESTAMP - INTERVAL '3 days'),
+    (6, 'Pen Drive', 29.99, 'Storage', CURRENT_TIMESTAMP),
+    (7, 'External HDD', 149.99, 'Storage', CURRENT_TIMESTAMP - INTERVAL '1 week'),
+    (8, 'Mouse', 24.99, 'Peripherals', CURRENT_TIMESTAMP),
+    (9, 'Keyboard', 39.99, 'Peripherals', CURRENT_TIMESTAMP - INTERVAL '5 days'),
+    (10, NULL, NULL, NULL, NULL); -- Testing NULL values
+
+-- Insert additional data using a loop for demonstration
+DO $$
+BEGIN
+    FOR i IN 11..20 LOOP
+        INSERT INTO products VALUES (
+            i,
+            format('Product %s', i),
+            round(random() * 1000 + 50, 2), -- Random price between 50 and 1050
+            CASE 
+                WHEN i <= 14 THEN 'Electronics'
+                WHEN i <= 17 THEN 'Audio'
+                ELSE 'Other' END,
+            CURRENT_TIMESTAMP - (random() * INTERVAL '30 days')
+        );
+    END LOOP;
+END $$;
+
+-- Perform various SELECT queries to test different operations
+
+-- Basic select with where clause
+SELECT product_id, name, price 
+FROM products 
+WHERE category = 'Electronics';
+
+-- Aggregate functions
+SELECT COUNT(*) as total_products,
+       SUM(price) as total_revenue,
+       AVG(price) as average_price,
+       MIN(price) as cheapest_product,
+       MAX(price) as most_expensive
+FROM products;
+
+-- Group by and having clause
+SELECT category, COUNT(*) as product_count
+FROM products
+GROUP BY category
+HAVING COUNT(*) > 2;
+
+-- Order by and limit
+SELECT name, price, last_updated
+FROM products
+ORDER BY last_updated DESC
+LIMIT 5;
+
+-- Subquery example
+SELECT *
+FROM products
+WHERE price > (SELECT AVG(price) FROM products);
+
+-- Testing index usage with sequential scan disabled
+SET enable_seqscan = OFF;
+EXPLAIN ANALYZE SELECT * FROM products WHERE product_id = 1;
+RESET enable_seqscan;
+
+-- Testing NULL handling
+SELECT name, category 
+FROM products 
+WHERE category IS NULL OR price IS NULL;
+
+-- Cleanup: Drop the table if no longer needed
+-- DROP TABLE products;

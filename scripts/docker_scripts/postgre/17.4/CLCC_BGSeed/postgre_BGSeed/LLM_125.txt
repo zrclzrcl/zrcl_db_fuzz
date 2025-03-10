@@ -1,0 +1,43 @@
+-- Create the covidxpart table with a and b columns, partitioned by a
+CREATE TABLE covidxpart (
+    a int,
+    b text
+) PARTITION BY RANGE (a);
+
+-- Create unique index on column a of covidxpart
+CREATE UNIQUE INDEX idx_a ON covidxpart(a);
+
+-- Partition the covidxpart table into ranges for a=1-10 and 11-20
+CREATE TABLE covidxpart_p1 PARTITION OF covidxpart FOR VALUES FROM (1) TO (11);
+CREATE TABLE covidxpart_p2 PARTITION OF covidxpart FOR VALUES FROM (11) TO (21);
+
+-- Create the parted_index_col_drop table with a, b, c columns
+CREATE TABLE parted_index_col_drop (
+    a int,
+    b text,
+    c timestamp
+);
+
+-- Add indexes on columns b, c, and (b,c) of parted_index_col_drop
+CREATE INDEX idx_b ON parted_index_col_drop(b);
+CREATE INDEX idx_c ON parted_index_col_drop(c);
+CREATE INDEX idx_bc ON parted_index_col_drop(b, c);
+
+-- Create the parted_unique table with a, b columns, partitioned by a
+CREATE TABLE parted_unique (
+    a int,
+    b text
+) PARTITION BY RANGE (a);
+
+-- Add unique constraint on column b of parted_unique
+ALTER TABLE parted_unique ADD CONSTRAINT constr_b UNIQUE (b);
+
+-- Partition the parted_unique table into ranges for a=1-10 and 11-20
+CREATE TABLE parted_unique_p1 PARTITION OF parted_unique FOR VALUES FROM (1) TO (11);
+CREATE TABLE parted_unique_p2 PARTITION OF parted_unique FOR VALUES FROM (11) TO (21);
+
+-- Create the plain_table with a, b columns
+CREATE TABLE plain_table (
+    a int,
+    b text
+);

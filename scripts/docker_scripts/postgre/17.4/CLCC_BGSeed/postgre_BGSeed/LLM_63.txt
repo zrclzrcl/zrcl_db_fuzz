@@ -1,0 +1,97 @@
+-- Create a table with various data types to test different scenarios
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    value NUMERIC(10, 2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ,
+    metadata JSONB,
+    uuid_col UUID,
+    description TEXT,
+    ts_vector_col TSVECTOR
+);
+
+-- Create indexes to test index behavior and query optimization
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+CREATE INDEX idx_jsonb ON test_table USING GIN (metadata jsonb_path_ops);
+CREATE INDEX idx_tsvector ON test_table USING GIN (ts_vector_col);
+
+-- Insert sample data for testing queries
+INSERT INTO test_table (name, value, metadata, uuid_col, description, ts_vector_col)
+VALUES 
+    ('Test 1', 100.5, '{"key": "value"}', gen_random_uuid(), 'This is a test description.', to_tsvector('english', 'test description')),
+    ('Test 2', NULL, '{"array": [1,2,3]}', gen_random_uuid(), 'Another test entry.', to_tsvector('english', 'another test')),
+    ('Test 3', 200.75, '{"object": {"nested": "value"}}', gen_random_uuid(), 'Yet another test.', to_tsvector('english', 'yet another'));
+
+-- Create a partitioned table for testing partitioning functionality
+CREATE TABLE test_part (
+    id SERIAL,
+    date_partition DATE NOT NULL,
+    data TEXT
+) PARTITION BY RANGE (date_partition);
+
+-- Create partitions for specific months
+CREATE PARTITION OF test_part FOR VALUES FROM ('2023-01-01') TO ('2023-02-01') WITH (
+    TABLESPACE = pg_default,
+    ENCODING = 'UTF8'
+);
+CREATE PARTITION OF test_part FOR VALUES FROM ('2023-02-01') TO ('2023-03-01');
+
+-- Insert data into partitioned table
+INSERT INTO test_part (date_partition, data)
+VALUES 
+    ('2023-01-15', 'Data for January'),
+    ('2023-02-10', 'Data for February');
+
+-- Create a Common Table Expression to test complex queries
+WITH cte AS (
+    SELECT * FROM test_table
+)
+SELECT COUNT(*) FROM cte;
+
+-- Test JSONB operations and functions
+SELECT metadata->'key' AS extracted_value FROM test_table WHERE metadata ? 'key';
+
+-- Create a function with different volatility levels for testing
+CREATE OR REPLACE FUNCTION concat_names(first_name TEXT, last_name TEXT)
+RETURNS TEXT IMMUTABLE AS $$
+BEGIN
+    RETURN first_name || ' ' || last_name;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT concat_names('John', 'Doe');
+
+-- Test window functions and ordering
+SELECT id, name, ROW_NUMBER() OVER (PARTITION BY active ORDER BY id) AS row_num FROM test_table;
+
+-- Create a trigger function to test triggers
+CREATE FUNCTION log_insertion() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO trigger_log (table_name, inserted_id)
+        VALUES ('test_table', NEW.id);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TABLE trigger_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    inserted_id INT NOT NULL,
+    log_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a trigger that logs insertions into test_table
+CREATE TRIGGER after_insert_trigger
+AFTER INSERT ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION log_insertion();
+
+-- Test the trigger by inserting new data
+INSERT INTO test_table (name, metadata)
+VALUES ('Trigger Test', '{"trigger": "test"}');
+
+-- Clean up triggers and functions if needed
+-- DROP TRIGGER after_insert_trigger ON test_table;
+-- DROP FUNCTION log_insertion();

@@ -1,0 +1,33 @@
+-- Create a simple table with range partitioning on integer values
+CREATE TABLE IF NOT EXISTS test_part (
+    id SERIAL PRIMARY KEY,
+    value INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) PARTITION BY RANGE (value);
+
+-- Create partitions for different ranges of 'value'
+CREATE TABLE test_part_1 PARTITION OF test_part FOR VALUES FROM (0) TO (100);
+CREATE TABLE test_part_2 PARTITION OF test_part FOR VALUES FROM (100) TO (200);
+CREATE TABLE test_part_3 PARTITION OF test_part FOR VALUES FROM (200) TO (MAXVALUE);
+
+-- Create an index on the 'value' column for faster queries
+CREATE INDEX idx_test_part_value ON test_part (value);
+
+-- Insert some sample data
+INSERT INTO test_part (value)
+VALUES 
+    (50),
+    (150),
+    (250),
+    (350);
+
+-- Verify the partitioning works as expected
+SELECT table_name, partition_range FROM pg_partitions WHERE parent_table = 'test_part';
+
+-- Query specific partitions
+SELECT * FROM test_part_1;
+SELECT * FROM test_part_2;
+SELECT * FROM test_part_3;
+
+-- Clean up (uncomment if needed)
+-- DROP TABLE test_part CASCADE;

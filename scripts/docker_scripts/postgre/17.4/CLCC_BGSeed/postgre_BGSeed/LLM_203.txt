@@ -1,0 +1,82 @@
+-- Initial PostgreSQL Seed Setup
+
+-- Create essential roles with appropriate privileges
+CREATE ROLE admin WITH SUPERUSER NOCREATEDB NOCREATEROLE;
+CREATE ROLE readonly WITH LOGIN;
+CREATE ROLE web_user WITH LOGIN;
+CREATE ROLE report_user WITH LOGIN;
+CREATE ROLE dba WITH SUPERUSER CREATEDB CREATEROLE;
+
+-- Grant specific privileges to roles
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO web_user;
+GRANT SELECT, EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO report_user;
+GRANT ALL PRIVILEGES ON DATABASE postgres TO dba;
+
+-- Create common tables for most applications
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    role_id INT REFERENCES roles(id),
+    permission_type VARCHAR(20) CHECK(permission_type IN ('read', 'write', 'delete', 'execute')),
+    resource_id VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    action_type VARCHAR(50) NOT NULL,
+    affected_table VARCHAR(100) NOT NULL,
+    old_data TEXT,
+    new_data TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create useful indexes
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_roles_name ON roles(name);
+CREATE INDEX idx_audit_logs_timestamp ON audit_logs(created_at);
+CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+
+-- Create a simple function to get database size information
+CREATE OR REPLACE FUNCTION get_db_size()
+RETURNS TABLE(size_mb FLOAT) AS $$
+    SELECT pg_size_pretty(pg_database_size('postgres'))::text::FLOAT / 1024 AS size_mb;
+$$ LANGUAGE SQL;
+
+-- Grant privileges on tables and schemas
+GRANT SELECT, INSERT, UPDATE, DELETE ON users TO web_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON roles TO admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON permissions TO admin;
+GRANT INSERT, SELECT ON audit_logs TO PUBLIC;
+
+-- Initial data insertion for essential records
+INSERT INTO roles (name, description) VALUES 
+    ('admin', 'System Administrator'),
+    ('readonly', 'Read Only Access'),
+    ('web_user', 'Web Application User'),
+    ('report_user', 'Report Generation User'),
+    ('dba', 'Database Administrator');
+
+-- Add pg_size_pretty alias for easier database size monitoring
+CREATE ALIAS IF NOT EXISTS db_size FOR pg_size_pretty(pg_database_size('postgres'));

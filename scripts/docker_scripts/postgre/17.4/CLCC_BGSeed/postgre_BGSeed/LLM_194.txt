@@ -1,0 +1,11 @@
+SELECT name, statement, parameter_types FROM pg_prepared_statements;
+PREPARE q1 AS SELECT 1 AS a;
+EXECUTE q1;
+SELECT name, statement, parameter_ypes FROM pg_prepared_statements;
+PREPARE q2(text) AS SELECT datname, datistemplate, datallowconn FROM pg_database WHERE datname = $1;
+EXECUTE q2('postgres');
+DEALLOCATE q2;
+PREPARE q3(int, text) AS SELECT * FROM tenk1 WHERE unique1 = $1 OR stringu1 = $2 ORDER BY unique1;
+CREATE TEMPORARY TABLE temp_results AS EXECUTE q3(5, 'AAAAxx') WITH NO DATA;
+SELECT * FROM temp_results;
+DEALLOCATE ALL;

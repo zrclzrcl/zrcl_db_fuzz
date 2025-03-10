@@ -1,0 +1,5 @@
+VACUUM;
+SELECT relname, relkind FROM pg_class WHERE relkind IN ('r', 'v', 'i', 'S') AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public');
+SELECT a.attname, t.typname FROM pg_attribute a JOIN pg_type t ON a.atttypid = t.oid WHERE a.attnum > 0 AND a.attrelid = (SELECT oid FROM pg_class WHERE relname = 'pg_stat_activity');
+SELECT json_agg(row_to_json(t)) FROM (SELECT * FROM pg_locks LIMIT 5) t;
+SELECT count(*) FROM pg_index WHERE indrelid IN (SELECT oid FROM pg_class WHERE relkind = 'r' AND relname LIKE 'pg_%');

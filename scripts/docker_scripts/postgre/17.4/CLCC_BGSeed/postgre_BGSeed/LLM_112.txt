@@ -1,0 +1,43 @@
+-- Create a test table with various data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data JSONB,
+    unique_id UUID UNIQUE
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (name, value, data, unique_id)
+VALUES 
+('Alice', 100, '{"age": 30}', '11111111-1111-1111-1111-111111111111'),
+('Bob', 200, '{"age": NULL}', '22222222-2222-2222-2222-222222222222'),
+('Charlie', 300, '{"city": "London"}', '33333333-3333-3333-3333-333333333333');
+
+-- Update specific records
+UPDATE test_table SET value = -50 WHERE name = 'Charlie';
+
+-- Delete a record
+DELETE FROM test_table WHERE name = 'Bob';
+
+-- Create indexes to test index operations
+CREATE INDEX idx_name ON test_table (name);
+CREATE UNIQUE INDEX idx_unique_value ON test_table (value) WHERE value > 100;
+
+-- Test transaction handling
+BEGIN;
+    INSERT INTO test_table (name, value) VALUES ('TransactionTest', 42);
+    ROLLBACK;
+
+-- Use a cursor to fetch data in batches
+DECLARE my_cursor CURSOR FOR SELECT * FROM test_table ORDER BY created_at DESC;
+FETCH 2 FROM my_cursor;
+MOVE BACKWARD ALL IN my_cursor;
+CLOSE my_cursor;
+
+-- Test vacuum operation for maintenance
+VACUUM test_table;
+
+-- Clean up resources
+DROP TABLE test_table CASCADE;

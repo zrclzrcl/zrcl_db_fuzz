@@ -1,0 +1,46 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE
+);
+
+INSERT INTO test_table (name, description, status)
+VALUES ('Test1', 'This is a test description.', TRUE),
+       ('Test2', '', FALSE),
+       ('Test3', NULL, TRUE),
+       ('Test4', REPEAT('a', 255), FALSE);
+
+UPDATE test_table SET status = NOT status WHERE id % 2 = 0;
+
+DELETE FROM test_table WHERE name LIKE 'Test%';
+
+CREATE INDEX idx_name ON test_table (name);
+
+CREATE FUNCTION log_changes() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_table (table_name, action, timestamp)
+    VALUES ('test_table', TG_OP, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE audit_table (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(255),
+    action VARCHAR(10),
+    timestamp TIMESTAMP
+);
+
+CREATE TRIGGER trigger_log_changes AFTER UPDATE OR DELETE ON test_table
+FOR EACH ROW EXECUTE FUNCTION log_changes();
+
+BEGIN;
+INSERT INTO test_table (name, description) VALUES ('TransactionTest', 'Testing transactions.');
+SAVEPOINT my_savepoint;
+UPDATE test_table SET status = TRUE WHERE name = 'TransactionTest';
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+VACUUM ANALYZE test_table;

@@ -1,0 +1,29 @@
+CREATE TABLE edge_cases (
+    id SERIAL PRIMARY KEY,
+    col1 INT,
+    col2 TEXT,
+    col3 TIMESTAMP,
+    col4 JSONB,
+    col5 UUID
+);
+
+INSERT INTO edge_cases (col1, col2, col3, col4, col5) VALUES 
+(0, '', '1970-01-01 00:00:00', '{}', '00000000-0000-0000-0000-000000000000'),
+(2147483647, 'test_string', CURRENT_TIMESTAMP, '{"key": "value"}', gen_random_uuid());
+
+SELECT * FROM edge_cases WHERE col1 = 0;
+SELECT * FROM edge_cases WHERE col2 = '';
+SELECT * FROM edge_cases WHERE col3 = '1970-01-01 00:00:00';
+SELECT * FROM edge_cases WHERE col4 = '{}';
+SELECT * FROM edge_cases WHERE col5 = '00000000-0000-0000-0000-000000000000';
+
+SELECT count(*) FROM edge_cases;
+SELECT sum(col1) FROM edge_cases;
+
+ALTER TABLE edge_cases ADD COLUMN col6 BOOLEAN DEFAULT FALSE;
+
+UPDATE edge_cases SET col6 = TRUE WHERE id = 1;
+
+DELETE FROM edge_cases WHERE id = 2;
+
+DROP TABLE edge_cases;

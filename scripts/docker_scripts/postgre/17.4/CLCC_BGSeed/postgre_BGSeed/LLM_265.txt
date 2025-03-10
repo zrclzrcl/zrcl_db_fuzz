@@ -1,0 +1,80 @@
+-- Create a test table with various data types to test different scenarios
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    score DECIMAL(10, 2) DEFAULT 0.00,
+    tags TEXT[] DEFAULT '{}'::TEXT[],
+    metadata JSONB
+);
+
+-- Insert test data with edge cases
+INSERT INTO test_table (name, description, score, tags, metadata)
+VALUES 
+('Test Name', 'This is a test description.', 100.5, '{test, example}', '{"key": "value"}'),
+('', '', 0, '{}', '{}'),
+('A'::char(255), 'B'::text, NULL, NULL, NULL);
+
+-- Update data using a subquery
+UPDATE test_table 
+SET status = (SELECT COUNT(*) FROM generate_series(1, 3)) > 0 
+WHERE id IN (SELECT id FROM test_table WHERE name LIKE '%test%');
+
+-- Complex SELECT query with CTE and window functions
+WITH cte AS (
+    SELECT 
+        id,
+        name,
+        RANK() OVER (ORDER BY created_at DESC) as rank,
+        LEAD(name, 1) OVER () as next_name
+    FROM test_table
+)
+SELECT * FROM cte WHERE rank <= 5;
+
+-- Transaction control to test commit and rollback scenarios
+BEGIN;
+INSERT INTO test_table (name) VALUES ('Transaction Test');
+SAVEPOINT sp1;
+UPDATE test_table SET name = 'Updated Name' WHERE name = 'Transaction Test';
+ROLLBACK TO sp1;
+COMMIT;
+
+-- Index creation on specific columns and expressions
+CREATE INDEX idx_name_lower ON test_table (lower(name));
+CREATE INDEX idx_score_range ON test_table (score) WHERE status = TRUE;
+
+-- Create a view based on complex query to test view functionality
+CREATE VIEW test_view AS
+SELECT 
+    id,
+    name || ' - ' || description as full_description,
+    EXTRACT(YEAR FROM created_at) as year_created,
+    COUNT(*) OVER () as total_records
+FROM test_table
+WHERE status = TRUE;
+
+-- Stored procedure to test function execution and parameters
+CREATE OR REPLACE FUNCTION test_function(p_name TEXT)
+RETURNS TABLE(id INT, name TEXT) AS $$
+BEGIN
+    RETURN QUERY 
+        SELECT id, name FROM test_table WHERE name LIKE '%' || p_name || '%';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Call the stored procedure with different parameters
+SELECT * FROM test_function('test');
+
+-- System function calls to test PostgreSQL-specific functionality
+SELECT pg_sleep(0);
+SELECT pg_cancel_backend(pg_backend_pid());
+SELECT current_database(), current_schema();
+
+-- Clean up test objects
+DROP FUNCTION test_function(p_name TEXT);
+DROP VIEW test_view;
+DROP INDEX idx_score_range;
+DROP INDEX idx_name_lower;
+DROP TABLE test_table;

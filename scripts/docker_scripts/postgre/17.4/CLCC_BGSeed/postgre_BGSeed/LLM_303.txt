@@ -1,0 +1,73 @@
+-- Test case for PostgreSQL functionality testing
+-- This test focuses on various core features of PostgreSQL including data types,
+-- constraints, transactions, system functions, and error handling.
+
+-- Data Types Testing
+CREATE TABLE IF NOT EXISTS test_datatypes (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    integer_field INTEGER,
+    boolean_field BOOLEAN,
+    timestamp_field TIMESTAMP WITH TIME ZONE,
+    uuid_field UUID,
+    jsonb_field JSONB
+);
+
+INSERT INTO test_datatypes (text_field, integer_field, boolean_field, timestamp_field, uuid_field, jsonb_field)
+VALUES ('test', 123, TRUE, CURRENT_TIMESTAMP, gen_random_uuid(), '{"key": "value"}');
+
+-- Constraints Testing
+CREATE TABLE IF NOT EXISTS test_constraints (
+    id SERIAL PRIMARY KEY,
+    unique_field VARCHAR(50) UNIQUE,
+    not_null_field TEXT NOT NULL,
+    foreign_key_id INTEGER REFERENCES test_datatypes(id)
+);
+
+INSERT INTO test_constraints (unique_field, not_null_field, foreign_key_id)
+VALUES ('test_unique', 'required_value', 1); -- Should work
+INSERT INTO test_constraints (unique_field, not_null_field) VALUES ('test_unique', 'another_value'); -- Should fail due to unique constraint
+
+-- Transactions and Isolation Levels Testing
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL read committed;
+
+SELECT * FROM test_datatypes WHERE id = 1 FOR UPDATE;
+
+COMMIT;
+
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL repeatable read;
+
+SELECT * FROM test_datatypes WHERE id = 1 FOR UPDATE;
+
+ROLLBACK;
+
+-- System Functions and Monitoring Testing
+SELECT pg_current_xact_id(); -- Current transaction ID
+
+SELECT pid, state, wait_event_type, query FROM pg_stat_activity; -- Monitoring active processes
+
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid != pg_backend_pid() LIMIT 1; -- Terminate another backend (if any)
+
+-- Error Handling and Edge Cases Testing
+BEGIN;
+INSERT INTO test_constraints (unique_field, not_null_field)
+VALUES ('test_unique', 'value'); -- Should fail due to unique constraint
+
+SAVEPOINT sp1;
+
+INSERT INTO test_constraints (not_null_field) VALUES (NULL); -- Should fail due to NOT NULL constraint
+
+ROLLBACK TO sp1;
+
+COMMIT;
+
+-- Indexing Testing
+CREATE INDEX IF NOT EXISTS idx_test_datatypes_text ON test_datatypes(text_field);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_test_datatypes_unique ON test_datatypes(unique_field);
+
+-- Cleanup
+DROP TABLE test_constraints;
+DROP TABLE test_datatypes;

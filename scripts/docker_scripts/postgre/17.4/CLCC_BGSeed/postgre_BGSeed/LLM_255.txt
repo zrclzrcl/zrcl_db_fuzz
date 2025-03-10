@@ -1,0 +1,43 @@
+CREATE EXTENSION IF NOT EXISTS uuid-ossp;
+DROP TABLE IF EXISTS test_fuzz_table;
+CREATE TABLE test_fuzz_table (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT CHECK (LENGTH(text_col) <= 1000),
+    num_col INT DEFAULT 0,
+    bool_col BOOLEAN NOT NULL,
+    jsonb_col JSONB,
+    ts_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO test_fuzz_table (text_col, num_col, bool_col, jsonb_col)
+VALUES 
+('test_string', 123, TRUE, '{"key": "value"}'),
+('', -456, FALSE, NULL),
+(NULL, 789, TRUE, jsonb_build_object('a', 'b')),
+('longstringrepeatingfor测试', 0, FALSE, '{"array": [1,2,3]}');
+
+WITH cte AS (
+    SELECT id, text_col, ROW_NUMBER() OVER (ORDER BY id) as row_num
+    FROM test_fuzz_table
+)
+SELECT cte.id, cte.text_col, cte.row_num,
+       t.jsonb_col->>'key' as extracted_key
+FROM cte
+JOIN test_fuzz_table t ON cte.id = t.id
+WHERE bool_col = TRUE;
+
+SELECT 
+    COUNT(*) as total_count,
+    SUM(num_col) as sum_numbers,
+    MIN(id) as min_id,
+    MAX(ts_col) as max_timestamp,
+    BOOL_AND(bool_col) as all_bool_true,
+    BOOL_OR(bool_col) as any_bool_true
+FROM test_fuzz_table
+GROUP BY bool_col, num_col % 2
+WITH ROLLUP;
+
+CREATE INDEX idx_text_col ON test_fuzz_table (text_col NULLS LAST);
+CREATE INDEX idx_jsonb_col ON test_fuzz_table USING GIN (jsonb_col);
+ALTER TABLE test_fuzz_table ADD COLUMN new_col TEXT;
+CREATE INDEX idx_new_col ON test_fuzz_table (new_col);

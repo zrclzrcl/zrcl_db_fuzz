@@ -1,0 +1,33 @@
+-- Create a table with various data types specific to PostgreSQL
+CREATE TABLE test_seed (
+    id oid,
+    integer_col int,
+    text_col text,
+    boolean_col bool,
+    numeric_col numeric,
+    date_col date
+);
+
+-- Insert edge cases for each column type
+INSERT INTO test_seed (id, integer_col, text_col, boolean_col, numeric_col, date_col) VALUES
+    -- OID can be any object identifier; using 0 as a default
+    (0, -2147483648, '', NULL, -9999999999.999999, '1970-01-01'),
+    -- Testing integer min and max values
+    (1, 2147483647, ' ', TRUE, 9999999999.999999, '2024-02-29'),
+    -- Empty string and space in text_col
+    (2, 0, 'test', FALSE, 123.456789, '2024-12-31'),
+    -- Normal values for testing
+    (3, NULL, 'Special $%^&*()_+', NULL, 1e+100, '1900-01-01'),
+    -- Testing NULL and special characters
+    (4, 123, '   leading spaces', TRUE, -1e-100, '2024-06-30');
+-- Various edge cases for all columns
+
+-- Select statements with different WHERE conditions to test query paths
+SELECT * FROM test_seed WHERE integer_col = -2147483648;
+SELECT text_col FROM test_seed WHERE boolean_col IS TRUE;
+SELECT numeric_col FROM test_seed WHERE date_col >= '2024-02-29';
+SELECT id, text_col FROM test_seed WHERE text_col LIKE 'test%';
+SELECT COUNT(*) FROM test_seed WHERE boolean_col IS NULL;
+
+-- Clean up by dropping the table
+DROP TABLE test_seed;

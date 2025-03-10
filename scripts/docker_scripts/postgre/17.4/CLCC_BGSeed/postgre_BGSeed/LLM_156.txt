@@ -1,0 +1,8 @@
+CREATE TABLE test_table (
+    id serial PRIMARY KEY,
+    name text,
+    active boolean DEFAULT true,
+    amount numeric(10,2),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    geom lseg
+);

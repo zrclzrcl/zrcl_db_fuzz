@@ -1,0 +1,36 @@
+create table test_table (
+    id serial primary key,
+    name text,
+    age integer,
+    active boolean,
+    last_login timestamp,
+    metadata jsonb,
+    tags text[]
+);
+
+insert into test_table (name, age, active, last_login, metadata, tags) values 
+('Alice', 30, true, '2023-10-01 14:30:00', '{"role": "admin"}', '{web, db}'),
+('Bob', 25, false, NULL, '{"preferences": {"theme": "dark"}}', '{frontend}'),
+('Charlie', 35, true, '2023-10-02 09:15:00', '{"role": "user"}', '{backend, testing}'),
+('', NULL, false, '2023-10-03 12:45:00', '{}', '{}');
+
+create index idx_name on test_table (name);
+create index idx_age_hash on test_table using hash (age);
+create index idx_metadata_gin on test_table using gin (metadata);
+
+vacuum test_table;
+
+select * from test_table;
+select name, age from test_table where active = true;
+select name, last_login::text from test_table where last_login > '2023-10-01';
+select count(*) from test_table where tags @> '{web}';
+select id, name, metadata->>'role' as role from test_table;
+
+select * from test_table where name ~* '^a';
+select * from test_table where name ilike '%char%';
+
+select to_tsvector('english', metadata->>'description') from test_table;
+select array_length(tags, 1) as tag_count from test_table;
+
+select * from test_table where age between 25 and 35;
+select max(last_login) from test_table;

@@ -1,0 +1,59 @@
+CREATE SCHEMA test_schema;
+CREATE TABLE test_schema.test_table1 (
+    id serial PRIMARY KEY,
+    name text,
+    age integer,
+    balance decimal(10, 2),
+    active boolean DEFAULT true,
+    created_at timestamp WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    bio text,
+    data bytea
+);
+INSERT INTO test_schema.test_table1 (name, age, balance, active, bio) 
+VALUES 
+('Alice', 30, 1000.50, true, 'Software Engineer'),
+('Bob', NULL, -500.75, false, NULL),
+('', 25, 0.00, true, 'Student');
+CREATE TABLE test_schema.test_table2 (
+    id integer PRIMARY KEY,
+    value text CHECK (value <> ''),
+    amount numeric(10, 4) NOT NULL,
+    enabled boolean DEFAULT FALSE,
+    log bytea
+);
+INSERT INTO test_schema.test_table2 
+VALUES 
+(1, 'test', 100.5, true, 'UklhYnkgbW9kIHRoZSBzaG93IQ=='),
+(2, 'example', NULL, false, '\xDEADBEEF');
+CREATE DOMAIN test_domain AS integer CHECK (VALUE > 0);
+CREATE TABLE test_schema.test_table3 (
+    id test_domain,
+    name text NOT NULL,
+    created_on date DEFAULT CURRENT_DATE
+);
+INSERT INTO test_schema.test_table3 
+VALUES 
+(1, 'Item 1', '2024-01-01'),
+(2, 'Item 2', NULL);
+ALTER TABLE test_schema.test_table1 ADD COLUMN notes text;
+ALTER TABLE test_schema.test_table1 DROP COLUMN bio;
+CREATE INDEX idx_test_table1_age ON test_schema.test_table1 (age);
+INSERT INTO test_schema.test_table1 (name, age, active, notes) 
+SELECT 
+    'User' || generate_series(1, 100),
+    floor(random() * 100),
+    random() > 0.5,
+    md5(random()::text)
+FROM generate_series(1, 100);
+SELECT xmlforest(name, age, balance) FROM test_schema.test_table1;
+CREATE TABLE test_schema.test_table4 (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    data jsonb
+);
+INSERT INTO test_schema.test_table4 
+VALUES 
+('{'data': {'key': 'value'}}'::jsonb),
+('{'array': [1, 2, 3], 'nested': {'a': 'b'}}'::jsonb);
+ALTER TABLE test_schema.test_table4 ADD COLUMN metadata hstore;
+UPDATE test_schema.test_table4 SET metadata = hstore(ARRAY['key', 'value']);
+SELECT * FROM test_schema.test_table4 WHERE metadata @> hstore('key', 'value');

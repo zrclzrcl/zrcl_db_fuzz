@@ -1,0 +1,40 @@
+CREATE FUNCTION get_heartbeat() RETURNS pg_lsn
+    LANGUAGE C STRICT
+    AS 'MODULE_PATHNAME', 'pg_get_heartbeat';
+    
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+CREATE INDEX idx_data ON test_table USING GIN (data jsonb_path_ops);
+
+CREATE TRIGGER trg_test_table_update BEFORE UPDATE ON test_table FOR EACH ROW EXECUTE FUNCTION update_trigger();
+
+CREATE RULE rule_test AS ON SELECT TO test_table DO INSTEAD SELECT * FROM another_table;
+
+WITH cte AS (
+    SELECT id, name, created_at
+    FROM test_table
+)
+SELECT id, name, RANK() OVER (ORDER BY created_at DESC) as rank
+FROM cte;
+
+BEGIN;
+INSERT INTO test_table(name, data) VALUES('Test', '{"key": "value"}');
+SAVEPOINT sp1;
+UPDATE test_table SET name = 'Updated Test' WHERE id = 1;
+RELEASE SAVEPOINT sp1;
+COMMIT;
+
+ALTER TABLE test_table ADD CONSTRAINT unique_name UNIQUE (name);
+
+CREATE PROCEDURE proc_test()
+LANGUAGE SQL
+AS $$
+    INSERT INTO test_table(name, data) VALUES('Procedure Test', '{"proc": true}');
+$$;
+
+SELECT pg_sleep(1);

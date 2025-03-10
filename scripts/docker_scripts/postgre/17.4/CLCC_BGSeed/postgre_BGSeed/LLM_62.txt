@@ -1,0 +1,45 @@
+-- Create a table with various data types and constraints
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value FLOAT DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    notes TEXT[],
+    metadata JSONB
+);
+
+-- Insert edge cases into the table
+INSERT INTO test_table (name, value, status, notes, metadata) VALUES
+('Edge Case 1', -2147483648, TRUE, '{"test", "array"}', '{"key": "value"}'),
+('Edge Case 2', 2147483647, FALSE, '{}', 'null'),
+('', NULL, NULL, NULL, NULL);
+
+-- Create a view for testing query optimization
+CREATE VIEW test_view AS
+SELECT name, status, created_at FROM test_table WHERE status = TRUE;
+
+-- Test complex queries with CTE and window functions
+WITH cte_test AS (
+    SELECT id, name, ROW_NUMBER() OVER (ORDER BY created_at DESC) as rn
+    FROM test_table
+)
+SELECT * FROM cte_test WHERE rn <= 5;
+
+-- Test JSON operations
+INSERT INTO test_table (name, metadata) VALUES ('JSON Test', '{"complex": {"nested": "object"}, "array": [1,2,3]}');
+
+-- Test constraints and unique scenarios
+ALTER TABLE test_table ADD UNIQUE (name);
+INSERT INTO test_table (name) VALUES ('Unique Test') ON CONFLICT DO NOTHING;
+
+-- Test transactions and rollback
+BEGIN;
+    INSERT INTO test_table (name) VALUES ('Transaction Test');
+    ROLLBACK;
+
+-- Test PostgreSQL-specific functions
+SELECT pg_sleep(1); -- Simulate a delay for testing purposes
+
+-- Clean up (commented out to avoid accidental execution)
+-- DROP TABLE test_table CASCADE;

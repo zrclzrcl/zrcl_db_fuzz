@@ -1,0 +1,91 @@
+-- Create a table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT,
+    integer_column INTEGER,
+    timestamp_column TIMESTAMP WITH TIME ZONE,
+    boolean_column BOOLEAN,
+    numeric_column NUMERIC(10, 2),
+    uuid_column UUID DEFAULT gen_random_uuid(),
+    jsonb_column JSONB
+);
+
+-- Insert some test data with edge cases
+INSERT INTO test_table (text_column, integer_column, timestamp_column, boolean_column, numeric_column, jsonb_column)
+VALUES 
+    ('test string', 42, '2023-10-05 12:34:56+00', TRUE, 123.45, '{"key": "value"}'),
+    (NULL, NULL, NULL, FALSE, NULL, NULL),
+    ('最长的字符串测试', -99999, now(), TRUE, 9999999999.99, '{"array": [1,2,3], "nested": {"object": true}}');
+
+-- Create a table for testing JSON operations
+CREATE TABLE IF NOT EXISTS json_test (
+    id SERIAL PRIMARY KEY,
+    data JSONB
+);
+
+-- Insert some complex JSON data
+INSERT INTO json_test (data)
+VALUES 
+    ('{"name": "Alice", "age": 30, "hobbies": ["reading", "music"]}'::jsonb),
+    ('{"name": "Bob", "age": null, "address": {"city": "New York"}}'::jsonb);
+
+-- Create a table for testing array operations
+CREATE TABLE IF NOT EXISTS array_test (
+    id SERIAL PRIMARY KEY,
+    numbers INTEGER[],
+    text_array TEXT[]
+);
+
+-- Insert some array data
+INSERT INTO array_test (numbers, text_array)
+VALUES 
+    ('{1,2,3,4}'::integer[], '{"apple", "banana"}'::text[]),
+    ('{-5,-4,-3}'::integer[], NULL);
+
+-- Complex query with CTE and window functions
+WITH cte AS (
+    SELECT id, text_column, integer_column,
+           ROW_NUMBER() OVER (ORDER BY id) as row_num
+    FROM test_table
+)
+SELECT 
+    t.id, 
+    t.text_column,
+    t.integer_column,
+    t.timestamp_column,
+    cte.row_num,
+    j.data ->> 'name' as json_name,
+    a.numbers,
+    a.text_array[1] as first_text
+FROM test_table t
+JOIN cte ON t.id = cte.id
+LEFT JOIN json_test j ON t.id = j.id
+LEFT JOIN array_test a ON t.id = a.id
+WHERE t.boolean_column IS TRUE
+ORDER BY t.id;
+
+-- Testing JSON containment and operators
+SELECT data 
+FROM json_test 
+WHERE data @> '{"age": 30}';
+
+-- Testing array containment
+SELECT numbers 
+FROM array_test 
+WHERE numbers @> '{2,4}' AND id = 1;
+
+-- Create an index for testing query optimization
+CREATE INDEX IF NOT EXISTS idx_timestamp 
+ON test_table (timestamp_column);
+
+-- Create a view to test derived tables
+CREATE OR REPLACE VIEW test_view AS
+SELECT 
+    t.id,
+    t.text_column,
+    j.data ->> 'hobbies' as hobbies
+FROM test_table t
+LEFT JOIN json_test j ON t.id = j.id;
+
+-- Query the view with a limit and offset
+SELECT * FROM test_view LIMIT 2 OFFSET 1;

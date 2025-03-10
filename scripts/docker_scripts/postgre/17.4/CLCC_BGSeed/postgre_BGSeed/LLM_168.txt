@@ -1,0 +1,68 @@
+CREATE SCHEMA test_schema;
+SET search_path TO test_schema;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INT UNIQUE,
+    data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_value ON test_table (value);
+CREATE UNIQUE INDEX idx_name_lower ON test_table ((LOWER(name)));
+
+CREATE TABLE reference_table (
+    ref_id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL
+);
+
+ALTER TABLE test_table ADD COLUMN ref_id INT REFERENCES reference_table(ref_id);
+
+CREATE VIEW test_view AS
+SELECT id, name, value, data FROM test_table WHERE value > 10;
+
+CREATE MATERIALIZED VIEW mat_test_view AS
+SELECT COUNT(*) as total, EXTRACT(YEAR FROM created_at) as year
+FROM test_table GROUP BY year;
+
+INSERT INTO reference_table (title)
+VALUES ('Test Reference');
+
+INSERT INTO test_table (name, value, data, ref_id)
+VALUES ('Item 1', 42, '{"key": "value"}', 1);
+
+SELECT pg_sleep(0.5); -- Simulate a delay
+
+BEGIN;
+    INSERT INTO test_table (name, value) VALUES ('Transaction Item', 100);
+    UPDATE reference_table SET title = 'Updated Reference' WHERE ref_id = 1;
+COMMIT;
+
+VACUUM ANALYZE test_table;
+
+CREATE FUNCTION increment_value()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.value := OLD.value + 1;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trig_increment
+BEFORE UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE increment_value();
+
+SELECT * FROM test_view;
+SELECT * FROM mat_test_view;
+
+ALTER TABLE test_table ADD CHECK (value > 0);
+ALTER INDEX idx_name_lower RENAME TO idx_name_lowercase;
+
+DO $$
+BEGIN
+    RAISE NOTICE 'Procedure executed';
+END;
+$$;
+
+RESET search_path;

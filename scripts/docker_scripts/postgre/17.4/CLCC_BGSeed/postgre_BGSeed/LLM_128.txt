@@ -1,0 +1,8 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    num_col NUMERIC(10, 2),
+    bool_col BOOLEAN DEFAULT FALSE,
+    date_col DATE,
+    json_col JSONB
+);

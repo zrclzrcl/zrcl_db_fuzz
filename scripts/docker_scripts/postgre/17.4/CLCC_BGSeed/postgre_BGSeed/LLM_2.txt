@@ -1,76 +1,60 @@
--- 创建基础表结构，包含多种数据类型
-CREATE TABLE employees (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    age INT CHECK (age >= 0),
-    hire_date DATE DEFAULT CURRENT_DATE,
-    is_active BOOLEAN DEFAULT TRUE
+-- Initial seed for PostgreSQL test environment setup
+
+-- Create necessary schemas if they don't exist
+CREATE SCHEMA IF NOT EXISTS public;
+CREATE SCHEMA IF NOT EXISTS pg_temp;
+
+-- Create tables with required columns and data types
+CREATE TABLE IF NOT EXISTS agg_group_1 (
+    c1 numeric,
+    c2 text,
+    c3 integer
 );
 
--- 创建具有外键约束的表以测试关系型数据库特性
-CREATE TABLE departments (
-    dept_id SERIAL PRIMARY KEY,
-    dept_name VARCHAR(50) UNIQUE NOT NULL,
-    manager_id INT REFERENCES employees(id)
+CREATE TABLE IF NOT EXISTS agg_group_2 (
+    c1 numeric,
+    c2 text,
+    c3 integer
 );
 
--- 插入多样化数据，包含边界条件和边缘情况
-INSERT INTO employees (name, age, hire_date, is_active) 
-VALUES 
-('John Doe', 30, '2020-01-15', TRUE),
-('Jane Smith', 45, '2018-07-22', FALSE),
-('', 0, CURRENT_DATE, TRUE), -- 测试空字符串和边界年龄
-('Max Mustermann', 150, '1999-12-31', TRUE);
+CREATE TABLE IF NOT EXISTS agg_group_3 (
+    c1 numeric,
+    c2 integer,
+    c3 integer
+);
 
--- 创建索引以测试查询优化器行为
-CREATE INDEX idx_employee_age ON employees(age);
-CREATE UNIQUE INDEX uniq_dept_name ON departments(dept_name);
+CREATE TABLE IF NOT EXISTS agg_group_4 (
+    c1 numeric,
+    c2 text,
+    c3 integer
+);
 
--- 插入部门数据并建立外键关系
-INSERT INTO departments (dept_name, manager_id)
-VALUES 
-('Engineering', 1),
-('HR', 2),
-('Marketing', NULL); -- 测试NULL值
+-- Create indexes on frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_agg_group_1_c1 ON agg_group_1 (c1);
+CREATE INDEX IF NOT EXISTS idx_agg_group_2_c1 ON agg_group_2 (c1);
+CREATE INDEX IF NOT EXISTS idx_agg_group_3_c1 ON agg_group_3 (c1);
+CREATE INDEX IF NOT EXISTS idx_agg_group_4_c1 ON agg_group_4 (c1);
 
--- 更新操作测试
-UPDATE employees SET age = 35 WHERE id = 1;
-UPDATE departments SET dept_name = 'Software Engineering' WHERE dept_id = 1;
+-- Create functions used in test cases
+CREATE OR REPLACE FUNCTION pg_temp.add_one(numeric)
+RETURNS numeric AS $$
+BEGIN
+    RETURN $1 + 1;
+END;
+$$ LANGUAGE plpgsql;
 
--- 删除操作测试
-DELETE FROM departments WHERE dept_id = 3;
-DELETE FROM employees WHERE name = '';
+CREATE OR REPLACE FUNCTION pg_temp.multiply_two_numbers(integer, integer)
+RETURNS integer AS $$
+BEGIN
+    RETURN $1 * $2;
+END;
+$$ LANGUAGE plpgsql;
 
--- 复杂查询，包含聚合函数和窗口函数
-SELECT 
-    COUNT(*) AS total_employees,
-    AVG(age) AS avg_age,
-    MAX(hire_date) AS latest_hire_date
-FROM employees;
+-- Create sequence for generating unique identifiers
+CREATE SEQUENCE IF NOT EXISTS test_sequence
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    CACHE 1;
 
--- 使用窗口函数进行排名测试
-SELECT 
-    id, name, hire_date,
-    ROW_NUMBER() OVER (ORDER BY hire_date DESC) AS rank_by_date,
-    RANK() OVER (PARTITION BY is_active ORDER BY age ASC) AS age_rank
-FROM employees;
-
--- 事务控制测试
-BEGIN;
-INSERT INTO departments (dept_name, manager_id)
-VALUES ('TestDept', 3);
-SAVEPOINT sp1;
-DELETE FROM departments WHERE dept_name = 'TestDept';
-ROLLBACK TO sp1;
-COMMIT;
-
--- 复杂条件查询和连接操作
-SELECT 
-    e.name AS employee_name,
-    d.dept_name AS department,
-    e.age,
-    CASE WHEN e.is_active THEN 'Active' ELSE 'Inactive' END AS status
-FROM employees e
-LEFT JOIN departments d ON e.id = d.manager_id
-WHERE e.age > 30 OR (e.hire_date >= '2020-01-01' AND d.dept_name IS NOT NULL)
-ORDER BY e.name DESC;
+ALTER SEQUENCE test_sequence OWNER TO postgres;

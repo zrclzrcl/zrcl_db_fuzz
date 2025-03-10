@@ -1,0 +1,56 @@
+-- Create a test table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age INTEGER,
+    is_active BOOLEAN,
+    created_at DATE DEFAULT CURRENT_DATE,
+    score NUMERIC(5,2)
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (name, age, is_active, score) 
+SELECT 'Test' || generate_series(1, 10), 
+       generate_series(1, 10) * 10 + 20,
+       CASE WHEN generate_series(1, 10) % 2 = 0 THEN TRUE ELSE FALSE END,
+       (generate_series(1, 10) * 10.5)::NUMERIC(5,2);
+
+-- Test edge cases with MIN and MAX functions
+SELECT MIN(age), MAX(age) FROM test_table;
+
+-- Test aggregate functions with HAVING clause
+SELECT COUNT(*), AVG(score) 
+FROM test_table 
+GROUP BY is_active 
+HAVING COUNT(*) > 5;
+
+-- Test window functions
+SELECT id, name, RANK() OVER (ORDER BY score DESC) AS rank_score 
+FROM test_table;
+
+-- Test complex subqueries and joins
+WITH cte AS (
+    SELECT id, name, age, 
+           ROW_NUMBER() OVER (ORDER BY created_at) as rn
+    FROM test_table
+)
+SELECT t.id, t.name, c.rn 
+FROM test_table t
+JOIN cte c ON t.id = c.id 
+WHERE t.age > 25 AND c.rn <= 3;
+
+-- Test UPDATE with a condition and subquery
+UPDATE test_table 
+SET score = score * 1.1 
+WHERE age IN (SELECT age FROM test_table WHERE is_active = TRUE);
+
+-- Test DELETE with a join and subquery
+DELETE FROM test_table t1 
+USING (
+    SELECT id FROM test_table 
+    WHERE age < (SELECT AVG(age) FROM test_table)
+) t2 
+WHERE t1.id = t2.id;
+
+-- Cleanup (optional, uncomment if needed)
+-- DROP TABLE test_table;

@@ -1,0 +1,105 @@
+-- Create table with various data types and constraints
+CREATE TABLE onek2 (
+    unique1         int4,
+    unique2         int4,
+    two             int4,
+    four            int4,
+    ten             int4,
+    twenty          int4,
+    hundred         int4,
+    thousand        int4,
+    twothousand     int4,
+    fivethous       int4,
+    tenthous        int4,
+    odd             int4,
+    even            int4,
+    stringu1        name,
+    stringu2        name,
+    string4         char(4),
+    id              int8 PRIMARY KEY
+);
+
+-- Create indexes for testing queries
+CREATE INDEX idx_unique1 ON onek2(unique1);
+CREATE INDEX idx_unique2 ON onek2(unique2);
+
+-- Create function to test temporary tables and DDL operations
+CREATE OR REPLACE FUNCTION create_temp_table()
+RETURNS void AS $$
+BEGIN
+    -- Create a temporary table with the same structure as onek2
+    CREATE TEMPORARY TABLE temp_onek (
+        unique1         int4,
+        unique2         int4,
+        two             int4,
+        four            int4,
+        ten             int4,
+        twenty          int4,
+        hundred         int4,
+        thousand        int4,
+        twothousand     int4,
+        fivethous       int4,
+        tenthous        int4,
+        odd             int4,
+        even            int4,
+        stringu1        name,
+        stringu2        name,
+        string4         char(4),
+        id              int8
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to test column operations
+CREATE OR REPLACE FUNCTION add_column()
+RETURNS void AS $$
+BEGIN
+    -- Add a new column to onek2 table
+    ALTER TABLE onek2 ADD COLUMN new_col int4;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to test data manipulation
+CREATE OR REPLACE FUNCTION insert_data()
+RETURNS void AS $$
+BEGIN
+    -- Insert sample data into onek2 table
+    INSERT INTO onek2 (unique1, unique2, two, four, ten, twenty, hundred, thousand, twothousand, fivethous, tenthous, odd, even, stringu1, stringu2, string4, id)
+    VALUES (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 'test', 'test', 'test', 1);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to test complex operations
+CREATE OR REPLACE FUNCTION complex_operations()
+RETURNS void AS $$
+BEGIN
+    -- Perform a series of DDL and DML operations
+    CREATE TEMPORARY TABLE temp_table (
+        id int,
+        name text
+    );
+    
+    INSERT INTO temp_table VALUES (1, 'test');
+    
+    ALTER TABLE onek2 ADD COLUMN new_col2 text;
+    
+    UPDATE onek2 SET new_col2 = 'updated' WHERE id = 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to test transaction management
+CREATE OR REPLACE FUNCTION transaction_test()
+RETURNS void AS $$
+BEGIN
+    -- Test transaction commit
+    INSERT INTO onek2 (unique1, unique2, two, four, ten, twenty, hundred, thousand, twothousand, fivethous, tenthous, odd, even, stringu1, stringu2, string4, id)
+    VALUES (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 'transaction', 'test', 'test', 2);
+    
+    -- Test transaction rollback
+    BEGIN;
+        INSERT INTO onek2 (unique1, unique2, two, four, ten, twenty, hundred, thousand, twothousand, fivethous, tenthous, odd, even, stringu1, stringu2, string4, id)
+        VALUES (3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 'rollback', 'test', 'test', 3);
+        ROLLBACK;
+    END;
+END;
+$$ LANGUAGE plpgsql;

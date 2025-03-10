@@ -1,0 +1,82 @@
+-- Create a test table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INTEGER,
+    text_col TEXT,
+    boolean_col BOOLEAN,
+    date_col DATE,
+    jsonb_col JSONB
+);
+
+-- Insert edge case values into the table
+INSERT INTO test_table (integer_col, text_col, boolean_col, date_col, jsonb_col)
+VALUES 
+    (NULL, NULL, NULL, NULL, NULL),
+    (-2147483648, 'test_string', TRUE, '2000-01-01', '{"key": "value"}'),
+    (2147483647, '', FALSE, '2999-12-31', '[]'),
+    (0, NULL, NULL, CURRENT_DATE, '{}');
+
+-- Create a reference table for testing joins
+CREATE TABLE IF NOT EXISTS test_reference (
+    id SERIAL PRIMARY KEY,
+    fk INTEGER REFERENCES test_table(id),
+    data TEXT
+);
+
+-- Insert into the reference table
+INSERT INTO test_reference (fk, data)
+VALUES 
+    (1, 'related_data_1'),
+    (2, 'related_data_2');
+
+-- Use a CTE for complex calculations and insert results
+WITH cte AS (
+    SELECT id, integer_col + 10 as incremented_value
+    FROM test_table
+    WHERE boolean_col = TRUE
+)
+INSERT INTO test_table (integer_col, text_col)
+SELECT incremented_value, 'cte_insert' FROM cte;
+
+-- Complex SELECT with window functions and ordering
+SELECT 
+    id,
+    integer_col,
+    RANK() OVER (ORDER BY integer_col DESC) as rank,
+    jsonb_col->>'key' as extracted_key
+FROM test_table
+WHERE boolean_col IS NOT NULL
+ORDER BY date_col ASC NULLS LAST;
+
+-- Create a view with LATERAL join
+CREATE VIEW test_view AS
+SELECT 
+    t.id,
+    r.data as related_data,
+    t.jsonb_col
+FROM 
+    test_table t
+LEFT JOIN LATERAL (
+    SELECT data FROM test_reference WHERE fk = t.id LIMIT 1
+) r ON TRUE;
+
+-- Test JSONB operations and update
+UPDATE test_table
+SET jsonb_col = jsonb_col || '{"new_key": "new_value"}'
+WHERE id IN (SELECT id FROM test_view);
+
+-- Create an index on the JSONB column for testing performance
+CREATE INDEX idx_jsonb ON test_table USING GIN (jsonb_col);
+
+-- Test transaction management and rollback
+BEGIN;
+    UPDATE test_table SET integer_col = -1 WHERE id = 1;
+    -- This will cause a conflict or error, triggering a rollback
+    SAVEPOINT my_savepoint;
+    DELETE FROM test_reference WHERE fk = 1;
+    ROLLBACK TO my_savepoint;
+ROLLBACK;
+
+-- Clean up (uncomment if needed)
+-- DROP TABLE IF EXISTS test_table, test_reference;
+-- DROP VIEW IF EXISTS test_view;

@@ -28,6 +28,7 @@ RUN git clone https://github.com/zrclzrcl/zrcl_db_fuzz.git  && \
     cd AFLplusplus/ && LLVM_CONFIG=llvm-config-14 make -j20
 
 RUN git clone --depth=1 https://github.com/postgres/postgres.git postgres/ && \
+    git checkout REL_14_0 && \
     mkdir bld/ && cd bld/ && \
     CC=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-cc CXX=/home/zrcl_db_fuzz/Squirrel/AFLplusplus/afl-c++ \
     ../postgres/configure

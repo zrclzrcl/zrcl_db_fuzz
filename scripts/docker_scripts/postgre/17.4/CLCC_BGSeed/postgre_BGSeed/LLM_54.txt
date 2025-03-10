@@ -1,0 +1,76 @@
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age SMALLINT CHECK (age > 0),
+    is_active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description TEXT,
+    last_modified DATE,
+    balance NUMERIC(10,2) DEFAULT 0.00
+);
+
+CREATE TABLE IF NOT EXISTS history_table (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    old_data JSONB,
+    new_data JSONB,
+    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION before_insert_validation()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.name = '' THEN
+        RAISE EXCEPTION 'Name cannot be empty';
+    END IF;
+    IF NEW.age <= 0 THEN
+        RAISE EXCEPTION 'Age must be greater than zero';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION after_update_logging()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO history_table (table_name, action, old_data, new_data)
+    VALUES ('test_table', 'UPDATE', OLD::JSONB, NEW::JSONB);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE trigname = 'before_insert_trigger'
+    ) THEN
+        CREATE TRIGGER before_insert_trigger
+        BEFORE INSERT ON test_table
+        FOR EACH ROW
+        EXECUTE FUNCTION before_insert_validation();
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE trigname = 'after_update_trigger'
+    ) THEN
+        CREATE TRIGGER after_update_trigger
+        AFTER UPDATE ON test_table
+        FOR EACH ROW
+        EXECUTE FUNCTION after_update_logging();
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_name_unique ON test_table (name) UNIQUE;
+
+CREATE INDEX IF NOT EXISTS idx_created_at ON test_table (created_at);
+
+ALTER TABLE test_table ADD CONSTRAINT valid_boolean CHECK (is_active IN (TRUE, FALSE));
+
+INSERT INTO test_table (name, age, is_active, description)
+VALUES ('Test User', 25, TRUE, 'Initial test record');
+
+ANALYZE test_table;

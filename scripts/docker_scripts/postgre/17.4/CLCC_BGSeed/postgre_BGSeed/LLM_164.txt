@@ -1,0 +1,50 @@
+-- 1. Select built-in functions not in common languages
+SELECT p.proname, n.nspname 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'pg_catalog' -- Built-in functions are typically in pg_catalog
+AND NOT EXISTS (
+    SELECT 1 
+    FROM pg_language l 
+    WHERE l.lanname IN ('plpgsql', 'sql') 
+    AND l.oid = p.prolang
+);
+
+-- 2. Use CTE with window function to count functions per namespace
+WITH func_counts AS (
+    SELECT n.nspname, COUNT(*) OVER (PARTITION BY n.nspname) as total_functions
+    FROM pg_proc p 
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+)
+SELECT DISTINCT nspname, total_functions 
+FROM func_counts 
+WHERE total_functions > 0;
+
+-- 3. DO block to check extension dependencies
+DO $$
+DECLARE
+    ext_oid oid;
+BEGIN
+    FOR ext_oid IN (SELECT oid FROM pg_extension) LOOP
+        IF EXISTS (
+            SELECT 1 
+            FROM pg_depend 
+            WHERE classid = 'pg_extension'::regclass 
+            AND objid = ext_oid 
+            AND deptype = 'e'
+        ) THEN
+            -- Log or process extensions with dependencies here if needed
+            RAISE NOTICE 'Extension % has dependent objects', (SELECT extname FROM pg_extension WHERE oid = ext_oid);
+        END IF;
+    END LOOP;
+END $$;
+
+-- 4. Complex join to get table attributes and types
+SELECT c.relname as table_name, 
+       a.attname as column_name,
+       t.typname as data_type
+FROM pg_class c
+JOIN pg_attribute a ON c.oid = a.attrelid
+JOIN pg_type t ON a.atttypid = t.oid
+WHERE c.relnatts > 10 -- Only tables with more than 10 columns
+ORDER BY table_name, column_name;

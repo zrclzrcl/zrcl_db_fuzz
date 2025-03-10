@@ -1,0 +1,49 @@
+CREATE TABLE test_data (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+INSERT INTO test_data (name, value, data) VALUES
+('Test1', 100, '{"key": "value"}'),
+('Test2', 200, '{"array": [1, 2, 3]}'),
+('Test3', NULL, '{"nested": {"object": true}}');
+
+SELECT 
+    id,
+    name,
+    value,
+    timestamp,
+    data #> '{nested, object}' AS nested_object
+FROM test_data
+WHERE value > 150 OR name LIKE 'Test%'
+ORDER BY timestamp DESC
+LIMIT 2;
+
+WITH number_series AS (
+    SELECT generate_series(1, 10) AS n
+)
+SELECT 
+    n,
+    ROW_NUMBER() OVER (ORDER BY n) AS row_num,
+    RANK() OVER (ORDER BY n) AS rank
+FROM number_series;
+
+CREATE INDEX idx_name_trigram ON test_data USING GIN (name gin_trgm_ops);
+
+DO $$
+BEGIN
+    EXECUTE format('INSERT INTO test_data (name, value) VALUES (%L, %s)',
+        'DynamicTest', 300);
+END $$ LANGUAGE plpgsql;
+
+SELECT 
+    ts_headline(name, q.tsquery),
+    data
+FROM test_data
+JOIN (
+    SELECT to_tsquery('test & data') AS tsquery
+) q ON TRUE
+WHERE name @@ q.tsquery;

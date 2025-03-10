@@ -1,0 +1,37 @@
+-- Create the 'sales' table with partitioning based on the 'date' column
+CREATE TABLE sales (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    amount NUMERIC(10,2) NOT NULL
+) PARTITION BY RANGE (date);
+
+-- Create partitions for specific quarters
+CREATE TABLE q1_2023 PARTITION OF sales FOR VALUES FROM ('2023-01-01') TO ('2023-04-01');
+CREATE TABLE q2_2023 PARTITION OF sales FOR VALUES FROM ('2023-04-01') TO ('2023-07-01');
+
+-- Add a BRIN index on the 'date' column for efficient range queries
+CREATE INDEX idx_sales_date ON sales (date) USING BRIN;
+
+-- Create the 'products' table
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+-- Create the 'customers' table with JSONB field
+CREATE TABLE customers (
+    id SERIAL PRIMARY KEY,
+    info JSONB
+);
+
+-- Add an index on the 'age' path of the JSONB column
+CREATE INDEX idx_customers_age ON customers ((info->>'age'));
+
+-- Create a materialized view for aggregated sales data
+CREATE MATERIALIZED VIEW sales_summary AS
+SELECT date, SUM(amount) as total_sales
+FROM sales
+GROUP BY date;
+
+-- Refresh the materialized view to populate it
+REFRESH MATERIALIZED VIEW CONCURRENTLY sales_summary;

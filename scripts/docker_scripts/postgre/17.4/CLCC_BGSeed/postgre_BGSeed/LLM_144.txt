@@ -1,0 +1,23 @@
+-- Initial seed for PostgreSQL: Retail Customer Data
+
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    address TEXT,
+    registration_date DATE NOT NULL,
+    last_purchase_date DATE,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+INSERT INTO customers (customer_id, name, email, phone, address, registration_date, last_purchase_date, is_active)
+VALUES
+    (1, 'John Doe', 'john.doe@email.com', '+1234567890', '123 Main St, City A', '2022-01-15', '2023-11-20', TRUE),
+    (2, 'Jane Smith', 'jane.smith@email.com', '+0987654321', '456 Oak Ave, City B', '2021-05-22', '2023-10-25', FALSE),
+    (3, 'Bob Johnson', 'bob.johnson@email.com', '+1112223333', '789 Pine Rd, City C', '2020-11-30', NULL, TRUE),
+    (4, 'Alice Brown', 'alice.brown@email.com', '+4445556666', '321 Maple St, City D', '2023-02-14', '2023-11-28', TRUE),
+    (5, 'Charlie Wilson', 'charlie.wilson@email.com', '+7778889999', '654 Elm Dr, City E', '2022-08-20', '2023-11-15', TRUE),
+    (6, 'Diana Miller', 'diana.miller@email.com', '+2223334444', '987 Birch Ave, City F', '2023-04-05', NULL, FALSE),
+    (7, 'Edward White', 'edward.white@email.com', '+5556667777', '333 Chestnut St, City G', '2021-09-10', '2023-11-18', TRUE),
+    (8, 'Fiona Green', 'fiona.green@email.com', '+8889990000', '555 Walnut Rd, City H', '2022-03-25', '2023-11-17', FALSE);

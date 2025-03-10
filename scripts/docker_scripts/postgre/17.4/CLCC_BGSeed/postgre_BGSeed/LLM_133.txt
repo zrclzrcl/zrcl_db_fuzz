@@ -1,0 +1,40 @@
+-- Initial seed for testing PostgreSQL partitioned tables functionality
+
+-- Create a simple partitioned table structure
+CREATE TABLE parted_ancestor (
+    id integer PRIMARY KEY,
+    text_value text
+) PARTITION BY RANGE (id);
+
+-- Create a child partition
+CREATE TABLE parted_descendant PARTITION OF parted_ancestor
+    FOR VALUES FROM (100) TO (200);
+
+-- Insert sample data into the parent table with ON CONFLICT clause
+INSERT INTO parted_ancestor VALUES (150, 'Sample Text')
+ON CONFLICT (id) DO UPDATE SET text_value = EXCLUDED.text_value;
+
+-- Create indexes for testing unique constraints
+CREATE UNIQUE INDEX idx_parted_ancestor_id ON parted_ancestor (id);
+CREATE UNIQUE INDEX idx_parted_descendant_id ON parted_descendant (id);
+
+-- Insert data into child partition and verify inheritance
+INSERT INTO parted_descendant VALUES (175, 'Child Partition Text');
+
+-- Create a function to test triggers on partitioned tables
+CREATE OR REPLACE FUNCTION trigger_logger()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger fired for id: %, text_value: %', NEW.id, NEW.text_value;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger that fires after insert operations
+CREATE TRIGGER logger_trigger
+AFTER INSERT ON parted_ancestor
+FOR EACH ROW
+EXECUTE FUNCTION trigger_logger();
+
+-- Verify data insertion and inheritance
+SELECT * FROM parted_ancestor ORDER BY id;

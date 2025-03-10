@@ -1,0 +1,54 @@
+-- Initial seed for PostgreSQL testing environment
+
+-- Create a schema named 'test'
+CREATE SCHEMA test;
+
+-- Set the current search path to include 'test' schema
+SET search_path = test, public;
+
+-- Create tables with various data types and constraints
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE test_table2 (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT UNIQUE,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for testing inheritance
+CREATE TABLE test_table3 (
+    key TEXT PRIMARY KEY,
+    value JSONB
+);
+
+-- Table with various indexable columns
+CREATE TABLE test_indexed (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT,
+    ts_col TIMESTAMP WITH TIME ZONE
+);
+
+-- Create indexes for testing query performance
+CREATE INDEX idx_int_col ON test_indexed (int_col);
+CREATE INDEX idx_text_col ON test_indexed (text_col);
+CREATE INDEX idx_ts_col ON test_indexed (ts_col);
+
+-- Table for JSONB specific operations
+CREATE TABLE test_jsonb (
+    id SERIAL PRIMARY KEY,
+    data JSONB
+);
+
+-- Create a function for testing purposes
+CREATE FUNCTION concat_strings(text, text) RETURNS TEXT AS $$
+    SELECT $1 || $2;
+$$ LANGUAGE SQL;
+
+-- Create extension for additional functionality
+CREATE EXTENSION IF NOT EXISTS pg_trgm;

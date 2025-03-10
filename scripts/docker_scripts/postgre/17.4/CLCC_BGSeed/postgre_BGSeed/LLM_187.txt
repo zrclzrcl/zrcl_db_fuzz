@@ -1,0 +1,88 @@
+-- Create a temporary table with various data types
+CREATE TEMPORARY TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    value NUMERIC,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    description TEXT
+);
+
+-- Insert sample data including edge cases
+INSERT INTO test_table (name, value) VALUES 
+('Test1', 100),
+('Test2', NULL),
+('Test3', 9999999999.99),
+('Test4', -500),
+('Test5', 0);
+
+-- Create indexes to test query optimization
+CREATE INDEX idx_test_value ON test_table (value);
+CREATE UNIQUE INDEX idx_test_name ON test_table (name);
+
+-- Analyze the table to update statistics
+ANALYZE test_table;
+
+-- Prepare statements for common operations
+PREPARE select_by_id INT AS SELECT * FROM test_table WHERE id = $1;
+PREPARE select_by_name TEXT AS SELECT * FROM test_table WHERE name = $1;
+
+-- Execute prepared statements with different parameters
+EXECUTE select_by_id(1);
+EXECUTE select_by_name('Test2');
+
+-- Create a PL/pgSQL function to handle bulk inserts and exceptions
+CREATE OR REPLACE FUNCTION insert_test_data()
+RETURNS VOID AS $$
+DECLARE
+    i INT := 0;
+BEGIN
+    WHILE i < 10 LOOP
+        INSERT INTO test_table (name, value)
+        VALUES ('Bulk' || i, i * 100);
+        i := i + 1;
+    END LOOP;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error occurred: %', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the function to populate data
+SELECT insert_test_data();
+
+-- Create a view on the table for testing aggregations
+CREATE VIEW test_view AS
+SELECT name, COUNT(*) as count
+FROM test_table
+GROUP BY name;
+
+-- Query the view to test aggregation behavior
+SELECT * FROM test_view;
+
+-- Test transaction isolation levels
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+UPDATE test_table SET status = TRUE WHERE id = 1;
+COMMIT;
+
+-- Use a cursor to fetch results in batches
+DECLARE cur CURSOR FOR SELECT * FROM test_table ORDER BY id DESC;
+FETCH ALL IN cur;
+CLOSE cur;
+
+-- Test error handling with exceptions
+DO $$
+BEGIN
+    -- This will cause an error due to division by zero
+    RAISE NOTICE 'Attempting division by zero';
+    PERFORM 1 / 0;
+EXCEPTION
+    WHEN DIVISION_BY_ZERO THEN
+        RAISE NOTICE 'Division by zero detected and handled.';
+END;
+$$;
+
+-- Clean up prepared statements and functions
+DEALLOCATE select_by_id, select_by_name;
+DROP FUNCTION insert_test_data();

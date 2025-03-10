@@ -1,68 +1,75 @@
--- 创建一个包含多种数据类型的表，并插入一些测试数据
-CREATE TABLE test_table (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    age INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    data JSONB,
-    tags TEXT[],
-    status ENUM('active', 'inactive')
-);
+BEGIN;
+SELECT pg_advisory_xact_lock(1);
+SELECT pg_advisory_xact_lock(2);
+SELECT pg_advisory_xact_lock(3);
+SELECT pg_advisory_lock(4, 5);
+SELECT pg_advisory_lock(6, 7);
+SELECT pg_advisory_lock(8, 9);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+COMMIT;
 
--- 插入测试数据，包含各种类型的数据
-INSERT INTO test_table (name, age, data, tags, status)
-VALUES 
-    ('Alice', 30, '{"score": 95, "email": "alice@example.com"}', '{web, database}', 'active'),
-    ('Bob', 25, '{"score": 85, "email": null}', '{frontend}', 'inactive'),
-    ('Charlie', 40, '{"score": 100, "metadata": {"height": 180}}', '{backend, testing}', 'active');
+BEGIN;
+SELECT pg_advisory_xact_lock(1);
+SELECT pg_advisory_xact_lock(2);
+SELECT pg_advisory_xact_lock(3);
+SELECT pg_advisory_lock(4, 5);
+SELECT pg_advisory_lock(6, 7);
+SELECT pg_advisory_lock(8, 9);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+ROLLBACK;
 
--- 复杂查询，包含子查询、窗口函数和CTE
-WITH cte AS (
-    SELECT 
-        id,
-        name,
-        age,
-        RANK() OVER (ORDER BY age DESC) as age_rank,
-        created_at
-    FROM test_table
-)
-SELECT 
-    cte.id,
-    cte.name,
-    cte.age,
-    cte.age_rank,
-    COUNT(*) OVER () as total_records,
-    JSON_BUILD_OBJECT(
-        'name', cte.name,
-        'age', cte.age,
-        'rank', cte.age_rank
-    ) as json_result
-FROM cte;
+SELECT pg_advisory_lock(10, 11);
+SELECT pg_advisory_lock(12, 13);
+SELECT pg_advisory_lock(14, 15);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
 
--- 测试边界条件和特殊字符
-INSERT INTO test_table (name, age, created_at, data)
-VALUES 
-    ('测试特殊字符！@#$', 0, '1970-01-01 00:00:01', '{"empty": null}');
+BEGIN;
+SELECT pg_advisory_xact_lock(16);
+SELECT pg_advisory_xact_lock(17);
+SELECT pg_advisory_xact_lock(18);
+SELECT pg_advisory_lock(19, 20);
+SELECT pg_advisory_lock(21, 22);
+SELECT pg_advisory_lock(23, 24);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+COMMIT;
 
--- 使用PostgreSQL特有的功能：LATERAL连接和数组操作
-SELECT 
-    t.id,
-    u.name as user_name,
-    t.data->>'email' as email
-FROM test_table t
-LEFT JOIN LATERAL (
-    SELECT name FROM users WHERE id = t.id LIMIT 1
-) u ON true;
+SELECT pg_advisory_unlock_all();
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
 
--- 测试JSONB数据类型的操作
-UPDATE test_table 
-SET data = jsonb_set(data, '{metadata, height}', '190') 
-WHERE id = 3;
+BEGIN;
+SELECT pg_advisory_xact_lock(1);
+SELECT pg_advisory_xact_lock(2);
+SELECT pg_advisory_xact_lock(3);
+SELECT pg_advisory_lock(4, 5);
+SELECT pg_advisory_lock(6, 7);
+SELECT pg_advisory_lock(8, 9);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+COMMIT;
 
--- 测试枚举类型和复杂条件查询
-SELECT * FROM test_table 
-WHERE status = 'active' AND age > (SELECT AVG(age) FROM test_table);
+BEGIN;
+SELECT pg_advisory_xact_lock(1);
+SELECT pg_advisory_xact_lock(2);
+SELECT pg_advisory_xact_lock(3);
+SELECT pg_advisory_lock(4, 5);
+SELECT pg_advisory_lock(6, 7);
+SELECT pg_advisory_lock(8, 9);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+ROLLBACK;
 
--- 测试大数值和边界情况
-INSERT INTO test_table (name, age)
-VALUES ('MaxAge', 2147483647);
+SELECT pg_advisory_lock(25, 26);
+SELECT pg_advisory_lock(27, 28);
+SELECT pg_advisory_lock(29, 30);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+
+BEGIN;
+SELECT pg_advisory_xact_lock(31);
+SELECT pg_advisory_xact_lock(32);
+SELECT pg_advisory_xact_lock(33);
+SELECT pg_advisory_lock(34, 35);
+SELECT pg_advisory_lock(36, 37);
+SELECT pg_advisory_lock(38, 39);
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+COMMIT;
+
+SELECT pg_advisory_unlock_all();
+SELECT * FROM pg_locks WHERE locktype = 'advisory';

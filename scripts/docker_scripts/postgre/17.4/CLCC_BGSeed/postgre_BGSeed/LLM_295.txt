@@ -1,0 +1,32 @@
+CREATE TABLE int_test(f1 integer);
+INSERT INTO int_test VALUES(NULL), (0), (1), (-1), (2147483647), (-2147483648);
+
+SELECT * FROM int_test WHERE f1 IS NULL;
+SELECT * FROM int_test WHERE f1 = 0;
+SELECT * FROM int_test WHERE f1 > 0;
+SELECT * FROM int_test WHERE f1 < 0;
+SELECT * FROM int_test WHERE f1 >= 1;
+SELECT * FROM int_test WHERE f1 <= -1;
+
+CREATE TABLE date_test(f1 date);
+INSERT INTO date_test VALUES('2023-07-25'), ('0001-01-01'), ('9999-12-31'), (NULL), ('2023-02-29');
+
+SELECT * FROM date_test WHERE f1 >= '2023-01-01' AND f1 <= '2024-01-01';
+SELECT EXTRACT(YEAR FROM f1) AS year FROM date_test;
+SELECT f1 + INTERVAL '1 day' AS next_day FROM date_test;
+
+CREATE TABLE jsonb_test(f1 jsonb);
+INSERT INTO jsonb_test VALUES('{}'), ('{"key": "value"}'), ('[1, 2, 3]'), (NULL), ('{"nested": {"object": true}}');
+
+SELECT * FROM jsonb_test WHERE f1 @> '{"key": "value"}';
+SELECT * FROM jsonb_test WHERE f1 ? 'key';
+
+CREATE TABLE array_test(f1 integer[]);
+INSERT INTO array_test VALUES(ARRAY[]::integer[]), (ARRAY[1,2,3]), (NULL);
+
+SELECT * FROM array_test WHERE 2 = ANY(f1);
+SELECT * FROM array_test WHERE f1 IS NULL;
+
+SELECT COUNT(*) FROM int_test;
+SELECT SUM(f1) FROM int_test;
+SELECT MIN(f1), MAX(f1) FROM int_test;

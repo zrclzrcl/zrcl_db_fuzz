@@ -1,0 +1,66 @@
+-- Create a role with login privileges
+CREATE ROLE test_user WITH LOGIN PASSWORD 'testpass';
+
+-- Set session authorization to the new user
+SET SESSION AUTHORIZATION test_user;
+
+-- Create a tablespace for testing
+CREATE TABLESPACE test_tablespace LOCATION '/path/to/test_tablespace';
+
+-- Switch back to default role
+RESET ROLE;
+
+-- Install an extension
+CREATE EXTENSION IF NOT EXISTS uuid-ossp;
+
+-- Create a table with various data types and constraints
+CREATE TABLE test_table (
+    id UUID DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) CHECK (status IN ('active', 'inactive'))
+);
+
+-- Indexes on the table
+CREATE INDEX idx_name ON test_table(name);
+CREATE UNIQUE INDEX idx_unique_id ON test_table(id);
+
+-- Create a function for triggers
+CREATE OR REPLACE FUNCTION log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'Row updated at %', CURRENT_TIMESTAMP;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger that uses the function
+CREATE TRIGGER changes_trigger
+AFTER UPDATE ON test_table
+FOR EACH ROW EXECUTE FUNCTION log_changes();
+
+-- Test transaction and locking
+BEGIN;
+    INSERT INTO test_table(name) VALUES('Test');
+    SELECT pg_advisory_lock(123);
+    UPDATE test_table SET status = 'active' WHERE name = 'Test';
+COMMIT;
+
+-- Alter tablespace location
+ALTER TABLESPACE test_tablespace RENAME TO new_test_tablespace;
+
+-- Attempt to alter a non-existent subscription (test edge case)
+ALTER SUBSCRIPTION non_existent_subscription DISABLE; -- This should return an error
+
+-- Clean up resources
+DROP TRIGGER changes_trigger ON test_table;
+DROP FUNCTION log_changes();
+DROP TABLE test_table;
+DROP EXTENSION uuid-ossp;
+DROP TABLESPACE new_test_tablespace;
+
+-- Revert session authorization and drop role
+RESET ROLE;
+DROP ROLE test_user;

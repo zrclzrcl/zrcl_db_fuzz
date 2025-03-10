@@ -1,0 +1,67 @@
+-- Create table with various data types and constraints
+CREATE TABLE test_data (
+    id SERIAL PRIMARY KEY,
+    int_col INT NOT NULL,
+    text_col TEXT DEFAULT '',
+    bool_col BOOLEAN DEFAULT FALSE,
+    float_col FLOAT8,
+    ts_col TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    jsonb_col JSONB
+);
+
+-- Insert basic data with edge cases and expressions
+INSERT INTO test_data (int_col, text_col, bool_col, float_col) VALUES 
+(0, '', TRUE, 0.0),
+(-2147483648, 'test_string', FALSE, -1.7976931348623157E+308),
+(2147483647, NULL, TRUE, 1.7976931348623157E+308);
+
+-- Complex query with CTE and window functions
+WITH cte AS (
+    SELECT 
+        id,
+        int_col,
+        ROW_NUMBER() OVER (ORDER BY ts_col DESC) as row_num,
+        RANK() OVER (PARTITION BY bool_col ORDER BY float_col ASC) as rank_val
+    FROM test_data
+)
+SELECT * FROM cte WHERE row_num <= 10;
+
+-- Partitioned table for testing query execution paths
+CREATE TABLE sales (
+    id SERIAL PRIMARY KEY,
+    sale_date DATE NOT NULL,
+    amount DECIMAL(10,2)
+) PARTITION BY RANGE (sale_date);
+
+-- Create partitions for specific date ranges
+CREATE TABLE sales_2023 PARTITION OF sales FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Insert into partitioned table with JSON data
+INSERT INTO test_data (int_col, text_col, jsonb_col) VALUES 
+(42, 'json_test', '{"key": "value", "array": [1, 2, 3]}'),
+(99, NULL, '{"nested": {"object": true}, "null_value": null}');
+
+-- Index on an expression and JSON path
+CREATE INDEX idx_text_lower ON test_data (lower(text_col));
+CREATE INDEX idx_jsonb_path ON test_data USING GIN ((jsonb_col -> 'key'));
+
+-- Test large values and edge cases
+INSERT INTO test_data (int_col, text_col) VALUES 
+(-1, REPEAT('a', 1024)), -- Long string to test storage
+(999999999, E'\\nTest with escape characters\\n');
+
+-- PostgreSQL-specific functions and operators
+SELECT pg_sleep(1); -- Test timing operations
+SELECT nextval('test_data_id_seq'); -- Test sequence handling
+
+-- Testing boolean logic and NULLs
+INSERT INTO test_data (bool_col) VALUES 
+(TRUE), 
+(FALSE), 
+(NULL);
+
+-- Covering different timestamp scenarios
+INSERT INTO test_data (ts_col) VALUES 
+(NOW()),
+('infinity'::TIMESTAMP),
+('-infinity'::TIMESTAMP);

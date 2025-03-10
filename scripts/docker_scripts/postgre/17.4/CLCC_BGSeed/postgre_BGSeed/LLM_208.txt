@@ -1,0 +1,38 @@
+-- Create a table with various constraints and indexes
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    unique_col VARCHAR(50) UNIQUE NOT NULL,
+    index_col INT NOT NULL,
+    text_col TEXT,
+    ts_col TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes to test different scenarios
+CREATE INDEX idx_index_col ON test_table (index_col);
+CREATE INDEX idx_text_lower ON test_table (lower(text_col));
+CREATE INDEX idx_ts_col ON test_table USING HASH (ts_col);
+
+-- Test ALTER operations for schema changes
+ALTER TABLE test_table ADD COLUMN new_col BOOLEAN DEFAULT FALSE;
+ALTER TABLE test_table DROP COLUMN new_col;
+ALTER TABLE test_table RENAME COLUMN text_col TO new_text_col;
+
+-- Create a table with EXCLUDE constraint and partial index
+CREATE TABLE spatial_test (
+    id SERIAL PRIMARY KEY,
+    point_col POINT,
+    EXCLUDE USING gist (point_col WITH &&)
+);
+CREATE INDEX idx_spatial_partial ON spatial_test (id) WHERE point_col IS NOT NULL;
+
+-- Test data type alteration
+ALTER TABLE test_table ADD COLUMN int_col INT;
+ALTER TABLE test_table ALTER COLUMN int_col TYPE TEXT;
+
+-- Query system catalogs to check metadata changes
+SELECT relname, relkind FROM pg_class WHERE relname LIKE 'test%';
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'test_table';
+
+-- Clean up the tables created during testing
+DROP TABLE spatial_test;
+DROP TABLE test_table;

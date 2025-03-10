@@ -1,0 +1,41 @@
+create table test_table (
+    id serial primary key,
+    name varchar(100),
+    value int,
+    data jsonb,
+    unique(name)
+);
+
+create index idx_data on test_table using gin (data jsonb_path_ops);
+
+insert into test_table (name, value, data) values ('test1', 100, '{"key": "value"}');
+insert into test_table (name, value, data) values ('test2', 200, '{"array": [1,2,3]}');
+
+update test_table set value = -5 where name = 'nonexistent';
+
+select t1.id, t1.name, t2.value 
+from test_table t1
+join (
+    select id, value from test_table where value > 100
+) t2 on t1.id = t2.id;
+
+select jsonb_set(data, '{array}', '[4,5,6]') as updated_data 
+from test_table 
+where name = 'test2';
+
+begin;
+insert into test_table (name, value, data) values ('tx_test', 300, '{"transaction": true}');
+savepoint sp1;
+update test_table set value = 400 where name = 'tx_test';
+rollback to sp1;
+commit;
+
+create function increment_value() returns trigger as $$
+begin
+    new.value := old.value + 1;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_increment before update on test_table 
+for each row execute procedure increment_value();

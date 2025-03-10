@@ -1,0 +1,8 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    str_col TEXT,
+    uuid_col UUID DEFAULT gen_random_uuid(),
+    json_col JSONB,
+    ts_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

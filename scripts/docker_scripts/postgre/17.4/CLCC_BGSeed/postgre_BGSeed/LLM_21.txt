@@ -1,0 +1,48 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tags JSONB,
+    num_array INT[]
+);
+
+INSERT INTO test_table (name, description, active, created_at, tags, num_array)
+VALUES
+('Test1', 'This is a test description.', TRUE, '2023-01-01 12:00:00', '{"key1": "value1", "key2": 42}', '{1,2,3}'),
+('', NULL, FALSE, '2023-01-02 12:00:00', NULL, '{}'),
+('Test3', 'Another test.', TRUE, CURRENT_TIMESTAMP, '{"nested": {"object": true}}', '{10, 20, 30}');
+
+UPDATE test_table SET active = FALSE WHERE name = 'Test1';
+DELETE FROM test_table WHERE name = 'Test3';
+
+SELECT id, name, description FROM test_table
+WHERE active IS TRUE AND created_at > '2023-01-01'
+ORDER BY created_at DESC
+LIMIT 5;
+
+SELECT t.id, t.name, a.value AS array_value
+FROM test_table t
+CROSS JOIN LATERAL unnest(t.num_array) AS a(value)
+WHERE a.value > 10;
+
+CREATE INDEX idx_name ON test_table (name);
+
+ALTER TABLE test_table ADD CONSTRAINT unique_tag CHECK (jsonb_typeof(tags) != 'array');
+
+BEGIN;
+    INSERT INTO test_table (name, description) VALUES ('TransactionTest', 'Testing transactions.');
+    SAVEPOINT sp1;
+    UPDATE test_table SET active = FALSE WHERE name = 'TransactionTest';
+    ROLLBACK TO sp1;
+COMMIT;
+
+CREATE FUNCTION add_numbers(a INT, b INT)
+RETURNS INT AS $$
+BEGIN
+    RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT add_numbers(5, 7);

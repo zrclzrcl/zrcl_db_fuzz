@@ -1,0 +1,61 @@
+-- Create a table with various data types for testing
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT CHECK (age >= 0),
+    balance DECIMAL(10,2),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+-- Insert some test data with edge cases
+INSERT INTO test_table (name, age, balance, is_active, data)
+VALUES 
+    ('Test User 1', NULL, -0.00, FALSE, '{"key": "value"}'), -- Testing NULL and boundary values
+    ('Test User 2', 127, 99999999.99, TRUE, '{"array": [1,2,3]}'),
+    ('Test User 3', 0, 0.00, FALSE, '{"nested": {"object": true}}');
+
+-- Test JSONB operations
+UPDATE test_table 
+SET data = jsonb_set(data, '{new_key}', '"new_value"', TRUE)
+WHERE name = 'Test User 1';
+
+-- Test transactions and savepoints
+BEGIN;
+    INSERT INTO test_table (name, age) VALUES ('Savepoint Test', 42);
+    SAVEPOINT sp1;
+    UPDATE test_table SET is_active = FALSE WHERE name = 'Savepoint Test';
+    ROLLBACK TO sp1;
+COMMIT;
+
+-- Test advanced queries with window functions and CTEs
+WITH cte AS (
+    SELECT 
+        id,
+        name,
+        ROW_NUMBER() OVER (ORDER BY age DESC) as rn
+    FROM test_table
+)
+SELECT * FROM cte WHERE rn <= 2;
+
+-- Test system catalog access
+SELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE table_name = 'test_table';
+
+-- Test PostgreSQL-specific functions and operators
+SELECT 
+    id,
+    name,
+    age,
+    pg_sleep(0.1) -- Testing timing-related functionality
+FROM test_table
+ORDER BY age DESC NULLS FIRST;
+
+-- Test privilege testing (ensure proper permissions)
+REVOKE ALL ON test_table FROM public;
+GRANT SELECT, INSERT ON test_table TO anon_user;
+
+-- Clean up
+DROP TABLE IF EXISTS test_table;

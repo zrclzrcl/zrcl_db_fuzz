@@ -1,0 +1,88 @@
+create table fuzz_test_table (
+    id serial primary key,
+    name text not null default 'test',
+    data jsonb,
+    ts timestamp with time zone default now(),
+    num numeric(10, 2),
+    arr int[] check(array_length(arr, 1) <= 10)
+);
+
+create index idx_gin_jsonb on fuzz_test_table using gin(data);
+
+create table fuzz_test_partitioned (
+    id int,
+    val text
+) partition by range(id);
+
+create table fuzz_test_partition_1 partition of fuzz_test_partitioned for values from (1) to (100);
+create table fuzz_test_partition_2 partition of fuzz_test_partitioned for values from (101) to (200);
+
+insert into fuzz_test_table (name, data, num, arr)
+values ('test1', '{"key": "value"}', 123.45, '{1,2,3}');
+
+insert into fuzz_test_table (name, data, num, arr)
+select 'test' || g, '{"num": ' || g || '}', g * 100.5, array_agg(g) from generate_series(1, 100) g group by g;
+
+create function fuzz_test_func()
+returns table(id int, name text) as $$
+begin
+    return query select id, name from fuzz_test_table where id <= 50;
+end;
+$$ language plpgsql;
+
+insert into fuzz_test_partitioned select g, 'partition_test' || g from generate_series(1, 200) g;
+
+vacuum analyze fuzz_test_table;
+
+select * from fuzz_test_func();
+
+explain (analyze on, timing off)
+select count(*) as total,
+       jsonb_array_elements(data -> 'array') as elements
+from fuzz_test_table
+group by elements;
+
+delete from fuzz_test_table where id % 2 = 0;
+
+update fuzz_test_partitioned set val = 'updated' where id > 150;
+
+create view fuzz_test_view as
+select id, name, data ->> 'key' as key_value
+from fuzz_test_table;
+
+select t.id, p.val from fuzz_test_table t join fuzz_test_partitioned p on t.id = p.id;
+
+drop table if exists temp_fuzz_test;
+create temporary table temp_fuzz_test (like fuzz_test_table);
+
+insert into temp_fuzz_test select * from fuzz_test_table where id < 50;
+
+analyze temp_fuzz_test;
+
+set statement_timeout = '2s';
+select pg_sleep(3);
+reset statement_timeout;
+
+begin;
+    insert into fuzz_test_table values (default, 'transaction_test', '{"test": true}', now(), 100.0, '{42}');
+    savepoint my_savepoint;
+    update fuzz_test_table set name = 'updated_transaction' where id = lastval();
+    rollback to my_savepoint;
+commit;
+
+select pg_size_bytes(pg_total_relation_size('fuzz_test_table'));
+
+create trigger fuzz_test_trigger
+before insert on fuzz_test_table
+for each row execute procedure check_function();
+
+reindex index idx_gin_jsonb;
+
+set client_min_messages = 'warning';
+copy (select * from fuzz_test_table) to stdout with csv;
+reset client_min_messages;
+
+create extension if not exists pg_trgm;
+select similarity('fuzztesting', 'fuzztest') as trgm_sim;
+
+drop table temp_fuzz_test;

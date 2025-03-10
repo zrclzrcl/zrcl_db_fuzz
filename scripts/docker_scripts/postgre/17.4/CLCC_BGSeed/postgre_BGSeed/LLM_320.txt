@@ -1,0 +1,13 @@
+create table employees(id int primary key, name varchar(100), salary int, department_id int);
+insert into employees values (1, 'John Doe', 60000, 1), (2, 'Jane Smith', 55000, 2), (3, 'Bob Johnson', 70000, 1), (4, 'Alice Brown', NULL, NULL);
+create table departments(id int primary key, name varchar(50));
+insert into departments values (1, 'Engineering'), (2, 'HR');
+select id, name, salary from employees where salary > 50000 order by name desc;
+select department_id, sum(salary) as total_salary from employees group by department_id having sum(salary) > 100000;
+select e.name as employee_name, d.name as department_name from employees e left join departments d on e.department_id = d.id;
+with avg_salaries as (select department_id, avg(salary) as avg_sal from employees where department_id is not null group by department_id)
+select department_id, avg_sal from avg_salaries;
+select id, name, salary, row_number() over(partition by department_id order by salary desc) as rank from employees;
+select concat(name, ' works in ', d.name) as employee_details from employees e left join departments d on e.department_id = d.id;
+select * from employees where to_tsvector(name) @@ to_tsquery('John');
+select name from employees where lower(name) like 'a%';

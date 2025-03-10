@@ -1,0 +1,105 @@
+-- Create a schema for testing purposes
+CREATE SCHEMA test_schema;
+
+-- Set the search path to include the new schema
+SET search_path = test_schema, public;
+
+-- Create a domain with constraints
+CREATE DOMAIN positive_integer AS integer CHECK (VALUE > 0);
+
+-- Create a composite type
+CREATE TYPE composite_type AS (
+    id integer,
+    name text,
+    value positive_integer
+);
+
+-- Create a table with various data types and constraints
+CREATE TABLE main_table (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone,
+    status smallint CHECK (status IN (1, 2, 3)),
+    data jsonb,
+    geom geometry(Geometry, 4326),
+    CONSTRAINT pk_main_table PRIMARY KEY (id)
+);
+
+-- Create a partitioned table
+CREATE TABLE sales (
+    id bigint,
+    amount numeric(10, 2),
+    sale_date date
+) PARTITION BY RANGE (sale_date);
+
+-- Create partitions for the sales table
+CREATE TABLE sales_2023 PARTITION OF sales FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Create indexes, including a GIN index for JSONB data
+CREATE INDEX idx_main_table_status ON main_table (status);
+CREATE INDEX idx_sales_amount ON sales (amount DESC);
+CREATE INDEX idx_main_table_data ON main_table USING gin (data);
+
+-- Create a trigger function and trigger
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        RAISE NOTICE 'New row inserted into main_table';
+    ELSIF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'Row updated in main_table';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_main_table AFTER INSERT OR UPDATE ON main_table FOR EACH ROW EXECUTE FUNCTION trigger_function();
+
+-- Create a materialized view
+CREATE MATERIALIZED VIEW mv_sales_summary AS
+SELECT 
+    date_trunc('month', sale_date) as month,
+    sum(amount) as total_sales
+FROM sales
+GROUP BY month;
+
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW mv_sales_summary;
+
+-- Create an index on the materialized view
+CREATE INDEX idx_mv_sales_summary ON mv_sales_summary (month);
+
+-- Insert sample data into main_table
+INSERT INTO main_table (name, description, status, data, geom)
+VALUES 
+('Test 1', 'First test entry', 1, '{"key": "value"}', ST_GeomFromText('POINT(0 0)', 4326)),
+('Test 2', 'Second test entry', 2, '{"array": [1,2,3]}', ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))', 4326));
+
+-- Update a row in main_table
+UPDATE main_table SET status = 3 WHERE id = (SELECT id FROM main_table LIMIT 1);
+
+-- Delete a row from main_table
+DELETE FROM main_table WHERE name = 'Test 2';
+
+-- Create a view that joins multiple tables
+CREATE VIEW vw_sales_summary AS
+SELECT 
+    s.id,
+    m.name as main_name,
+    s.amount,
+    s.sale_date
+FROM sales s
+JOIN main_table m ON s.id = m.id;
+
+-- Insert data into the partitioned table
+INSERT INTO sales (id, amount, sale_date)
+VALUES 
+(1, 100.50, '2023-01-15'),
+(2, 200.75, '2023-02-20');
+
+-- Create an index on the partitioned table
+CREATE INDEX idx_sales_id ON sales (id);
+
+-- Analyze a specific system catalog
+SELECT * FROM pg_partition_tree('sales');

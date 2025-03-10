@@ -1,112 +1,40 @@
--- 创建测试用例所需的表和数据
-CREATE TABLE test_table (
+-- Initial seed for PostgreSQL test case
+
+-- Create table for storing boxes
+CREATE TABLE box (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    age INTEGER,
-    score DECIMAL(5,2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status BOOLEAN DEFAULT FALSE
+    name VARCHAR(100) NOT NULL,
+    width DECIMAL NOT NULL,
+    height DECIMAL NOT NULL,
+    depth DECIMAL NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 插入测试数据，包含边界值、特殊字符和大值
-INSERT INTO test_table (name, age, score) VALUES 
-('Test User', 30, 99.99), 
-('', -1, 0.00),
-('Special Chars!@#$%^&*', 255, NULL),
-('LongString' || repeat('a', 1000), 100, 100.00);
-
--- 复杂查询，包含窗口函数、排序和过滤
-SELECT 
-    id,
-    name,
-    score,
-    RANK() OVER (ORDER BY score DESC) as rank_score,
-    DENSE_RANK() OVER (PARTITION BY status ORDER BY age ASC) as dense_rank_age
-FROM test_table
-WHERE age > 18 AND status = FALSE
-ORDER BY created_at DESC NULLS LAST;
-
--- 更新操作，包含条件更新和复杂表达式
-UPDATE test_table 
-SET score = score + 10, 
-    name = CONCAT(name, ' Updated'), 
-    status = NOT status,
-    created_at = CURRENT_TIMESTAMP - INTERVAL '1 day'
-WHERE age >= 25 AND (score < 90 OR score IS NULL);
-
--- 删除操作，包含子查询和多条件删除
-DELETE FROM test_table 
-WHERE id IN (
-    SELECT id 
-    FROM test_table 
-    WHERE age <= 20 OR name LIKE '%Test%'
-) 
-AND created_at < CURRENT_TIMESTAMP - INTERVAL '30 days';
-
--- 使用PostgreSQL特有的数组类型和JSON数据类型
-CREATE TABLE array_test (
+-- Create table for storing points
+CREATE TABLE point (
     id SERIAL PRIMARY KEY,
-    int_array INTEGER[],
-    text_array TEXT[],
-    json_data JSONB
+    x DECIMAL NOT NULL,
+    y DECIMAL NOT NULL,
+    z DECIMAL NOT NULL
 );
 
-INSERT INTO array_test (int_array, text_array, json_data) VALUES 
-(ARRAY[1,2,3], ARRAY['a','b','c'], '{"key": "value", "array": [1,2,3]}');
+-- Create table for box-point relationships
+CREATE TABLE box_point (
+    box_id INT REFERENCES box(id),
+    point_id INT REFERENCES point(id),
+    PRIMARY KEY (box_id, point_id)
+);
 
--- 窗口函数和CTE结合使用
-WITH ranked_scores AS (
-    SELECT 
-        id,
-        name,
-        score,
-        RANK() OVER (ORDER BY score DESC) as rank_score
-    FROM test_table
-)
-SELECT * FROM ranked_scores WHERE rank_score <= 5;
+-- Create index for faster box-point lookups
+CREATE INDEX box_point_idx ON box_point (box_id, point_id);
 
--- 事务控制和错误处理示例
-BEGIN;
-INSERT INTO test_table (name, age) VALUES ('Transaction Test', 40);
-SAVEPOINT sp1;
-UPDATE test_table SET status = TRUE WHERE name = 'Transaction Test';
-ROLLBACK TO sp1;
-COMMIT;
+-- Create table for storing box indexes
+CREATE TABLE box_index (
+    id SERIAL PRIMARY KEY,
+    box_id INT REFERENCES box(id),
+    index_name VARCHAR(100) NOT NULL,
+    index_value DECIMAL NOT NULL
+);
 
--- 索引操作，包含唯一索引和部分索引
-CREATE UNIQUE INDEX idx_unique_name ON test_table (name) WHERE age > 25;
-CREATE INDEX idx_partial_score ON test_table (score) WHERE status = TRUE;
-
--- 使用PostgreSQL特有的分区表功能
-CREATE TABLE partitioned_test (
-    id SERIAL,
-    amount DECIMAL(10,2),
-    transaction_date DATE
-)
-PARTITION BY RANGE (transaction_date);
-
-CREATE TABLE partitioned_test_2023 PARTITION OF partitioned_test 
-FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
-
-INSERT INTO partitioned_test (amount, transaction_date) VALUES 
-(100.50, '2023-06-01'), 
-(200.75, '2023-12-31');
-
--- 复杂的JSON操作和数组操作
-SELECT 
-    id,
-    json_data ->> 'key' as key_value,
-    int_array[1] as first_int,
-    text_array || ARRAY['d','e'] as extended_text_array
-FROM array_test;
-
--- 使用PostgreSQL特有的递归CTE功能
-WITH RECURSIVE numbers(n) AS (
-    SELECT 1
-    UNION ALL
-    SELECT n + 1 FROM numbers WHERE n < 10
-)
-SELECT * FROM numbers;
-
--- 清理测试数据（注释掉以避免删除）
--- DROP TABLE test_table, array_test, partitioned_test;
+-- Create spatial index for efficient queries
+CREATE INDEX box_spatial_idx ON box USING GIST (box(width, height, depth));

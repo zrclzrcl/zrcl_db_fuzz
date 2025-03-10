@@ -1,0 +1,41 @@
+create table fuzz_test (
+    id serial primary key,
+    text_col text,
+    int_col integer,
+    ts_col timestamp,
+    bool_col boolean,
+    numeric_col numeric(10,2)
+);
+
+insert into fuzz_test (text_col, int_col, ts_col, bool_col, numeric_col) values ('test', 123, '2024-01-01 00:00:00', true, 100.50);
+insert into fuzz_test (text_col, int_col, ts_col, bool_col, numeric_col) values ('', -2147483648, '2999-12-31 23:59:59', false, 0.00);
+insert into fuzz_test (text_col, int_col, ts_col, bool_col, numeric_col) values ('边缘情况测试', NULL, NULL, NULL, NULL);
+insert into fuzz_test (text_col, int_col, ts_col, bool_col, numeric_col) values ('特殊字符!@#$%^&*()', 2147483647, '1970-01-01 00:00:01', true, 99999999.99);
+
+create index fuzz_test_text_idx on fuzz_test (text_col);
+create index fuzz_test_int_idx on fuzz_test (int_col) where bool_col = true;
+create index fuzz_test_ts_idx on fuzz_test using btree (ts_col desc);
+
+vacuum analyze fuzz_test;
+
+select * from fuzz_test;
+select id, text_col || '附加文本' as concatenated_text from fuzz_test;
+select sum(numeric_col), count(*) from fuzz_test group by bool_col;
+select min(ts_col), max(int_col) from fuzz_test where int_col > 100;
+select text_col, char_length(text_col) from fuzz_test where length(text_col) > 5;
+select * from fuzz_test where ts_col between '2024-01-01' and current_timestamp;
+select bool_col, count(*) as total from fuzz_test group by bool_col;
+
+select * from fuzz_test where text_col ~* '\ytest\Y';
+select * from fuzz_test where int_col is null or numeric_col > 50.00;
+select * from fuzz_test where text_col like '%%' escape '!';
+
+select *, (numeric_col * 10) / 2 as calculated_value from fuzz_test;
+select id, to_timestamp(extract(epoch from ts_col)) as epoch_time from fuzz_test;
+
+select a.id, b.text_col 
+from fuzz_test a
+join fuzz_test b on a.id = b.id
+where a.bool_col = true and b.int_col > 100;
+
+select count(*) from fuzz_test;

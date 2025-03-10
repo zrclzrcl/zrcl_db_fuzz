@@ -1,0 +1,65 @@
+CREATE SCHEMA test_schema;
+CREATE USER test_user WITH PASSWORD 'test_password';
+GRANT ALL ON SCHEMA test_schema TO test_user;
+
+SET SESSION AUTHORIZATION test_user;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    value INT CHECK (value > 0)
+);
+
+INSERT INTO test_table (name, value) VALUES ('test1', 1);
+INSERT INTO test_table (name, value) VALUES ('test2', -1); -- This should fail due to check constraint
+
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+
+CREATE TABLE test_inherits (
+    id INT PRIMARY KEY,
+    inherited_value INT
+) INHERITS (test_table);
+
+ALTER TABLE test_inherits ADD CONSTRAINT inherit_check CHECK (inherited_value != 0);
+
+SELECT * INTO temp_table FROM test_table WHERE value > 0;
+
+DO $$
+BEGIN
+    EXECUTE 'CREATE TEMPORARY TABLE temp_proc (
+        id INT PRIMARY KEY,
+        data TEXT
+    )';
+    INSERT INTO temp_proc VALUES (1, 'test data');
+    COMMIT;
+END$$;
+
+CREATE OR REPLACE FUNCTION test_function()
+RETURNS TABLE(id INT, name VARCHAR) AS $$
+BEGIN
+    RETURN QUERY SELECT id, name FROM test_table WHERE value > 0;
+END$$ LANGUAGE plpgsql;
+
+SELECT * FROM test_function();
+
+CREATE VIEW test_view AS
+    SELECT name, MIN(value) as min_value
+    FROM test_table
+    GROUP BY name;
+
+DECLARE cur CURSOR FOR SELECT * FROM test_view;
+FETCH ALL IN cur;
+CLOSE cur;
+
+DO $$
+BEGIN
+    EXECUTE 'EXPLAIN ANALYZE SELECT * FROM test_table WHERE value > 0';
+END$$;
+
+DROP TABLE IF EXISTS temp_proc, temp_table;
+DROP VIEW test_view;
+DROP FUNCTION test_function();
+DROP TABLE test_inherits, test_table;
+REVOKE ALL ON SCHEMA test_schema FROM test_user;
+DROP SCHEMA test_schema;
+DROP USER test_user;

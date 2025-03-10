@@ -1,0 +1,84 @@
+-- Create a schema for testing
+CREATE SCHEMA test_schema;
+
+-- Create base tables with various data types and constraints
+CREATE TABLE test_schema.users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL CHECK (email LIKE '%@%.%'),
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('active', 'inactive') NOT NULL
+);
+
+CREATE TABLE test_schema.orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES test_schema.users(id),
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+    order_date DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+-- Create inherited tables
+CREATE TABLE test_schema.customer_orders () INHERITS (test_schema.orders);
+
+-- Add indexes
+CREATE INDEX idx_user_username ON test_schema.users(username);
+CREATE INDEX idx_order_amount ON test_schema.orders(amount);
+
+-- Insert sample data
+INSERT INTO test_schema.users (username, email, status)
+VALUES ('user1', 'user1@example.com', 'active'),
+       ('user2', 'user2@example.com', 'active');
+
+INSERT INTO test_schema.orders (user_id, amount, order_date)
+SELECT 1, 100.00, CURRENT_DATE
+UNION ALL
+SELECT 2, 200.00, CURRENT_DATE - INTERVAL '1 day';
+
+-- Create views
+CREATE VIEW test_schema.user_orders AS
+SELECT u.username, o.order_id, o.amount, o.order_date
+FROM test_schema.users u
+JOIN test_schema.orders o ON u.id = o.user_id;
+
+-- Role creation and permissions
+CREATE ROLE test_user WITH LOGIN PASSWORD 'testpass';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA test_schema TO test_user;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA test_schema TO test_user;
+
+-- Transaction blocks with locking
+BEGIN;
+    -- Test row-level locking
+    UPDATE test_schema.users SET status = 'inactive' WHERE id = 1;
+    -- Simulate concurrent access
+    SELECT pg_sleep(2);
+    COMMIT;
+
+-- System catalog queries
+SELECT locktype, relation::regclass, mode, granted
+FROM pg_locks
+WHERE pid = pg_backend_pid();
+
+-- Complex queries with CTE and window functions
+WITH user_activity AS (
+    SELECT username, COUNT(order_id) as total_orders,
+           SUM(amount) as total_spent
+    FROM test_schema.user_orders
+    GROUP BY username
+)
+SELECT *, RANK() OVER (ORDER BY total_spent DESC) as spending_rank
+FROM user_activity;
+
+-- Cleanup: Drop roles and schema objects
+REVOKE ALL ON SCHEMA test_schema FROM test_user;
+DROP ROLE test_user;
+
+-- Drop tables, views, indexes in reverse order
+DROP TABLE IF EXISTS test_schema.customer_orders;
+DROP TABLE IF EXISTS test_schema.orders;
+DROP TABLE IF EXISTS test_schema.users;
+DROP INDEX IF EXISTS idx_order_amount;
+DROP INDEX IF EXISTS idx_user_username;
+DROP VIEW IF EXISTS test_schema.user_orders;
+
+-- Finally drop the schema
+DROP SCHEMA test_schema CASCADE;

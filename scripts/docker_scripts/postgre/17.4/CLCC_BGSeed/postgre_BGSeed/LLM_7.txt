@@ -1,93 +1,131 @@
--- 创建一个包含多种数据类型的表
-CREATE TABLE test_fuzz (
+-- Create a schema for organizing test objects
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create a table with various data types including array and JSON
+CREATE TABLE test_schema.base_table (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    age INT,
-    salary DECIMAL(10, 2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    data JSONB,
-    arr INT[],
-    UNIQUE (name)
+    name TEXT NOT NULL,
+    value DECIMAL(10, 2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    tags JSONB,
+    status VARCHAR(50) CHECK (status IN ('active', 'inactive')),
+    data BYTEA
 );
 
--- 插入测试数据
-INSERT INTO test_fuzz (name, age, salary, data, arr)
-VALUES ('Alice', 30, 5000.50, '{"key": "value"}', '{1,2,3}'),
-       ('Bob', 45, 7000.75, '{"name": "Bob", "age": 45}', '{4,5,6}');
+-- Create a table with inheritance
+CREATE TABLE test_schema.inherited_table () INHERITS (test_schema.base_table);
 
--- 使用窗口函数和CTE的复杂查询
+-- Create an index on the JSONB column for efficient querying
+CREATE INDEX idx_tags ON test_schema.base_table USING GIN (tags jsonb_path_ops);
+
+-- Create a partitioned table
+CREATE TABLE test_schema.partitioned_table (
+    id SERIAL,
+    amount DECIMAL(10, 2),
+    transaction_date DATE
+) PARTITION BY RANGE (transaction_date);
+
+-- Create partitions for the partitioned table
+CREATE TABLE test_schema.partition_2023 PARTITION OF test_schema.partitioned_table 
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Create a unique constraint on a column
+ALTER TABLE test_schema.base_table ADD CONSTRAINT unique_name UNIQUE (name);
+
+-- Add a check constraint to enforce business rules
+ALTER TABLE test_schema.base_table ADD CONSTRAINT positive_value CHECK (value > 0);
+
+-- Create a foreign key constraint
+CREATE TABLE test_schema.dependent_table (
+    id SERIAL PRIMARY KEY,
+    base_id INTEGER REFERENCES test_schema.base_table(id) ON DELETE CASCADE
+);
+
+-- Create a trigger function
+CREATE FUNCTION test_schema.log_updates() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO test_schema.audit_log (table_name, action, old_data, new_data)
+    VALUES (TG_TABLE_NAME, TG_OP, OLD, NEW);
+    RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+-- Create a trigger that invokes the function
+CREATE TRIGGER update_trigger
+AFTER UPDATE ON test_schema.base_table
+FOR EACH ROW EXECUTE FUNCTION test_schema.log_updates();
+
+-- Create a view with complex query
+CREATE VIEW test_schema.complex_view AS
 WITH cte AS (
-    SELECT 
-        id,
-        name,
-        age,
-        salary,
-        RANK() OVER (ORDER BY salary DESC) as salary_rank,
-        DENSE_RANK() OVER (PARTITION BY age ORDER BY created_at ASC) as age_rank
-    FROM test_fuzz
+    SELECT id, name, value, 
+           ROW_NUMBER() OVER (ORDER BY value DESC) as rank
+    FROM test_schema.base_table
 )
-SELECT 
-    cte.id,
-    cte.name,
-    cte.age,
-    cte.salary,
-    cte.salary_rank,
-    cte.age_rank,
-    t2.data ->> 'key' as json_key
-FROM cte
-LEFT JOIN test_fuzz t2 ON cte.id = t2.id
-WHERE age > 30 AND salary < 8000.00
-ORDER BY salary_rank ASC, age_rank DESC;
+SELECT * FROM cte WHERE rank <= 10;
 
--- 测试PostgreSQL特有的JSON操作
-SELECT 
-    data ->> 'name' as name,
-    data #>> '{nested, key}' as nested_key,
-    jsonb_array_length(data) as array_length
-FROM test_fuzz
-WHERE data ? 'key';
+-- Create a materialized view for faster queries
+CREATE MATERIALIZED VIEW test_schema.mv_base_data AS
+SELECT id, name, value, created_at::DATE as date
+FROM test_schema.base_table
+WITH DATA;
 
--- 测试数组类型和边界条件
-SELECT 
-    arr[1] as first_element,
-    arr[2:4] as slice,
-    arr || '{7,8}' as concatenated_array,
-    array_length(arr, 1) as length
-FROM test_fuzz
-WHERE age = 30;
+-- Create an index on the materialized view
+CREATE INDEX idx_mv_date ON test_schema.mv_base_data (date);
 
--- 测试大数值和边界条件
-SELECT 
-    id * 1000000000000 as big_number,
-    salary / 0.0000000001 as small_value,
-    age + (2^31 -1) as int_overflow
-FROM test_fuzz
-LIMIT 1;
+-- Create a stored procedure with exception handling
+CREATE PROCEDURE test_schema.process_data()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM test_schema.base_table;
+    
+    IF v_count > 100 THEN
+        RAISE NOTICE 'Processing % records...', v_count;
+    END IF;
+    
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'An error occurred: %', SQLERRM;
+END $$;
 
--- 测试PostgreSQL特有的正则表达式和日期函数
-SELECT 
-    name ~* '^[A-Za-z]+$' as is_valid_name,
-    created_at::DATE as date_part,
-    EXTRACT(YEAR FROM created_at) as year,
-    DATE_TRUNC('month', created_at) as truncated_date
-FROM test_fuzz
-WHERE name ~ '[A-Z]';
+-- Create a function with parameters and return table
+CREATE FUNCTION test_schema.get_filtered_data(search_term TEXT)
+RETURNS TABLE (
+    id INTEGER,
+    name TEXT,
+    value DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT id, name, value 
+    FROM test_schema.base_table
+    WHERE name LIKE '%' || search_term || '%'
+       OR tags @> '{"search": "' || search_term || '"}';
+END $$ LANGUAGE plpgsql;
 
--- 测试PostgreSQL特有的递归CTE
-WITH RECURSIVE recursive_cte AS (
-    SELECT 1 as n
-    UNION ALL
-    SELECT n + 1 FROM recursive_cte WHERE n < 10
-)
-SELECT * FROM recursive_cte;
+-- Vacuum analyze the table for query optimization
+VACUUM ANALYZE test_schema.base_table;
 
--- 测试PostgreSQL特有的分区表（假设已经创建了时间戳字段）
--- 注意：实际应用中需要根据具体需求设置分区策略
-CREATE TABLE test_fuzz_partition (
-    LIKE test_fuzz INCLUDING ALL
-) PARTITION BY RANGE (created_at);
+-- Create an extension to add additional functionality
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS xml2;
 
--- 创建索引以提高查询性能
-CREATE INDEX idx_name ON test_fuzz(name);
-CREATE INDEX idx_salary ON test_fuzz(salary);
-CREATE INDEX idx_data ON test_fuzz USING GIN(data);
+-- Create a table with XML data type
+CREATE TABLE test_schema.xml_data (
+    id SERIAL PRIMARY KEY,
+    content XML
+);
+
+-- Insert sample data into the tables
+INSERT INTO test_schema.base_table (name, value, tags)
+VALUES 
+('Test1', 100.5, '{"key": "value"}'),
+('Test2', 200.3, '{"status": "active"}');
+
+-- Enable row-level security on a table
+ALTER TABLE test_schema.base_table ENABLE ROW LEVEL SECURITY;
+
+-- Create a policy for RLS
+CREATE POLICY base_policy ON test_schema.base_table AS RESTRICTIVE
+TO PUBLIC USING (status = 'active');

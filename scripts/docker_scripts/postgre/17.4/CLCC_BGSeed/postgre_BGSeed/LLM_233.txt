@@ -1,0 +1,70 @@
+-- Create temporary table with various constraints and indexes
+CREATE TEMPORARY TABLE temp_test (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    age INT CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index on name column
+CREATE INDEX idx_temp_test_name ON temp_test(name);
+
+-- Create trigger function
+CREATE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger activated';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger
+CREATE TRIGGER temp_trigger
+BEFORE INSERT ON temp_test
+FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+
+-- Create view on temporary table
+CREATE VIEW temp_view AS SELECT id, name, age FROM temp_test;
+
+-- Create sequence
+CREATE SEQUENCE temp_sequence START 100;
+
+-- Insert data into temporary table using sequence
+INSERT INTO temp_test (name, age) VALUES ('Test User', NEXTVAL('temp_sequence'));
+
+-- Test composite type
+CREATE TYPE temp_composite AS (
+    id INT,
+    name TEXT
+);
+
+-- Create function returning composite type
+CREATE FUNCTION get_temp_composite() RETURNS temp_composite AS $$
+DECLARE
+    result temp_composite;
+BEGIN
+    result.id := 1;
+    result.name := 'Composite Test';
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test inheritance with temporary tables
+CREATE TEMPORARY TABLE temp_inheritance (
+    INHERITS (temp_test)
+);
+
+-- Create index on inherited table
+CREATE INDEX idx_temp_inheritance_age ON temp_inheritance(age);
+
+-- Prepare transaction for two-phase commit testing
+BEGIN;
+INSERT INTO temp_test (name, age) VALUES ('2PC Test', 30);
+PREPARE TRANSACTION 'temp_2pc';
+
+-- Clean up objects after test
+DROP TABLE temp_test, temp_inheritance;
+DROP VIEW temp_view;
+DROP INDEX idx_temp_test_name, idx_temp_inheritance_age;
+DROP SEQUENCE temp_sequence;
+DROP TYPE temp_composite;
+DROP FUNCTION trigger_func(), get_temp_composite();

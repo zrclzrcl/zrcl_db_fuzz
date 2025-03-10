@@ -1,0 +1,104 @@
+CREATE TABLE test_table (id serial PRIMARY KEY, name text NOT NULL, value int UNIQUE);
+
+INSERT INTO test_table (name, value) VALUES ('test1', 0), (NULL, 2147483647);
+INSERT INTO test_table SELECT 'test2' AS name, -2147483648 AS value;
+
+WITH cte AS (
+    SELECT id, name, value FROM test_table
+)
+SELECT c.id, c.name, c.value 
+FROM cte c
+JOIN test_table t ON c.id = t.id
+GROUP BY c.id, c.name, c.value
+HAVING COUNT(*) > 0
+ORDER BY c.id DESC
+LIMIT 10;
+
+BEGIN;
+    INSERT INTO test_table (name) VALUES ('test3');
+    SAVEPOINT sp1;
+    UPDATE test_table SET name = 'test4' WHERE id = currval('test_table_id_seq');
+    ROLLBACK TO sp1;
+COMMIT;
+
+GRANT SELECT ON test_table TO public;
+REVOKE SELECT ON test_table FROM public;
+
+CREATE INDEX idx_name_lower ON test_table (LOWER(name));
+
+WITH RECURSIVE recursive_cte AS (
+    SELECT 1 AS num
+    UNION ALL
+    SELECT r.num + 1 FROM recursive_cte r WHERE r.num < 10
+)
+SELECT * FROM recursive_cte;
+
+DO $$
+BEGIN
+    RAISE NOTICE 'Test notice message';
+EXCEPTION
+    WHEN others THEN
+        RAISE WARNING 'An error occurred: %', SQLERRM;
+END $$;
+
+INSERT INTO test_table (name, value) VALUES ('test5', NULL);
+SELECT pg_sleep(1);  -- Test sleep function
+SELECT * FROM test_table WHERE id = 1 FOR UPDATE;  -- Test row locking
+
+CREATE TABLE another_test (
+    id integer,
+    data text,
+    CONSTRAINT pk_another_test PRIMARY KEY (id)
+);
+
+INSERT INTO another_test SELECT id, name FROM test_table;
+SELECT a.id, t.name 
+FROM another_test a
+JOIN test_table t ON a.id = t.id
+ORDER BY a.id;
+
+DROP TABLE another_test;
+
+CREATE UNIQUE INDEX idx_unique_value ON test_table (value) WHERE value IS NOT NULL;
+
+SELECT * FROM test_table ORDER BY value DESC OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY;
+
+WITH cte1 AS (
+    SELECT id, name FROM test_table
+), cte2 AS (
+    SELECT id, value FROM test_table
+)
+SELECT c.id, c.name, v.value 
+FROM cte1 c
+JOIN cte2 v ON c.id = v.id
+WHERE c.name LIKE 'test%'
+ORDER BY c.id;
+
+SELECT ROW_NUMBER() OVER (ORDER BY id) as row_num, * FROM test_table;
+
+GRANT INSERT ON test_table TO anon;
+REVOKE INSERT ON test_table FROM anon;
+
+INSERT INTO test_table (name, value) VALUES ('long_string_test', 123);
+UPDATE test_table SET name = 'updated_name' WHERE id = 1;
+DELETE FROM test_table WHERE id = 1 RETURNING *;
+
+SELECT pg_cancel_backend(pg_backend_pid());  -- Test backend cancellation
+
+CREATE TABLE IF NOT EXISTS temp_table (
+    id integer,
+    data text
+) ON COMMIT DROP;
+
+INSERT INTO temp_table VALUES (1, 'temp_data');
+SELECT * FROM temp_table;
+
+SELECT pg_size_bytes(42);  -- Test size conversion functions
+
+SELECT json_build_object('key', 'value') AS json_obj;
+SELECT to_tsvector('english', 'test document');  -- Test full-text search
+
+SELECT uuid_generate_v4() AS random_uuid;  -- Test UUID generation
+INSERT INTO test_table (name, value) VALUES ('uuid_test', (uuid_generate_v4())::text);
+
+SELECT * FROM information_schema.tables WHERE table_name = 'test_table';

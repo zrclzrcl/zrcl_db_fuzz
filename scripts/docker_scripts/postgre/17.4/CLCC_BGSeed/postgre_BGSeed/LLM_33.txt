@@ -1,0 +1,41 @@
+-- Initial seed setup for PostgreSQL test environment
+-- This script sets up roles, tables, data, and permissions needed for testing
+
+-- Create test roles
+CREATE ROLE regress_rls_copy_user;
+CREATE ROLE regress_rls_copy_user_colperms;
+
+-- Create test tables
+CREATE TABLE rls_rls_t1 (
+    a int,
+    b int,
+    c int
+);
+
+-- Insert initial test data
+INSERT INTO rls_rls_t1 (a, b, c) VALUES 
+(1, 4, 12),
+(3, 23, 2),
+(34, 1, 4);
+
+-- Set up row-level security policies
+CREATE POLICY p1 ON rls_rls_t1 FOR SELECT USING (a % 2 = 0);
+ALTER TABLE rls_rls_t1 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rls_rls_t1 FORCE ROW LEVEL SECURITY;
+
+-- Grant permissions to test roles
+GRANT SELECT ON TABLE rls_rls_t1 TO regress_rls_copy_user;
+GRANT SELECT (a, b) ON TABLE rls_rls_t1 TO regress_rls_copy_user_colperms;
+
+-- Create view and trigger setup for instead-of insert testing
+CREATE VIEW instead_of_insert_tbl_view AS SELECT ''::text AS str;
+CREATE FUNCTION fun_instead_of_insert_tbl() RETURNS trigger AS $$
+BEGIN
+    INSERT INTO instead_of_insert_tbl (name) VALUES (NEW.str);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trig_instead_of_insert_tbl_view 
+INSTEAD OF INSERT ON instead_of_insert_tbl_view 
+FOR EACH ROW EXECUTE PROCEDURE fun_instead_of_insert_tbl();

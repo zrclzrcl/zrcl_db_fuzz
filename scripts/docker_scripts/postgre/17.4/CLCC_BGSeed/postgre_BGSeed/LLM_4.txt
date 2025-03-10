@@ -1,54 +1,59 @@
--- 创建一个包含多种数据类型的表以覆盖更多数据库特性
-CREATE TABLE test_fuzz (
+-- Create a test table with various data types including PostgreSQL-specific ones
+CREATE TABLE test_edge_cases (
     id SERIAL PRIMARY KEY,
     text_field TEXT,
-    numeric_field NUMERIC(10,2),
-    date_field DATE,
+    numeric_field NUMERIC(20, 5),
     jsonb_field JSONB,
-    array_field INTEGER[],
-    enum_field ENUM('option1', 'option2')
+    uuid_field UUID,
+    timestamp_field TIMESTAMP WITH TIME ZONE,
+    bool_field BOOLEAN DEFAULT FALSE,
+    bytea_field BYTEA
 );
 
--- 插入测试数据，包含边界条件和特殊字符
-INSERT INTO test_fuzz (text_field, numeric_field, date_field, jsonb_field, array_field, enum_field) 
+-- Insert edge-case data into the table
+INSERT INTO test_edge_cases (text_field, numeric_field, jsonb_field, uuid_field, timestamp_field, bool_field, bytea_field)
 VALUES 
-    ('测试字符串', 99999.99, '2024-01-01', '{"key": "value"}', ARRAY[1,2,3], 'option1'),
-    ('边界条件测试', -99999.99, '1970-01-01', '{"test": [1,2,3]}', ARRAY[], 'option2');
+('Empty String', 0.00001, '{}'::JSONB, '00000000-0000-0000-0000-000000000000'::UUID, '1970-01-01 00:00:01+00', TRUE, '\x00'),
+('Test String', 9999999999.99999, '{"key": "value"}'::JSONB, '12345678-1234-5678-1234-567812345678'::UUID, '2024-01-01 12:34:56+00', FALSE, '\xff');
 
--- 复杂查询，包含窗口函数、CTE和JSON操作
-WITH cte AS (
-    SELECT 
-        id,
-        text_field,
-        ROW_NUMBER() OVER (ORDER BY id) as rn,
-        jsonb_array_length(jsonb_field->'test') as array_len
-    FROM test_fuzz
-)
-SELECT 
-    cte.id,
-    cte.text_field,
-    SUM(cte.numeric_field) OVER () as total_sum,
-    CASE 
-        WHEN cte.array_len > 2 THEN 'Long array'
-        ELSE 'Short array'
-    END as array_type
-FROM cte;
+-- Create indexes on the table
+CREATE INDEX idx_text_field ON test_edge_cases (text_field);
+CREATE INDEX idx_jsonb_field ON test_edge_cases USING GIN (jsonb_field);
 
--- 测试聚合函数和子查询
-SELECT 
-    COUNT(*) as total_records,
-    MAX(numeric_field) as max_value,
-    (SELECT MIN(date_field) FROM test_fuzz) as min_date
-FROM test_fuzz;
-
--- 创建一个触发器来测试数据库响应复杂操作
-CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+-- Create a function that manipulates JSON data
+CREATE OR REPLACE FUNCTION manipulate_json(j JSONB)
+RETURNS JSONB AS $$
 BEGIN
-    RAISE NOTICE 'Trigger activated';
-    RETURN NEW;
+    RETURN j || '{"processed": TRUE}';
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER test_trigger 
-AFTER INSERT ON test_fuzz 
-FOR EACH ROW EXECUTE PROCEDURE trigger_function();
+-- Select statements with different query patterns
+SELECT id, text_field, numeric_field, jsonb_field, uuid_field 
+FROM test_edge_cases 
+WHERE timestamp_field >= '2024-01-01 00:00:00+00' AND bool_field = TRUE;
+
+SELECT COUNT(*) AS total_records FROM test_edge_cases;
+
+SELECT JSONB_ARRAY_LENGTH(jsonb_field) AS array_length FROM test_edge_cases WHERE id = 1;
+
+-- Alter table to modify constraints and columns
+ALTER TABLE test_edge_cases ADD COLUMN new_column TEXT;
+ALTER TABLE test_edge_cases ALTER COLUMN text_field SET NOT NULL;
+ALTER TABLE test_edge_cases DROP CONSTRAINT IF EXISTS test_edge_cases_pkey;
+ALTER TABLE test_edge_cases ADD PRIMARY KEY (id);
+
+-- Query system catalogs to check metadata changes
+SELECT relname, relkind FROM pg_class WHERE relname = 'test_edge_cases';
+
+-- Test user permissions by creating roles and adjusting privileges
+CREATE ROLE test_user WITH LOGIN PASSWORD 'securepassword';
+GRANT SELECT ON test_edge_cases TO test_user;
+REVOKE SELECT ON test_edge_cases FROM test_user;
+
+-- Clean up the database objects
+DROP FUNCTION manipulate_json(JSONB);
+DROP INDEX idx_text_field;
+DROP INDEX idx_jsonb_field;
+DROP TABLE test_edge_cases;
+DROP ROLE test_user;

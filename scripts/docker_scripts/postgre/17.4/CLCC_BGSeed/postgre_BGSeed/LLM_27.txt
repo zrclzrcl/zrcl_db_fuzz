@@ -1,0 +1,50 @@
+-- Initial seed for PostgreSQL testing with various collations
+
+-- Create tables with different collations
+CREATE TABLE IF NOT EXISTS collate_1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT COLLATE "C",
+    description TEXT COLLATE "POSIX"
+);
+
+CREATE TABLE IF NOT EXISTS collate_2 (
+    id SERIAL PRIMARY KEY,
+    title TEXT COLLATE "en_US",
+    content TEXT
+);
+
+-- Insert sample data
+INSERT INTO collate_1 (name, description) VALUES 
+('Test 1', 'This is a test with C collation'),
+('Test 2', 'Another test with POSIX collation');
+
+INSERT INTO collate_2 (title, content) VALUES 
+('First Title', 'Sample content for en_US collation'),
+('Second Title', 'More sample content here');
+
+-- Create indexes with specific collations
+CREATE INDEX idx_collate_1_name ON collate_1 USING BTREE (name COLLATE "C");
+CREATE INDEX idx_collate_2_title ON collate_2 USING BTREE (title COLLATE "en_US");
+
+-- Basic query to verify setup
+SELECT * FROM collate_1 ORDER BY name;
+SELECT * FROM collate_2 ORDER BY title DESC;
+
+-- Cleanup functions and triggers
+DO $$
+BEGIN
+    -- Simple cleanup function
+    CREATE OR REPLACE FUNCTION cleanup_old_records()
+    RETURNS TRIGGER AS $BODY$
+        BEGIN
+            DELETE FROM collate_1 WHERE id < 100;
+            RETURN NEW;
+        END;
+    $BODY$ LANGUAGE plpgsql;
+
+    -- Create trigger for cleanup
+    CREATE TRIGGER trig_cleanup
+    AFTER INSERT ON collate_1
+    FOR EACH ROW
+    EXECUTE FUNCTION cleanup_old_records();
+END $$;

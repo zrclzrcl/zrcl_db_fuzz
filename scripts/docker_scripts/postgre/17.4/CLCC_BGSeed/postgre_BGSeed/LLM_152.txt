@@ -1,0 +1,10 @@
+CREATE TABLE test_table (
+       id SERIAL PRIMARY KEY,
+       integer_col INT,
+       text_col TEXT,
+       boolean_col BOOLEAN,
+       date_col DATE,
+       numeric_col NUMERIC(30, 15),
+       jsonb_col JSONB,
+       geom_point POINT
+   );

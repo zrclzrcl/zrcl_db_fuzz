@@ -1,0 +1,32 @@
+\set ON_ERROR_STOP 1
+
+-- Test case for ROLLUP with simple aggregation
+DO $$
+BEGIN
+  -- Create a temporary table with sample data
+  CREATE TEMPORARY TABLE test_rollup (
+    category text,
+    subcategory text,
+    value integer
+  );
+
+  -- Insert sample data
+  INSERT INTO test_rollup VALUES
+    ('A', 'X', 10),
+    ('A', 'Y', 20),
+    ('B', 'Z', 30);
+
+  -- Perform ROLLUP and check results
+  WITH rollup_test AS (
+    SELECT category, subcategory, SUM(value) as total
+    FROM test_rollup
+    GROUP BY ROLLUP(category, subcategory)
+  )
+  SELECT COUNT(*) = 6 INTO strict result
+  FROM rollup_test;
+
+  -- Verify the expected number of rows (3 detailed + 2 subtotal + 1 grand total)
+  IF NOT result THEN
+    RAISE EXCEPTION 'ROLLUP test failed. Expected 6 rows.';
+  END IF;
+END $$;

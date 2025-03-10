@@ -1,0 +1,31 @@
+-- Initial Seed Setup for PostgreSQL Testing
+
+BEGIN;
+
+-- Create base enum type
+CREATE TYPE rainbow AS ENUM ('red', 'orange', 'green', 'blue', 'indigo', 'violet');
+
+-- Create test tables
+CREATE TABLE enumtest (
+    id SERIAL PRIMARY KEY,
+    color rainbow NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE enumtest_parent (
+    id rainbow PRIMARY KEY
+);
+
+CREATE TABLE enumtest_child (
+    parent rainbow REFERENCES enumtest_parent(id)
+);
+
+-- Create indexes for better query performance
+CREATE INDEX idx_enumtest_color ON enumtest(color);
+CREATE INDEX idx_enumtest_parent_id ON enumtest_parent(id);
+CREATE INDEX idx_enumtest_child_parent ON enumtest_child(parent);
+
+-- Insert initial data
+INSERT INTO enumtest_parent VALUES ('red');
+
+COMMIT;

@@ -1,0 +1,56 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT NOT NULL,
+    text_col TEXT DEFAULT '',
+    json_col JSONB,
+    timestamp_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    bool_col BOOLEAN DEFAULT FALSE,
+    numeric_col NUMERIC(10, 5)
+);
+
+INSERT INTO test_edge_cases (int_col, text_col, json_col, timestamp_col, bool_col, numeric_col) 
+VALUES 
+    (NULL, '', '{"key": "value", "number": 9999999999}', CURRENT_TIMESTAMP, TRUE, 12345.67890),
+    (-2147483648, 'test_string', '{"array": [1,2,3]}', '2023-01-01 00:00:00+00', FALSE, 0.00000);
+
+WITH number_series AS (
+    SELECT generate_series(1, 100) AS n
+)
+SELECT 
+    n,
+    RANK() OVER (ORDER BY n),
+    DENSE_RANK() OVER (ORDER BY n),
+    NTILE(4) OVER (ORDER BY n)
+FROM number_series;
+
+ALTER TABLE test_edge_cases ADD CONSTRAINT unique_text_col UNIQUE (text_col);
+
+CREATE INDEX idx_json_col ON test_edge_cases USING GIN (json_col);
+
+CREATE OR REPLACE FUNCTION test_function()
+RETURNS VOID AS $$
+DECLARE
+    v_count INT;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM test_edge_cases WHERE bool_col = TRUE;
+    
+    IF v_count > 5 THEN
+        RAISE NOTICE 'More than five records found';
+    ELSEIF v_count < 3 THEN
+        RAISE WARNING 'Less than three records found';
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE INFO 'An error occurred: %', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT 
+    id,
+    jsonb_set(json_col, '{array}', '[4,5,6]') AS updated_json,
+    EXTRACT(YEAR FROM timestamp_col) AS year_extracted
+FROM test_edge_cases
+WHERE bool_col = TRUE
+ORDER BY numeric_col DESC NULLS LAST;
+
+COMMIT;

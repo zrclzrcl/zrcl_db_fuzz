@@ -1,0 +1,65 @@
+-- Create test_table with necessary columns and constraints
+CREATE TABLE test_table (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    age int DEFAULT 0,
+    data jsonb
+);
+
+-- Insert sample data into test_table
+INSERT INTO test_table (name, age, data)
+VALUES
+('Alice', 30, '{"key": "value"}'),
+('Bob', NULL, '{"age": 45}');
+
+-- Create test_data table and insert sample data
+CREATE TABLE test_data (
+    id int,
+    value text
+);
+
+INSERT INTO test_data (id, value)
+VALUES
+(1, 'Test Value 1'),
+(2, 'Test Value 2');
+
+-- Update test_table by joining with test_data
+UPDATE test_table
+SET age = td.value::int
+FROM test_data td
+WHERE test_table.id = td.id;
+
+-- Complex SELECT using CTE and window functions
+WITH totals AS (
+    SELECT 
+        name,
+        COUNT(*) as total_age,
+        ROW_NUMBER() OVER (ORDER BY age DESC) as rank
+    FROM test_table
+    GROUP BY name, age
+)
+SELECT 
+    t.name,
+    t.total_age,
+    t.rank
+FROM totals t
+WHERE t.total_age > 0
+ORDER BY t.name DESC;
+
+-- UNION ALL of two SELECT statements
+SELECT id, name, age FROM test_table
+UNION ALL
+SELECT id, value as name, NULL as age FROM test_data;
+
+-- Transaction management example
+BEGIN;
+    INSERT INTO test_table (name, data) VALUES ('Charlie', '{"test": "transaction"}');
+    -- Perform other operations if needed
+COMMIT;
+
+-- Create indexes on test_table for better query performance
+CREATE INDEX idx_name ON test_table(name);
+CREATE INDEX idx_jsonb_data ON test_table USING GIN(data);
+
+-- Clean up by dropping tables (comment out if not needed)
+-- DROP TABLE test_table, test_data;

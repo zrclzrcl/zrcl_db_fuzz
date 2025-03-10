@@ -1,0 +1,29 @@
+drop table if exists test_fuzz;
+create table test_fuzz (
+    id serial primary key,
+    text_col text,
+    int_col integer,
+    uuid_col uuid,
+    jsonb_col jsonb,
+    timestamp_col timestamp with time zone,
+    bool_col boolean
+);
+create index idx_text_btree on test_fuzz using btree (text_col);
+create index idx_int_hash on test_fuzz using hash (int_col);
+insert into test_fuzz (text_col, int_col, uuid_col, jsonb_col, timestamp_col, bool_col) values ('test', 123, '12345678-1234-5678-1234-567812345678', '{"key": "value"}', current_timestamp, true);
+insert into test_fuzz (text_col, int_col, uuid_col, jsonb_col, timestamp_col, bool_col) values ('boundary', 0, '00000000-0000-0000-0000-000000000000', '{"test": null}', current_timestamp - interval '1 day', false);
+insert into test_fuzz (text_col, int_col, uuid_col, jsonb_col, timestamp_col, bool_col) values ('max_str', 2147483647, 'ffffffff-ffff-ffff-ffff-ffffffffffff', '{"array": [1,2,3]}', current_timestamp + interval '1 year', true);
+vacuum analyze test_fuzz;
+select id from test_fuzz where text_col = 'test';
+select * from test_fuzz where int_col > 100 and bool_col is true;
+select jsonb_col->>'key' as value from test_fuzz where jsonb_col ? 'key';
+select count(*) from test_fuzz where timestamp_col between current_timestamp - interval '2 days' and current_timestamp + interval '2 days';
+select row_number() over (order by id) as rank, text_col from test_fuzz;
+with cte as (select id, text_col from test_fuzz where bool_col is true)
+select * from cte union select * from cte order by id;
+begin;
+insert into test_fuzz (text_col, int_col) values ('transaction', 99);
+savepoint sp1;
+update test_fuzz set int_col = 100 where text_col = 'transaction';
+rollback to sp1;
+commit;

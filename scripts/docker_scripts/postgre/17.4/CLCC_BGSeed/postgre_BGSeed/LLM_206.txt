@@ -1,0 +1,47 @@
+create table test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT NOT NULL,
+    text_col TEXT,
+    timestamp_col TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    bool_col BOOLEAN
+);
+
+-- Test partitioning (PostgreSQL specific feature)
+CREATE TABLE sales (
+    id SERIAL,
+    sale_date DATE NOT NULL,
+    amount DECIMAL(10,2)
+) PARTITION BY RANGE (sale_date);
+
+-- Create an index on a column that will be used in queries
+create index idx_int_col on test_edge_cases(int_col);
+
+-- Test common table expressions (CTEs)
+WITH recursive_numbers AS (
+    SELECT 1 AS num
+    UNION ALL
+    SELECT num + 1 FROM recursive_numbers WHERE num < 10
+),
+non_recursive_cte AS (
+    SELECT 'test' as text_value
+)
+SELECT * FROM recursive_numbers, non_recursive_cte;
+
+-- Test aggregate functions
+insert into test_edge_cases(int_col, text_col, bool_col) values(10, 'test', true);
+insert into test_edge_cases(int_col, text_col, bool_col) values(-5, NULL, false);
+insert into test_edge_cases(int_col, text_col, bool_col) values(0, 'another test', NULL);
+
+-- Test vacuum (PostgreSQL specific command)
+VACUUM ANALYZE;
+
+-- Test large value insertion
+insert into sales(sale_date, amount) values('2023-01-01', 999999.99);
+update sales set amount = 1000000.00 where id = 1;
+
+-- Test boolean logic
+select * from test_edge_cases where bool_col is true or int_col > 5;
+update test_edge_cases set text_col = 'updated' where id = 2 returning *;
+
+-- Create an index on a column that will be updated
+create index idx_text_col on test_edge_cases(text_col);

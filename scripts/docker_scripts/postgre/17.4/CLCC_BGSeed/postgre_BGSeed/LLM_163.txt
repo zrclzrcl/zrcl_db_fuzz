@@ -1,0 +1,42 @@
+-- Create a test table with various data types to explore different scenarios
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT,
+    point_col POINT,
+    array_col INTEGER[],
+    unique_id UNIQUEIDENTIFIER
+);
+
+-- Insert sample data into the table for testing purposes
+INSERT INTO test_table (int_col, text_col, point_col, array_col, unique_id)
+VALUES 
+(42, 'test', '(1.0, 2.0)', '{1,2,3}', '123e4567-e89b-12d3-a456-426614174000'),
+(0, NULL, NULL, '{}', 'abcdef12-3456-789a-bcde-f123456789ab');
+
+-- Test edge cases with NULL values and different data types
+SELECT num_nonnulls(int_col) FROM test_table WHERE id = 1;
+SELECT num_nulls(text_col, point_col) FROM test_table WHERE id = 2;
+
+-- Explore variadic functions with arrays and NULLs
+SELECT array_agg(int_col) AS int_array FROM test_table;
+SELECT VARIADIC(array_col) AS var_array FROM test_table WHERE id = 1;
+SELECT VARIADIC(NULL::INTEGER[]) AS null_array;
+
+-- Test custom function creation, alteration, and usage
+CREATE OR REPLACE FUNCTION my_custom_function(int, text)
+RETURNS SETOF RECORD
+AS $$
+    SELECT $1, $2;
+$$ LANGUAGE SQL;
+
+ALTER FUNCTION my_custom_function(int, text) RENAME TO my_renamed_function;
+
+SELECT * FROM my_renamed_function(42, 'test');
+
+-- Test system catalog and internal functions
+SELECT * FROM pg_timezone_names();
+SELECT * FROM pg_tablespace_databases();
+
+-- Clean up the test table
+DROP TABLE IF EXISTS test_table;

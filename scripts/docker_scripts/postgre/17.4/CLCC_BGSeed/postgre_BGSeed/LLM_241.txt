@@ -1,0 +1,42 @@
+ALTER EVENT TRIGGER ddl_command_end ENABLE;
+
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    salary NUMERIC(10, 2),
+    hired_date DATE,
+    department JSONB
+) PARTITION BY RANGE (hired_date);
+
+CREATE INDEX idx_department_jsonb ON employees USING GIN (department);
+
+WITH RECURSIVE recursive_cte AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM recursive_cte WHERE n < 100
+)
+INSERT INTO employees (name, salary, hired_date, department)
+SELECT 
+    'Employee' || n,
+    50000 + n * 100,
+    '2024-01-01'::DATE + n * INTERVAL '1 day',
+    '{"id": ' || n || ', "name": "Dept' || n || '"}'
+FROM recursive_cte;
+
+BEGIN;
+SAVEPOINT my_savepoint;
+INSERT INTO employees (name, salary, hired_date, department)
+VALUES ('John Doe', 60000, CURRENT_DATE, '{"id": 1, "name": "Engineering"}');
+UPDATE employees SET salary = salary * 1.1 WHERE name = 'John Doe';
+DELETE FROM employees WHERE name = 'John Doe' AND salary > 55000;
+ROLLBACK TO my_savepoint;
+COMMIT;
+
+VACUUM ANALYZE employees;
+
+CREATE INDEX idx_name ON employees (name);
+
+UPDATE employees SET department = jsonb_set(department, '{manager}', '"Jane Smith"', true)
+WHERE name = 'John Doe';
+
+DELETE FROM employees WHERE salary < 50000 AND hired_date > CURRENT_DATE - INTERVAL '1 year';

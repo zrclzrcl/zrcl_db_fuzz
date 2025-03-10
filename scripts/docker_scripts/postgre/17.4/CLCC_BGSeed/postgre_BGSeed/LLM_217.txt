@@ -1,0 +1,78 @@
+-- Create a test table with various data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INT,
+    text_col TEXT,
+    boolean_col BOOLEAN,
+    date_col DATE,
+    numeric_col NUMERIC(10, 2)
+);
+
+-- Insert sample data into the test table
+INSERT INTO test_table (integer_col, text_col, boolean_col, date_col, numeric_col)
+VALUES 
+    (1, 'Test String', TRUE, '2023-01-01', 100.50),
+    (2, NULL, FALSE, '2023-02-02', NULL),
+    (3, 'Another Test', TRUE, '2023-03-03', 200.75);
+
+-- Create a table for testing joins
+CREATE TABLE another_table (
+    id SERIAL PRIMARY KEY,
+    test_id INT REFERENCES test_table(id),
+    value INT
+);
+
+-- Insert data into the join table
+INSERT INTO another_table (test_id, value)
+VALUES 
+    (1, 10),
+    (2, 20),
+    (3, 30);
+
+-- Basic SELECT with WHERE clause
+SELECT id, text_col FROM test_table WHERE integer_col > 1;
+
+-- Test NULL handling
+SELECT * FROM test_table WHERE text_col IS NULL;
+
+-- Use of LIKE and IN operators
+SELECT * FROM test_table WHERE text_col LIKE 'Test%' AND integer_col IN (1, 2);
+
+-- ORDER BY with ASC and DESC
+SELECT * FROM test_table ORDER BY integer_col ASC, id DESC;
+
+-- GROUP BY and HAVING clauses
+SELECT integer_col, COUNT(*) AS count 
+FROM test_table 
+GROUP BY integer_col 
+HAVING COUNT(*) > 1;
+
+-- Window functions with ROW_NUMBER
+SELECT id, text_col, ROW_NUMBER() OVER (ORDER BY id) as row_num 
+FROM test_table;
+
+-- CTE example
+WITH cte AS (
+    SELECT id, integer_col FROM test_table WHERE integer_col < 3
+)
+SELECT * FROM cte;
+
+-- EXPLAIN plan for query optimization
+EXPLAIN ANALYZE
+SELECT t.text_col, a.value 
+FROM test_table t
+JOIN another_table a ON t.id = a.test_id
+WHERE t.integer_col > 1;
+
+-- Test boundary values
+SELECT id, integer_col 
+FROM test_table 
+WHERE integer_col = (SELECT MIN(integer_col) FROM test_table);
+
+-- Transaction example
+BEGIN;
+    UPDATE test_table SET boolean_col = NOT boolean_col WHERE id = 1;
+COMMIT;
+
+-- Clean up tables
+DROP TABLE another_table, test_table;

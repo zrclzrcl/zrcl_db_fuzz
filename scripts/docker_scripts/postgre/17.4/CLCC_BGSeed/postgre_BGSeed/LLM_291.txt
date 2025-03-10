@@ -1,0 +1,102 @@
+CREATE TABLE non_parted (
+    id int
+);
+
+INSERT INTO non_parted VALUES (1), (1), (1), (2), (2), (2), (3), (3), (3);
+
+CREATE TABLE list_parted (
+    a int,
+    b int,
+    c int
+) PARTITION BY LIST (a);
+
+CREATE TABLE sub_part1 (
+    id int,
+    name text
+);
+
+CREATE TABLE sub_part2 (
+    id int,
+    age int
+);
+
+CREATE TABLE hash_parted (
+    a int,
+    b int
+) PARTITION BY HASH (a, b);
+
+CREATE TABLE hpart1 (
+    a int,
+    b int
+);
+
+CREATE TABLE hpart2 (
+    a int,
+    b int
+);
+
+CREATE TABLE hpart3 (
+    a int,
+    b int
+);
+
+CREATE TABLE hpart4 (
+    a int,
+    b int
+);
+
+INSERT INTO hpart1 VALUES (1, 1);
+INSERT INTO hpart2 VALUES (2, 5);
+INSERT INTO hpart4 VALUES (3, 4);
+
+ALTER TABLE list_parted ADD PARTITION sub_part1 PARTITION FOR VALUES IN (1);
+ALTER TABLE list_parted ADD PARTITION sub_part2 PARTITION FOR VALUES IN (2);
+
+CREATE OR REPLACE FUNCTION func_parted_mod_b()
+RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.b = 2;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER parted_mod_b
+BEFORE UPDATE ON sub_part1
+FOR EACH ROW
+EXECUTE FUNCTION func_parted_mod_b();
+
+CREATE OR REPLACE FUNCTION dummy_hashint4()
+RETURNS void AS
+$$
+BEGIN
+    -- Custom hash function implementation
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OPERATOR CLASS custom_opclass FOR TYPE int4 USING HASH AS
+OPERATOR 1 =,
+OPERATOR 2 <>,
+OPERATOR 3 <,
+OPERATOR 4 >,
+OPERATOR 5 <=,
+OPERATOR 6 >=,
+FUNCTION 1 dummy_hashint4(int4);
+
+ALTER TABLE hash_parted ADD PARTITION hpart1 VALUES LESS THAN (10);
+ALTER TABLE hash_parted ADD PARTITION hpart2 VALUES LESS THAN (20);
+ALTER TABLE hash_parted ADD PARTITION hpart3 VALUES LESS THAN (30);
+ALTER TABLE hash_parted ADD PARTITION hpart4 VALUES LESS THAN (40);
+
+INSERT INTO list_parted VALUES (1, 10, 100);
+INSERT INTO list_parted VALUES (2, 20, 200);
+
+UPDATE list_parted SET c = 300 WHERE a = 1;
+
+CREATE TRIGGER parted_aging
+AFTER INSERT ON sub_part2
+FOR EACH ROW
+EXECUTE FUNCTION func_parted_mod_b();
+
+SELECT * FROM list_parted;
+SELECT * FROM hash_parted;

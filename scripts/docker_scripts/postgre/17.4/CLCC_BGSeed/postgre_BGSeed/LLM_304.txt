@@ -1,0 +1,71 @@
+-- Initial seed for PostgreSQL XML testing environment
+-- This setup includes necessary tables and sample data for XML tests
+
+-- Create test table for XML storage
+CREATE TABLE xmltest (
+    id SERIAL PRIMARY KEY,
+    data XML
+);
+
+-- Populate test data for XML operations
+INSERT INTO xmltest (data) VALUES 
+('<root><value>10</value></root>'),
+('<employees><employee><name>Alice</name><age>30</age></employee></employees>'),
+('<catalog><book><title>The Great Gatsby</title><price>29.99</price></book></catalog>');
+
+-- Create test table for employee data
+CREATE TABLE emp (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    age INT,
+    salary DECIMAL(10,2)
+);
+
+-- Populate employee data
+INSERT INTO emp (name, age, salary) VALUES 
+('Alice', 30, 75000.00),
+('Bob', 28, 65000.00),
+('Charlie', 35, 85000.00);
+
+-- Create test views for XML functions
+CREATE VIEW xmlview1 AS 
+SELECT xmlcomment('This is a test comment') AS xmldata;
+
+CREATE VIEW xmlview2 AS 
+SELECT xmlconcat('<hello>', 'World</hello>') AS xmldata;
+
+CREATE VIEW xmlview3 AS 
+SELECT xmlelement(
+    name element,
+    xmlattributes(1 as ":one:", 'deuce' as two),
+    'content&'
+) AS xmldata;
+
+CREATE VIEW xmlview4 AS 
+SELECT xmlelement(
+    name employee,
+    xmlforest(name, age, salary as pay)
+) FROM emp;
+
+-- Create view for XML parsing tests
+CREATE VIEW xmlview5 AS 
+SELECT xmlparse(DOCUMENT '<abc>test</abc>', STANDALONE YES);
+
+-- Create view for XML processing instructions
+CREATE VIEW xmlview6 AS 
+SELECT xmlpi('xml', VERSION '1.0');
+
+-- Create view for XML document root testing
+CREATE VIEW xmlview7 AS 
+SELECT xmlroot(
+    xmlelement(name doc, xmlattributes('en' as lang), '<content/>'),
+    VERSION '1.0',
+    STANDALONE YES
+);
+
+-- Create views for XML serialization tests
+CREATE VIEW xmlview8 AS 
+SELECT xmlserialize(CONTENT '<a>test</a>' AS VARCHAR(50));
+
+CREATE VIEW xmlview9 AS 
+SELECT xmlserialize(CONTENT '<a>test</a>', TYPE XML);

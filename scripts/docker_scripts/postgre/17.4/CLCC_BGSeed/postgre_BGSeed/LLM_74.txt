@@ -1,0 +1,84 @@
+-- Create a table with specific constraints
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE,
+    age INTEGER CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert data that tests boundary conditions for the CHECK constraint
+INSERT INTO test_table(name, age) VALUES('test_user', -1);
+INSERT INTO test_table(name, age) VALUES('another_test_user', 2147483647); -- Testing integer limits
+
+-- Create an index to test unique constraints
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_name ON test_table (name);
+
+-- Test the unique constraint by inserting duplicate data
+INSERT INTO test_table(name, age) VALUES('test_user', 25);
+
+-- Create a function with side effects to test function execution
+CREATE OR REPLACE FUNCTION test_function()
+RETURNS void AS $$
+BEGIN
+    RAISE NOTICE 'This is a test function.';
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT test_function();
+
+-- Test triggers by creating a BEFORE INSERT trigger
+CREATE TABLE IF NOT EXISTS audit_log (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(255),
+    action TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION log_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_log(table_name) VALUES(TG_TABLE_NAME);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER before_insert_trigger
+BEFORE INSERT ON test_table
+FOR EACH ROW EXECUTE PROCEDURE log_insert();
+
+-- Test the trigger by inserting data
+INSERT INTO test_table(name, age) VALUES('trigger_test', 30);
+
+-- Create a view to test query execution paths
+CREATE VIEW IF NOT EXISTS test_view AS
+SELECT name, age FROM test_table WHERE age > 25;
+
+-- Query the view to ensure it works as expected
+SELECT * FROM test_view;
+
+-- Test stored procedures with error handling
+CREATE OR REPLACE PROCEDURE test_procedure()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- This will cause an error due to division by zero
+    RAISE NOTICE 'Attempting division by zero: %', 1/0;
+EXCEPTION
+    WHEN division_by_zero THEN
+        RAISE NOTICE 'Caught division_by_zero exception';
+END;
+$$;
+
+CALL test_procedure();
+
+-- Test roles and permissions
+CREATE ROLE IF NOT EXISTS test_role WITH NOLOGIN;
+GRANT SELECT ON test_table TO test_role;
+REVOKE INSERT ON test_table FROM test_role;
+
+-- Clean up the created objects (commented out for testing purposes)
+-- DROP TABLE IF EXISTS test_table CASCADE;
+-- DROP TABLE IF EXISTS audit_log CASCADE;
+-- DROP VIEW IF EXISTS test_view CASCADE;
+-- DROP FUNCTION IF EXISTS test_function() CASCADE;
+-- DROP PROCEDURE IF EXISTS test_procedure() CASCADE;
+-- DROP ROLE IF EXISTS test_role;

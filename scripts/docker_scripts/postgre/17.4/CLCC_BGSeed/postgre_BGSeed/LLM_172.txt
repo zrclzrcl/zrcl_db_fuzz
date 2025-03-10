@@ -1,0 +1,32 @@
+-- Create a simple table structure for testing purposes
+
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+CREATE TABLE IF NOT EXISTS test_schema.users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS test_schema.posts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES test_schema.users(id),
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for faster querying
+CREATE INDEX idx_users_username ON test_schema.users(username);
+CREATE INDEX idx_posts_posted_at ON test_schema.posts(posted_at);
+CREATE UNIQUE INDEX idx_users_email ON test_schema.users(email);
+
+-- Insert sample data
+INSERT INTO test_schema.users (username, email)
+VALUES ('test_user1', 'test1@example.com'),
+       ('test_user2', 'test2@example.com');
+
+INSERT INTO test_schema.posts (user_id, title, content)
+VALUES (1, 'First Post', 'This is the first test post.'),
+       (2, 'Second Post', 'This is another test post.');

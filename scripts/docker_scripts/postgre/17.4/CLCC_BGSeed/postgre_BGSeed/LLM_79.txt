@@ -1,0 +1,100 @@
+-- Initial seed setup for PostgreSQL database
+
+-- Create schema if not exists
+CREATE SCHEMA IF NOT EXISTS public;
+
+-- Create sample table with various data types
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    metadata JSONB
+);
+
+-- Create table with UUID primary key
+CREATE TABLE IF NOT EXISTS products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
+    created_by INT REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create table with foreign key constraint
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id),
+    quantity INT NOT NULL CHECK (quantity > 0),
+    order_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    total_amount NUMERIC(10, 2)
+);
+
+-- Create index for frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
+
+-- Create function to calculate order total amount
+CREATE OR REPLACE FUNCTION calculate_order_total()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.total_amount = (
+        SELECT p.price * NEW.quantity
+        FROM products p
+        WHERE p.id = NEW.product_id
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to update order total amount
+CREATE TRIGGER update_order_total
+BEFORE INSERT OR UPDATE ON orders
+FOR EACH ROW EXECUTE FUNCTION calculate_order_total();
+
+-- Create sample data
+INSERT INTO users (username, email)
+VALUES 
+    ('john_doe', 'john.doe@example.com'),
+    ('jane_smith', 'jane.smith@example.com');
+
+INSERT INTO products (name, description, price, created_by)
+VALUES 
+    ('Laptop', 'High-performance notebook with 16GB RAM and 512GB SSD', 999.99, 1),
+    ('Smartphone', 'Latest model with 128GB storage and 6.7-inch display', 699.99, 1);
+
+-- Create a procedural language extension if not exists
+CREATE EXTENSION IF NOT EXISTS plpgsql;
+
+-- Create a stored procedure example
+CREATE PROCEDURE update_product_price(
+    product_id UUID,
+    new_price NUMERIC(10, 2)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE products 
+    SET price = new_price
+    WHERE id = product_id;
+END;
+$$;
+
+-- Create a view for user orders
+CREATE VIEW user_orders AS
+SELECT 
+    u.username,
+    p.name AS product_name,
+    o.quantity,
+    o.order_date,
+    o.total_amount
+FROM 
+    users u
+JOIN 
+    orders o ON u.id = o.user_id
+JOIN 
+    products p ON o.product_id = p.id;

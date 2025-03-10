@@ -1,0 +1,63 @@
+-- Create star tables
+CREATE TABLE a_Star (
+    id int,
+    txt text
+);
+
+CREATE TABLE b_Star (
+    id int,
+    txt text
+);
+
+CREATE TABLE c_Star (
+    id int,
+    d float4
+);
+
+CREATE TABLE d_Star (
+    id int,
+    p polygon
+);
+
+CREATE TABLE e_Star (
+    id int,
+    i int2
+);
+
+CREATE TABLE f_Star (
+    id int,
+    txt text,
+    d float4,
+    p polygon,
+    i int2
+);
+
+-- Insert sample data into star tables
+INSERT INTO a_Star VALUES(1, 'Sample text for a');
+INSERT INTO b_Star VALUES(2, 'Another sample text for b');
+INSERT INTO c_Star VALUES(3, 5.678);
+INSERT INTO d_Star VALUES(4, '(0,0),(1,1)'::polygon);
+INSERT INTO e_Star VALUES(5, 50);
+INSERT INTO f_Star VALUES(6, 'More sample text', 9.876, '(2,2),(3,3)'::polygon, 100);
+
+-- Analyze star tables
+ANALYZE a_Star;
+ANALYZE b_Star;
+ANALYZE c_Star;
+ANALYZE d_Star;
+ANALYZE e_Star;
+ANALYZE f_Star;
+
+-- Create and populate another table
+CREATE TABLE another_table (
+    id int,
+    name text,
+    description text
+);
+
+INSERT INTO another_table VALUES(1, 'Item 1', 'Description for item one');
+INSERT INTO another_table VALUES(2, 'Item 2', 'Description for item two');
+INSERT INTO another_table VALUES(3, 'Item 3', 'Description for item three');
+
+-- Analyze the additional table
+ANALYZE another_table;

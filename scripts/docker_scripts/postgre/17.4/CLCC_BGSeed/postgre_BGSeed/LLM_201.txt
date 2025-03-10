@@ -1,0 +1,56 @@
+-- Initial seed for PostgreSQL testing environment
+
+-- Create a dedicated schema for test objects
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create tables used in functions and queries
+CREATE TABLE IF NOT EXISTS test_schema.int8_tbl (
+    q1 int8,
+    q2 int8
+);
+
+CREATE TABLE IF NOT EXISTS test_schema.users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    email VARCHAR(100) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data into tables
+INSERT INTO test_schema.int8_tbl (q1, q2)
+VALUES 
+    (100, 200),
+    (300, 400),
+    (500, 600);
+
+INSERT INTO test_schema.users (name, email)
+VALUES 
+    ('Alice', 'alice@example.com'),
+    ('Bob', 'bob@example.com'),
+    ('Charlie', 'charlie@example.com');
+
+-- Create functions used in testing
+CREATE OR REPLACE FUNCTION test_schema.extractq2(t test_schema.int8_tbl)
+RETURNS int8 AS $$
+    SELECT t.q2;
+$$ LANGUAGE SQL IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION test_schema.rngfuncbar()
+RETURNS SETOF text AS $$
+    SELECT 'foo'::text
+    UNION ALL
+    SELECT 'bar'::text;
+$$ LANGUAGE SQL STABLE;
+
+-- Create a view for testing ordinality
+CREATE VIEW test_schema.usersview AS
+    SELECT *
+    FROM ROWS FROM(
+        test_schema.get_users(),
+        generate_series(10, 11)
+    ) WITH ORDINALITY;
+
+-- Verify the setup
+SELECT * FROM test_schema.int8_tbl;
+SELECT * FROM test_schema.users;
+SELECT * FROM test_schema.usersview;

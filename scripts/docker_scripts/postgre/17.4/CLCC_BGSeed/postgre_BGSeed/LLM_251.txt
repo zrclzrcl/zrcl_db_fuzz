@@ -1,0 +1,72 @@
+-- Create a table with various data types and constraints
+CREATE TABLE t1 (
+    id SERIAL PRIMARY KEY,
+    col1 INT NOT NULL,
+    col2 TEXT UNIQUE,
+    col3 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (col1 > 0)
+);
+
+-- Insert sample data into the table
+INSERT INTO t1 (col1, col2) VALUES (1, 'test1'), (2, 'test2');
+
+-- Create an index on a frequently queried column
+CREATE INDEX idx_t1_col1 ON t1 (col1);
+
+-- Create a materialized view based on the table
+CREATE MATERIALIZED VIEW mv_t1 AS SELECT * FROM t1;
+
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW mv_t1;
+
+-- Create a function to log insertions
+CREATE FUNCTION log_insert() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO t_log VALUES (NEW.id, NEW.col2);
+    RETURN NEW;
+END $$;
+
+-- Create a trigger that calls the logging function
+CREATE TRIGGER trig_log AFTER INSERT ON t1 FOR EACH ROW EXECUTE PROCEDURE log_insert();
+
+-- Insert data to test the trigger and logging
+INSERT INTO t1 (col1, col2) VALUES (3, 'test3');
+
+-- Alter table to add a new column with a default value
+ALTER TABLE t1 ADD COLUMN col4 TEXT DEFAULT 'test';
+
+-- Update existing records
+UPDATE t1 SET col2 = 'updated' WHERE col1 = 1;
+
+-- Perform a join query across tables
+SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id;
+
+-- Use window functions for ranking
+SELECT RANK() OVER (ORDER BY col1) AS rank_col FROM t1;
+
+-- Test concurrent index creation
+CREATE INDEX CONCURRENTLY idx_t2_col1 ON t2 (col1);
+
+-- Drop the index after testing
+DROP INDEX idx_t2_col1;
+
+-- Test transaction rollback
+BEGIN;
+    INSERT INTO t1 (col1, col2) VALUES (4, 'test4');
+ROLLBACK;
+
+-- Test error handling with division by zero
+SELECT col1 / 0 FROM t1 WHERE col1 = 0;
+
+-- Clean up triggers and functions
+DROP TRIGGER trig_log ON t1;
+DROP FUNCTION log_insert();
+
+-- Drop the materialized view
+DROP MATERIALIZED VIEW mv_t1;
+
+-- Remove indexes
+DROP INDEX idx_t1_col1;
+
+-- Finally, drop all tables to clean up the database
+DROP TABLE t2, t1;

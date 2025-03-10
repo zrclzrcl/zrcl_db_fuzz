@@ -1,0 +1,79 @@
+-- Create test tables with various constraints and indexes
+CREATE TABLE employee (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    department_id INT NOT NULL REFERENCES department(id),
+    salary NUMERIC(10, 2) CHECK (salary > 0),
+    hire_date DATE DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE department (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    budget NUMERIC(12, 2),
+    manager_id INT REFERENCES employee(id)
+);
+
+CREATE TABLE project (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(20) CHECK (status IN ('Not Started', 'In Progress', 'Completed'))
+);
+
+CREATE TABLE assignment (
+    employee_id INT REFERENCES employee(id),
+    project_id INT REFERENCES project(id),
+    role VARCHAR(50),
+    PRIMARY KEY (employee_id, project_id)
+);
+
+-- Insert sample data into tables
+INSERT INTO department(name, budget) VALUES
+('Engineering', 1000000.00),
+('Marketing', 500000.00),
+('Sales', 750000.00);
+
+INSERT INTO employee(name, department_id, salary, hire_date) VALUES
+('John Doe', 1, 85000.00, '2023-01-15'),
+('Jane Smith', 2, 75000.00, '2023-02-20'),
+('Mike Johnson', 3, 90000.00, '2023-03-10');
+
+INSERT INTO project(name, start_date, end_date, status) VALUES
+('Product Development', '2023-04-01', '2023-06-30', 'In Progress'),
+('Marketing Campaign', '2023-05-01', '2023-07-31', 'Not Started'),
+('Sales Expansion', '2023-06-01', '2023-08-31', 'Completed');
+
+INSERT INTO assignment(employee_id, project_id, role) VALUES
+(1, 1, 'Software Engineer'),
+(2, 2, 'Marketing Manager'),
+(3, 3, 'Sales Lead');
+
+-- Create indexes for frequently queried columns
+CREATE INDEX idx_employee_department ON employee(department_id);
+CREATE INDEX idx_project_status ON project(status);
+
+-- Test queries to verify data integrity and query performance
+SELECT e.name AS employee_name, d.name AS department_name, e.salary 
+FROM employee e 
+JOIN department d ON e.department_id = d.id;
+
+SELECT p.name, COUNT(a.employee_id) AS team_size 
+FROM project p 
+LEFT JOIN assignment a ON p.id = a.project_id 
+GROUP BY p.name;
+
+SELECT e.name, a.role 
+FROM employee e 
+WHERE e.id IN (SELECT a.employee_id FROM assignment a WHERE a.project_id = 1);
+
+-- Update and delete operations
+UPDATE department SET budget = 1200000.00 WHERE name = 'Engineering';
+DELETE FROM project WHERE status = 'Completed';
+
+-- Vacuum analyze to update query plans
+VACUUM ANALYZE;
+
+-- Clean up test data
+DROP TABLE assignment, employee, project, department;

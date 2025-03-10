@@ -1,0 +1,53 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INT,
+    string_col TEXT,
+    boolean_col BOOLEAN,
+    timestamp_col TIMESTAMP WITH TIME ZONE
+);
+
+INSERT INTO test_table (integer_col, string_col, boolean_col, timestamp_col)
+VALUES (0, '', TRUE, '2023-10-05 12:34:56+00');
+INSERT INTO test_table (integer_col, string_col, boolean_col, timestamp_col)
+VALUES (-9223372036854775808, NULL, FALSE, 'infinity');
+INSERT INTO test_table (integer_col, string_col, boolean_col, timestamp_col)
+VALUES (9223372036854775807, 'test_string', TRUE, '-infinity');
+
+SELECT * FROM test_table;
+
+UPDATE test_table SET boolean_col = NOT boolean_col WHERE id = 1;
+
+DELETE FROM test_table WHERE integer_col < 0;
+
+CREATE TABLE test_join (
+    id SERIAL PRIMARY KEY,
+    foreign_id INT REFERENCES test_table(id),
+    name TEXT
+);
+
+INSERT INTO test_join (foreign_id, name) VALUES (1, 'test_name');
+
+SELECT t.id, j.name 
+FROM test_table t 
+JOIN test_join j ON t.id = j.foreign_id;
+
+SAVEPOINT my_savepoint;
+DELETE FROM test_table WHERE id = 2;
+ROLLBACK TO my_savepoint;
+
+DO $$
+BEGIN
+    RAISE NOTICE 'Test notice';
+    IF (SELECT COUNT(*) FROM test_table) > 0 THEN
+        RAISE EXCEPTION 'Test exception';
+    END IF;
+END $$;
+
+SELECT SUM(integer_col), AVG(integer_col)
+FROM test_table;
+
+SELECT COUNT(*), MAX(timestamp_col), MIN(timestamp_col)
+FROM test_table;
+
+DROP TABLE test_join;
+DROP TABLE test_table;

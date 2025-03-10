@@ -1,0 +1,76 @@
+-- PostgreSQL initial seed for database fuzz testing
+-- This seed includes various SQL statements that test edge cases,
+-- cover multiple functionalities, and have the potential to trigger bugs.
+
+-- Create users with different privileges
+CREATE USER test_user1 WITH PASSWORD 'testpass';
+CREATE USER test_user2 WITH SUPERUSER;
+CREATE GROUP test_group;
+
+-- Create tables with various constraints
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (name)
+);
+
+-- Test edge cases with large data types
+CREATE TABLE test_large_data (
+    id BIGINT,
+    text_col TEXT,
+    bytea_col BYTEA,
+    json_col JSONB
+);
+
+-- Create indexes and test index operations
+CREATE INDEX idx_test ON test_table (name);
+ALTER TABLE test_table ADD CONSTRAINT check_name CHECK (name <> '');
+
+-- Test trigger functions
+CREATE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger fired';
+    RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger
+BEFORE INSERT ON test_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+
+-- Test transactions and concurrency
+BEGIN;
+INSERT INTO test_table (name) VALUES ('test');
+COMMIT;
+
+-- Test vacuum and analyze
+VACUUM ANALYZE test_table;
+
+-- Test various DDL operations
+ALTER TABLE test_table ADD COLUMN new_col INT;
+RENAME TABLE test_table TO test_table_renamed;
+DROP TABLE test_table_renamed;
+
+-- Test user and privilege management
+GRANT SELECT ON test_large_data TO test_group;
+REASSIGN OWNED BY test_user1 TO test_user2;
+
+-- Test sequence operations
+CREATE SEQUENCE test_seq;
+ALTER SEQUENCE test_seq OWNER TO test_user1;
+SELECT nextval('test_seq');
+
+-- Test extensions and specific PostgreSQL features
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+SELECT uuid_generate_v4();
+
+-- Cleanup objects
+DROP TABLE IF EXISTS test_large_data;
+DROP INDEX IF EXISTS idx_test;
+DROP FUNCTION IF EXISTS trigger_func();
+DROP TRIGGER IF EXISTS test_trigger ON test_table;
+
+-- Cleanup users and groups
+DROP GROUP test_group;
+DROP USER test_user1;
+DROP USER test_user2;

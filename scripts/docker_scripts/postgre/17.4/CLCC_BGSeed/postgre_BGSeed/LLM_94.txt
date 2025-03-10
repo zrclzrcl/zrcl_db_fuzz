@@ -1,0 +1,93 @@
+\connect postgres
+
+SET default_transaction_isolation = 'read committed';
+SET client_min_messages = warning;
+SET log_destination = 'stderr';
+SET logging_collector = on;
+SET log_directory = 'pg_log';
+SET log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log';
+SET log_truncate_on_rotation = on;
+SET log_checkpoints = off;
+SET log_connections = off;
+SET log_disconnections = off;
+SET log_duration = off;
+SET log_error_verbosity = default;
+SET log_line_prefix = '';
+SET log_min_messages = warning;
+SET log_statement_sample_rate = 0.0;
+SET log_temp_files = 0;
+SET log_timezone = 'UTC';
+SET log_rotation_size = 10MB;
+SET max_connections = 200;
+SET shared_buffers = 64MB;
+SET effective_cache_size = 512MB;
+SET maintenance_work_mem = 64MB;
+SET vacuum_work_mem = 32MB;
+SET checkpoint_segments = 8;
+SET wal_level = minimal;
+SET archive_mode = off;
+SET max_wal_size = 1GB;
+SET min_wal_size = 80MB;
+SET checkpoint_timeout = 5min;
+SET checkpoint_completion_target = 0.9;
+
+\echo 'Cleaning up existing tables...'
+DROP TABLE IF EXISTS m CASCADE;
+DROP TABLE IF EXISTS has_volatile CASCADE;
+DROP EVENT TRIGGER IF EXISTS has_volatile_rewrite;
+DROP FUNCTION IF EXISTS log_rewrite();
+DROP SCHEMA IF EXISTS fast_default CASCADE;
+set search_path = public;
+
+-- Create a table with various data types
+CREATE TABLE m (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    numeric_field NUMERIC(10, 2),
+    boolean_field BOOLEAN DEFAULT FALSE,
+    date_field DATE DEFAULT CURRENT_DATE,
+    timestamp_field TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    json_field JSONB,
+    uuid_field UUID DEFAULT gen_random_uuid()
+);
+
+-- Create a table with volatile functions
+CREATE TABLE has_volatile (
+    id SERIAL PRIMARY KEY,
+    now_value TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    random_value INT DEFAULT RANDOM() * 100
+);
+
+-- Create an event trigger to log rewrite operations
+CREATE FUNCTION log_rewrite() RETURNS EVENT_TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Rewrite operation detected on table %', tg_tag;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE EVENT TRIGGER has_volatile_rewrite
+ON REWRITE OF TABLE has_volatile
+EXECUTE FUNCTION log_rewrite();
+
+-- Create a schema for testing fast vacuum settings
+CREATE SCHEMA fast_default;
+
+-- Create tables to test foreign key relationships
+CREATE TABLE leader (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE follower (
+    id SERIAL PRIMARY KEY,
+    leader_id INT REFERENCES leader(id),
+    data JSONB,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes on the tables
+CREATE INDEX idx_leader_name ON leader(name);
+CREATE INDEX idx_follower_last_updated ON follower(last_updated);
+
+\echo 'Setup complete!'

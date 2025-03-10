@@ -1,0 +1,22 @@
+CREATE TYPE status_enum AS ENUM ('active', 'inactive', 'unknown');
+
+CREATE TABLE fuzz_test_table (
+    id SERIAL PRIMARY KEY,
+    int_array INTEGER[],
+    ts TIMESTAMP WITH TIME ZONE,
+    uuid_col UUID,
+    jsonb_col JSONB,
+    status status_enum,
+    point_col POINT,
+    polygon_col POLYGON
+);
+
+INSERT INTO fuzz_test_table (int_array, ts, uuid_col, jsonb_col, status, point_col, polygon_col) VALUES
+('{-2147483648, 0, 2147483647}', '2024-01-01 12:34:56+00', '00000000-0000-0000-0000-000000000000', '{}', 'unknown', '(0,0)', '((0,0),(1,0),(0,1))'),
+('{-2147483648}', '2050-12-31 23:59:59+00', 'ffffffff-ffff-ffff-ffff-ffffffffffff', '{"key": "value"}', 'active', '(1e6, -1e6)', '((1,1),(2,1),(1,2))'),
+('{}', '1970-01-01 00:00:01+00', '12345678-1234-5678-1234-567812345678', '[1, "two", 3]', 'inactive', '(999999.999, -999999.999)', '((0,0),(0,0))'),
+('{-2147483648, 2147483647}', 'infinity', 'abcdefab-cdef-1234-5678-abcdefabcdef', '{"nested": {"object": true}}', 'unknown', '(999999.0, -999999.0)', '((1,2),(3,4))');
+
+SELECT array_length(int_array, 1) FROM fuzz_test_table;
+SELECT jsonb_object_keys(jsonb_col) FROM fuzz_test_table WHERE id = 1;
+SELECT ST_Area(polygon_col), ST_Perimeter(polygon_col) FROM fuzz_test_table WHERE id = 2;

@@ -1,0 +1,38 @@
+-- Create a table with various PostgreSQL-specific data types
+CREATE TABLE test_edge_cases (
+    id uuid PRIMARY KEY,
+    json_data jsonb,
+    text_field text,
+    int_array integer[],
+    timestamp_tz timestamp with time zone,
+    bool_value boolean
+);
+
+-- Insert edge case values for testing
+INSERT INTO test_edge_cases (id, json_data, text_field, int_array, timestamp_tz, bool_value)
+VALUES 
+    ('00000000-0000-0000-0000-000000000000', '{"key": "value"}', 'This is a test text.', '{1,2,3}', '2024-01-01 00:00:00+00', true),
+    ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'null', REPEAT('X', 1000), '{}', 'infinity', false),
+    ('123e4567-e89b-12d3-a456-426614174000', '{"array": [1, 2, null]}', '', '{-2147483648}', '2024-01-01 00:00:00+00', NULL);
+
+-- Test JSONB operations
+SELECT json_data ->> 'key' FROM test_edge_cases WHERE id = '00000000-0000-0000-0000-000000000000';
+SELECT * FROM test_edge_cases WHERE json_data @> '{"array": [1]}';
+
+-- Test text operations
+SELECT text_field, LENGTH(text_field) FROM test_edge_cases;
+SELECT * FROM test_edge_cases WHERE text_field LIKE 'This%';
+
+-- Test array operations
+SELECT int_array[1] FROM test_edge_cases WHERE id = '00000000-0000-0000-0000-000000000000';
+SELECT ARRAY_LENGTH(int_array, 1) FROM test_edge_cases;
+
+-- Test timestamp operations
+SELECT EXTRACT(YEAR FROM timestamp_tz) FROM test_edge_cases;
+SELECT AGE(timestamp_tz, NOW()) FROM test_edge_cases;
+
+-- Test UUID operations
+SELECT uuid_nil() = id FROM test_edge_cases WHERE id = '00000000-0000-0000-0000-000000000000';
+
+-- Cleanup
+DROP TABLE test_edge_cases;

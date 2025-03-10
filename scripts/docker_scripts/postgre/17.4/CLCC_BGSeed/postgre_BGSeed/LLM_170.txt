@@ -1,0 +1,81 @@
+WITH
+    -- Test log(1+x) for small x values near 0
+    log1_plus_x_tests AS (
+        SELECT 
+            'log(1+'||x||')' AS expr,
+            log(1 + x::numeric) AS actual_value,
+            expected_result AS expected_value,
+            ABS(log(1 + x::numeric) - expected_result) < 1e-12 AS is_accurate
+        FROM (
+            VALUES 
+                ('0.5', '-0.346573590279973'),
+                ('0.25', '-0.223143551313737'),
+                ('0.1', '-0.0953101798043247'),
+                ('0.05', '-0.0482895863785985'),
+                ('0.025', '-0.0246913580525693'),
+                ('0.01', '-0.00995033085315572')
+        ) AS t(x, expected_result)
+    ),
+
+    -- Test log(1-x) for small x values near 0
+    log1_minus_x_tests AS (
+        SELECT 
+            'log(1-'||x||')' AS expr,
+            log(1 - x::numeric) AS actual_value,
+            expected_result AS expected_value,
+            ABS(log(1 - x::numeric) - expected_result) < 1e-12 AS is_accurate
+        FROM (
+            VALUES 
+                ('0.5', '-0.693147180559945'),
+                ('0.25', '-0.287682072451781'),
+                ('0.1', '-0.0953101798043247'),
+                ('0.05', '-0.0482895863785985'),
+                ('0.025', '-0.0246913580525693'),
+                ('0.01', '-0.00995033085315572')
+        ) AS t(x, expected_result)
+    ),
+
+    -- Test log(x) for large x values
+    large_x_tests AS (
+        SELECT 
+            'log('||x||')' AS expr,
+            log(x::numeric) AS actual_value,
+            expected_result AS expected_value,
+            ABS(log(x::numeric) - expected_result) < 1e-12 AS is_accurate
+        FROM (
+            VALUES 
+                ('1000000', '13.8155105579643'),
+                ('10000000', '16.1180938233317'),
+                ('100000000', '18.4206807430862'),
+                ('1000000000', '20.7232658339093'),
+                ('10000000000', '22.9999999999999')
+        ) AS t(x, expected_result)
+    ),
+
+    -- Test log(x) for small x values near 0
+    small_x_tests AS (
+        SELECT 
+            'log('||x||')' AS expr,
+            log(x::numeric) AS actual_value,
+            expected_result AS expected_value,
+            ABS(log(x::numeric) - expected_result) < 1e-12 AS is_accurate
+        FROM (
+            VALUES 
+                ('0.0000001', '-14.5086503387759'),
+                ('0.00000001', '-16.1180938233317'),
+                ('0.000000001', '-18.4206807430862'),
+                ('0.0000000001', '-20.7232658339093'),
+                ('0.00000000001', '-23.0258509299405')
+        ) AS t(x, expected_result)
+    )
+
+-- Combine all test results
+SELECT * FROM (
+    SELECT expr, actual_value, expected_value, is_accurate FROM log1_plus_x_tests
+    UNION ALL
+    SELECT expr, actual_value, expected_value, is_accurate FROM log1_minus_x_tests
+    UNION ALL
+    SELECT expr, actual_value, expected_value, is_accurate FROM large_x_tests
+    UNION ALL
+    SELECT expr, actual_value, expected_value, is_accurate FROM small_x_tests
+) AS all_tests;

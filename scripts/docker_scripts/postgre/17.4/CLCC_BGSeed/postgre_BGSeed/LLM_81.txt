@@ -1,0 +1,95 @@
+-- Create a schema for organizing database objects
+CREATE SCHEMA test_schema;
+
+-- Create a table to test basic data types including edge cases
+CREATE TABLE test_schema.basic_types (
+    id SERIAL PRIMARY KEY,
+    tiny_int SMALLINT,
+    small_int INT,
+    big_int BIGINT,
+    decimal_num DECIMAL(10, 2),
+    text_field TEXT,
+    bool_flag BOOLEAN,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    uuid_col UUID
+);
+
+-- Create a table with unique constraints and indexes for testing
+CREATE TABLE test_schema.index_test (
+    id SERIAL PRIMARY KEY,
+    unique_val INT UNIQUE,
+    non_unique_val INT,
+    text_search TEXT
+);
+
+-- Add a GIN index for full-text search capabilities
+CREATE INDEX idx_fts ON test_schema.index_test USING GIN (text_search gin_trgm_ops);
+
+-- Create a function to handle edge cases and complex logic
+CREATE OR REPLACE FUNCTION test_schema.calculate_sum(a INT, b INT)
+RETURNS INT AS $$
+BEGIN
+    RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a stored procedure for testing transactions
+CREATE PROCEDURE test_schema.test_proc()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    sum_val INT;
+BEGIN
+    INSERT INTO test_schema.basic_types (tiny_int, small_int, big_int)
+    VALUES (-32768, -2147483648, 9223372036854775807);
+    
+    CALL calculate_sum(-2147483648, 2147483647);
+END;
+$$;
+
+-- Create a trigger function to test data integrity
+CREATE FUNCTION test_schema.trig_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.text_field IS NULL THEN
+        NEW.text_field = 'Default value';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply the trigger to enforce data integrity
+CREATE TRIGGER text_trigger BEFORE INSERT ON test_schema.basic_types
+FOR EACH ROW EXECUTE FUNCTION test_schema.trig_func();
+
+-- Create a view for testing complex queries and joins
+CREATE VIEW test_schema.test_view AS
+SELECT bt.id, it.unique_val, bt.text_field
+FROM test_schema.basic_types bt
+JOIN test_schema.index_test it ON bt.id = it.id;
+
+-- Test partitioned tables for query planning
+CREATE TABLE test_schema.partitioned_data (
+    id SERIAL,
+    region TEXT,
+    amount DECIMAL(10, 2)
+) PARTITION BY RANGE (amount);
+
+-- Create a child partition for testing specific ranges
+CREATE TABLE test_schema.partitioned_data_p1 PARTITION OF test_schema.partitioned_data
+FOR VALUES FROM (0) TO (100000);
+
+-- Test foreign key constraints and relationships
+CREATE TABLE test_schema.foreign_key_test (
+    id SERIAL PRIMARY KEY,
+    basic_id INT REFERENCES test_schema.basic_types(id)
+);
+
+-- Insert sample data to test with various edge cases
+INSERT INTO test_schema.basic_types (tiny_int, small_int, big_int, decimal_num, text_field, bool_flag, timestamp_col, uuid_col)
+VALUES (-32768, -2147483648, 9223372036854775807, 1234.56, 'Edge case test', TRUE, '2023-10-01 00:00:00+00', '12345678-1234-5678-1234-567812345678');
+
+-- Test JSONB data type with complex structures
+ALTER TABLE test_schema.index_test ADD COLUMN jsonb_col JSONB;
+INSERT INTO test_schema.index_test (text_search, jsonb_col)
+VALUES ('test search', '{"key": "value", "array": [1, 2, 3], "nested": {"object": true}}');

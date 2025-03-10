@@ -1,0 +1,28 @@
+CREATE TABLE pg_fuzz_test (
+    id SERIAL PRIMARY KEY,
+    jsonb_col JSONB,
+    uuid_col UUID,
+    citext_col CITEXT,
+    interval_col INTERVAL,
+    geometry_col GEOMETRY
+);
+
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('{"key": "value", "array": [1, 2, 3]}', '12345678-1234-5678-1234-567812345678', 'MiXeD CaSe', '1 year 3 months', 'POINT (1 2)');
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('{"nested": {"object": true}, "numbers": [null, 0, -1]}', '87654321-8765-4321-8765-432187654321', 'UPPERCASE', '1 day 5 hours', 'LINESTRING (0 0, 1 1)');
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('invalid_json', 'invalid-uuid-format', 'lowercase', 'invalid_interval', 'POINT (3 4)');
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('{"key": "value", "array": []}', '12345678-1234-5678-1234-567812345678', 'MiXeD CaSe', '0 seconds', 'POLYGON ((0 0, 1 0, 1 1, 0 1))');
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('{"key": "value", "array": [null]}', '87654321-8765-4321-8765-432187654321', 'UPPERCASE', '1 year 3 months 5 days', 'GEOMETRYCOLLECTION (POINT (2 3), LINESTRING (3 4, 5 6))');
+INSERT INTO pg_fuzz_test (jsonb_col, uuid_col, citext_col, interval_col, geometry_col) VALUES 
+('{"key": "value", "array": [1, null]}', 'invalid-uuid-format', 'lowercase', 'invalid_interval', 'POINT (invalid_coordinate)');
+SELECT jsonb_path_exists(jsonb_col, '$.nested.object') FROM pg_fuzz_test;
+INSERT INTO pg_fuzz_test (jsonb_col) VALUES ('{"key": "value", "array": [1]}');
+INSERT INTO pg_fuzz_test (uuid_col) VALUES ('{12345678-1234-5678-1234-567812345678}');
+INSERT INTO pg_fuzz_test (citext_col) VALUES ('MiXeD CaSe');
+INSERT INTO pg_fuzz_test (interval_col) VALUES ('P1Y3M5DT1H');
+INSERT INTO pg_fuzz_test (geometry_col) VALUES ('SRID=4326;POINT(1 2)');
+DROP TABLE pg_fuzz_test;

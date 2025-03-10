@@ -1,0 +1,82 @@
+-- Create partitioned_table and its partitions
+CREATE TABLE partitioned_table (
+    id INT,
+    a INT,
+    b TEXT
+) PARTITION BY LIST (a);
+
+CREATE TABLE pt_part1 PARTITION OF partitioned_table FOR VALUES IN (1);
+CREATE TABLE pt_part2 PARTITION OF partitioned_table FOR VALUES IN (2);
+
+-- Insert data into partitioned_table
+INSERT INTO pt_part1 VALUES (1, 1, 'Row 1');
+INSERT INTO pt_part2 VALUES (2, 2, 'Row 2');
+
+-- Create multi_test table and insert data
+CREATE TABLE multi_test (
+    id INT
+);
+
+INSERT INTO multi_test VALUES (1);
+
+-- Define the function for multi_test trigger
+CREATE OR REPLACE FUNCTION multi_test_trig()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Example trigger logic
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger on multi_test table
+CREATE TRIGGER my_trigger
+AFTER UPDATE ON multi_test
+FOR EACH ROW
+EXECUTE FUNCTION multi_test_trig();
+
+-- Create alter_able table
+CREATE TABLE alter_able (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT
+);
+
+-- Insert data into alter_able
+INSERT INTO alter_able (name, description) VALUES ('Item 1', 'Description for item 1');
+INSERT INTO alter_able (name, description) VALUES ('Item 2', 'Description for item 2');
+
+-- Define function to get from partitioned_table
+CREATE OR REPLACE FUNCTION get_from_partitioned_table(a INT)
+RETURNS SETOF partitioned_table AS $$
+BEGIN
+    RETURN QUERY SELECT * FROM partitioned_table WHERE a = $1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Define function to list from partitioned_table
+CREATE OR REPLACE FUNCTION list_partitioned_table()
+RETURNS SETOF INT AS $$
+DECLARE
+    rec record;
+BEGIN
+    FOR rec IN SELECT * FROM partitioned_table LOOP
+        RETURN NEXT rec.id;
+    END LOOP;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Define trigger function for alter_able
+CREATE OR REPLACE FUNCTION alter_able_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Example trigger logic
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger on alter_able table
+CREATE TRIGGER alter_able_trig
+AFTER UPDATE OR TRUNCATE ON alter_able
+FOR EACH ROW
+EXECUTE FUNCTION alter_able_func();

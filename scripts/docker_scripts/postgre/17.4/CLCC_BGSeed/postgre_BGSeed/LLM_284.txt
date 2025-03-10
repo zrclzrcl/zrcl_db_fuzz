@@ -1,0 +1,48 @@
+-- Create test_table to store basic information
+CREATE TABLE IF NOT EXISTS test_table (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for faster lookups
+CREATE INDEX IF NOT EXISTS idx_test_table_id ON test_table (id);
+CREATE INDEX IF NOT EXISTS idx_test_table_name ON test_table (name);
+
+-- Insert sample data into test_table
+INSERT INTO test_table (id, name, value)
+SELECT 
+    gen_random_uuid(),
+    'test_entry_' || i,
+    i * 10
+FROM generate_series(1, 5) AS i;
+
+-- Create a view for common queries
+CREATE VIEW IF NOT EXISTS vw_test_data AS
+SELECT 
+    id,
+    name,
+    value,
+    created_at,
+    updated_at
+FROM test_table
+ORDER BY created_at DESC;
+
+-- Create a stored procedure for inserting data
+CREATE OR REPLACE PROCEDURE insert_test_entry(
+    p_name TEXT,
+    p_value INT DEFAULT 0
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO test_table (id, name, value)
+    VALUES (gen_random_uuid(), p_name, p_value);
+END;
+$$;
+
+-- Grant permissions to use the table and view
+GRANT SELECT ON test_table TO public;
+GRANT SELECT ON vw_test_data TO public;

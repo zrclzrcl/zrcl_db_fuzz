@@ -1,0 +1,23 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE test_table (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    integer_col INT NOT NULL,
+    text_col TEXT,
+    boolean_col BOOLEAN DEFAULT FALSE,
+    jsonb_col JSONB,
+    timestamp_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO test_table (integer_col, text_col, boolean_col, jsonb_col) VALUES 
+(0, '', TRUE, '{}'),
+(-123456789, 'test_string', FALSE, '{"key": "value"}'),
+(123456789, REPEAT('a', 1000), NULL, '{"array": [1,2,3]}');
+UPDATE test_table SET text_col = 'updated' WHERE integer_col > 0;
+WITH cte AS (
+    SELECT integer_col, COUNT(*) OVER (PARTITION BY boolean_col) as cnt
+    FROM test_table
+)
+SELECT * FROM cte ORDER BY cnt DESC;
+BEGIN;
+INSERT INTO test_table (integer_col, text_col) VALUES (42, 'transaction_test');
+COMMIT;
+CREATE INDEX idx_jsonb ON test_table USING GIN (jsonb_col);

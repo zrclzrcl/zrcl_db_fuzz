@@ -1,0 +1,76 @@
+-- Create roles with different privileges
+CREATE ROLE test_user WITH LOGIN PASSWORD 'testpass';
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO test_user;
+
+-- Create tables with various data types and constraints
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER CHECK (value > 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE
+);
+
+-- Add indexes on key columns
+CREATE INDEX idx_test_value ON test_table(value);
+CREATE UNIQUE INDEX idx_test_name ON test_table(name);
+
+-- Insert sample data including edge cases
+INSERT INTO test_table (name, value) VALUES 
+('Test1', 1),
+('Test2', 2147483647), -- Maximum integer value
+('Test3', NULL);         -- Testing NULL values
+
+-- Create a function and trigger for testing
+CREATE OR REPLACE FUNCTION log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        RAISE NOTICE 'New record inserted: %', NEW.name;
+    ELSIF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'Record updated from: % to %', OLD.value, NEW.value;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach trigger to test_table
+CREATE TRIGGER trg_log_changes
+AFTER INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE log_changes();
+
+-- Test transactions and rollbacks
+BEGIN;
+INSERT INTO test_table (name, value) VALUES ('Temp1', 10);
+SAVEPOINT sp1;
+UPDATE test_table SET status = TRUE WHERE name = 'Temp1';
+ROLLBACK TO sp1;
+COMMIT;
+
+-- Complex queries using CTEs and window functions
+WITH sample_cte AS (
+    SELECT id, name, RANK() OVER (ORDER BY value DESC) as rank
+    FROM test_table
+)
+SELECT * FROM sample_cte WHERE rank <= 3;
+
+-- Testing edge cases with large data
+DO $$
+DECLARE
+    i INT := 0;
+BEGIN
+    WHILE i < 1000 LOOP
+        INSERT INTO test_table (name, value) VALUES 
+            ('LargeData' || i, i);
+        i := i + 1;
+    END LOOP;
+END $$;
+
+-- Cleanup created objects
+DROP TRIGGER trg_log_changes ON test_table;
+DROP FUNCTION log_changes();
+TRUNCATE TABLE test_table;
+DROP INDEX idx_test_value, idx_test_name;
+DROP TABLE test_table;
+REVOKE ALL PRIVILEGES ON SCHEMA public FROM test_user;
+DROP ROLE test_user;

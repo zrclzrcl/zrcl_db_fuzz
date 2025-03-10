@@ -1,0 +1,52 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    int_field INT,
+    timestamp_field TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE test_edge_cases ALTER COLUMN text_field SET STORAGE PLAIN;
+
+CREATE INDEX idx_int_field ON test_edge_cases (int_field) WITH (fillfactor = 50);
+CREATE INDEX idx_text_field ON test_edge_cases USING HASH (text_field COLLATE "C") WITH (tablespace='pg_default');
+
+INSERT INTO test_edge_cases (text_field, int_field)
+SELECT 
+    md5(random()::text), 
+    floor(random() * 1000000)
+FROM generate_series(1, 1000);
+
+BEGIN;
+    INSERT INTO test_edge_cases (text_field, int_field)
+    SELECT 'long_string_' || i, i
+    FROM generate_series(1, 500) i;
+    
+    UPDATE test_edge_cases 
+    SET timestamp_field = CURRENT_TIMESTAMP - INTERVAL '1 day'
+    WHERE id % 2 = 0;
+COMMIT;
+
+DELETE FROM test_edge_cases WHERE int_field < 500;
+
+VACUUM test_edge_cases;
+
+CREATE TABLE test_constraints (
+    id SERIAL PRIMARY KEY,
+    unique_field VARCHAR(50) UNIQUE,
+    CHECK (id > 0),
+    FOREIGN KEY (id) REFERENCES test_edge_cases(id)
+);
+
+INSERT INTO test_constraints (unique_field)
+SELECT 'unique_' || i
+FROM generate_series(1, 100) i;
+
+EXPLAIN ANALYZE SELECT 
+    t.id, 
+    t.text_field,
+    c.unique_field
+FROM test_edge_cases t
+JOIN test_constraints c ON t.id = c.id
+WHERE t.int_field > 500 AND c.unique_field LIKE 'unique_%';
+
+DROP INDEX idx_text_field;

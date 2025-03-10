@@ -1,0 +1,41 @@
+-- Create a schema for testing partitioned table functionality
+CREATE SCHEMA IF NOT EXISTS test_part_schema;
+
+-- Create parent table with id as primary key and data column
+CREATE TABLE IF NOT EXISTS test_part_schema.parent_table (
+    id INT PRIMARY KEY,
+    data INT NOT NULL
+);
+
+-- Add constraints to ensure data consistency between partitions
+ALTER TABLE test_part_schema.parent_table ADD CONSTRAINT valid_data CHECK (data >= 0 AND data <= 100);
+
+-- Create first child table partition for ids 0-999
+CREATE TABLE IF NOT EXISTS test_part_schema.child_table_1 (
+    id INT PRIMARY KEY,
+    data INT NOT NULL,
+    FOREIGN KEY (id) REFERENCES test_part_schema.parent_table(id) ON DELETE CASCADE
+)
+PARTITION BY RANGE (id);
+
+-- Create second child table partition for ids 1000+
+CREATE TABLE IF NOT EXISTS test_part_schema.child_table_2 (
+    id INT PRIMARY KEY,
+    data INT NOT NULL,
+    valid_data BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (id) REFERENCES test_part_schema.parent_table(id) ON DELETE CASCADE
+)
+PARTITION BY RANGE (id);
+
+-- Add indexes to improve query performance on child tables
+CREATE INDEX idx_child1_data ON test_part_schema.child_table_1(data);
+CREATE INDEX idx_child2_valid_data ON test_part_schema.child_table_2(valid_data);
+
+-- Insert sample data into partitions
+INSERT INTO test_part_schema.parent_table VALUES (1, 50), (2, 75), (3, 100);
+INSERT INTO test_part_schema.child_table_1 SELECT id, data FROM test_part_schema.parent_table WHERE id < 1000;
+INSERT INTO test_part_schema.child_table_2 SELECT id, data, TRUE FROM test_part_schema.parent_table WHERE id >= 1000;
+
+-- Verify data insertion
+SELECT * FROM test_part_schema.child_table_1;
+SELECT * FROM test_part_schema.child_table_2;

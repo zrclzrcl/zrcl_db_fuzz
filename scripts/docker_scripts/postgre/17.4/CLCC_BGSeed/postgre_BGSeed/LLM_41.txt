@@ -1,0 +1,75 @@
+CREATE EXTENSION pg_stat_statements;
+CREATE EXTENSION uuid-ossp;
+CREATE EXTENSION postgis;
+
+CREATE SCHEMA test_schema;
+
+ALTER SCHEMA test_schema RENAME TO test_schema_renamed;
+ALTER SCHEMA test_schema_renamed OWNER TO postgres;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT 'test',
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB,
+    ip_address inet,
+    search_vector tsvector
+);
+
+CREATE INDEX idx_text ON test_table USING btree (name);
+CREATE INDEX idx_number ON test_table USING hash (id);
+CREATE INDEX idx_bool ON test_table USING gist (active);
+CREATE INDEX idx_jsonb ON test_table USING gin (metadata);
+
+CREATE FUNCTION increment_counter() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.counter = OLD.counter + 1;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_increment
+BEFORE UPDATE ON test_table
+FOR EACH ROW
+EXECUTE PROCEDURE increment_counter();
+
+ALTER TABLE test_table ADD COLUMN counter INTEGER DEFAULT 0;
+ALTER TABLE test_table ADD CONSTRAINT unique_name UNIQUE (name);
+ALTER TABLE test_table ADD CONSTRAINT chk_active CHECK (active IN (true, false));
+
+CREATE TABLE referenced_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+ALTER TABLE test_table ADD COLUMN ref_id INTEGER REFERENCES referenced_table(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+CREATE TABLE partitioned_table (
+    id SERIAL,
+    category TEXT,
+    value NUMERIC
+) PARTITION BY RANGE (value);
+
+CREATE TABLE partitioned_table_less_100 PARTITION OF partitioned_table FOR VALUES FROM (MINVALUE) TO (100);
+CREATE TABLE partitioned_table_100_to_500 PARTITION OF partitioned_table FOR VALUES FROM (100) TO (500);
+CREATE TABLE partitioned_table_greater_500 PARTITION OF partitioned_table FOR VALUES FROM (500) TO (MAXVALUE);
+
+WITH recursive_cte AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM recursive_cte WHERE n < 10
+)
+INSERT INTO test_table (name, description) 
+SELECT n::TEXT, 'Test' || n FROM recursive_cte;
+
+INSERT INTO referenced_table VALUES (1, 'Reference');
+INSERT INTO test_table (name, metadata, ip_address, search_vector)
+VALUES (
+    'Test Record',
+    '{"key": "value", "array": [1, 2, 3]}',
+    '192.168.1.1/32',
+    to_tsvector('english', 'test record')
+);

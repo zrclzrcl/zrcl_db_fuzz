@@ -1,0 +1,49 @@
+-- Create a minimal test table
+CREATE TABLE IF NOT EXISTS event_trigger_test (
+    a integer,
+    b text
+);
+
+-- Create functions for testing event triggers
+CREATE OR REPLACE FUNCTION start_command()
+RETURNS event_trigger AS $$
+BEGIN
+    RAISE NOTICE '% - ddl_command_start', tg_tag;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION end_command()
+RETURNS event_trigger AS $$
+BEGIN
+    RAISE NOTICE '% - ddl_command_end', tg_tag;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION drop_sql_command()
+RETURNS event_trigger AS $$
+BEGIN
+    RAISE NOTICE '% - sql_drop', tg_tag;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create event triggers for testing DDL commands
+CREATE EVENT TRIGGER start_rls_command 
+ON ddl_command_start 
+WHEN TAG IN ('CREATE POLICY', 'ALTER POLICY', 'DROP POLICY') 
+EXECUTE PROCEDURE start_command();
+
+CREATE EVENT TRIGGER end_rls_command 
+ON ddl_command_end 
+WHEN TAG IN ('CREATE POLICY', 'ALTER POLICY', 'DROP POLICY') 
+EXECUTE PROCEDURE end_command();
+
+CREATE EVENT TRIGGER sql_drop_command 
+ON sql_drop 
+WHEN TAG IN ('DROP POLICY') 
+EXECUTE PROCEDURE drop_sql_command();
+
+-- Create a policy for testing
+CREATE POLICY p1 ON event_trigger_test USING (FALSE);
+
+-- This table and objects are used by the test case above to verify proper operation
+SELECT 1 AS status, 'Initialization complete' AS message;

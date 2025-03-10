@@ -1,0 +1,49 @@
+CREATE EXTENSION IF NOT EXISTS plpgsql;
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx Gin (to_tsvector('english', name)) ON test_table USING gin;
+CREATE TYPE status AS ENUM ('active', 'inactive');
+CREATE FUNCTION calculate_sum(n INT) RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+    total INT := 0;
+BEGIN
+    FOR i IN 1..n LOOP
+        total := total + i;
+    END LOOP;
+    RETURN total;
+END$$;
+SELECT t1.id, t2.name, ROW_NUMBER() OVER (ORDER BY t1.id) AS row_num
+FROM pg_class t1
+JOIN pg_attribute t2 ON t1.oid = t2.attrelid
+WHERE t2.attnum > 0 AND NOT t2.attisdropped;
+WITH recursive cte(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 10
+)
+SELECT * FROM cte;
+CREATE TABLE sales (
+    id SERIAL PRIMARY KEY,
+    amount DECIMAL(10,2),
+    sale_date DATE
+);
+INSERT INTO sales (amount, sale_date) VALUES 
+(100.50, '2023-01-01'),
+(200.75, '2023-01-02'),
+(150.00, '2023-01-03');
+SELECT * FROM sales
+WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days';
+DO $$
+BEGIN
+    RAISE NOTICE 'Starting transaction';
+    BEGIN
+        INSERT INTO test_table (name) VALUES ('Test Transaction 1');
+        INSERT INTO test_table (name) VALUES ('Test Transaction 2');
+        COMMIT;
+    EXCEPTION WHEN OTHERS THEN
+        ROLLBACK;
+END$$;

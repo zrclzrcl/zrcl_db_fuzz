@@ -1,0 +1,107 @@
+SELECT 
+    e.employee_id,
+    e.first_name || ' ' || e.last_name AS full_name,
+    COALESCE(e.email, 'No email provided') AS contact_info,
+    CASE 
+        WHEN e.salary > 100000 THEN 'High'
+        WHEN e.salary BETWEEN 50000 AND 100000 THEN 'Medium'
+        ELSE 'Low' 
+    END AS salary_range,
+    EXTRACT(YEAR FROM e.hire_date) AS hire_year
+FROM 
+    employees e
+WHERE 
+    e.department_id IN (SELECT d.department_id FROM departments d WHERE d.location = 'New York')
+GROUP BY 
+    e.employee_id, e.first_name, e.last_name, e.email, e.salary, e.hire_date
+HAVING 
+    COUNT(*) > 1
+ORDER BY 
+    hire_year DESC;
+
+WITH recursive_cte AS (
+    SELECT 
+        p.product_id,
+        p.product_name,
+        p.price,
+        p.stock_quantity,
+        ROW_NUMBER() OVER (ORDER BY p.price DESC) AS price_rank
+    FROM 
+        products p
+)
+SELECT 
+    rc.product_id,
+    rc.product_name,
+    rc.price,
+    rc.stock_quantity,
+    rc.price_rank,
+    (
+        SELECT 
+            jsonb_build_object(
+                'average_price', ROUND(AVG(p.price), 2),
+                'total_stock', SUM(p.stock_quantity)
+            )
+        FROM 
+            products p
+        WHERE 
+            p.category = 'Electronics'
+    ) AS category_stats
+FROM 
+    recursive_cte rc;
+
+SELECT 
+    s.order_id,
+    s.order_date,
+    s.total_amount,
+    jsonb_array_length(s.items) AS item_count,
+    (
+        SELECT 
+            jsonb_object_agg(i.item_name, i.quantity)
+        FROM 
+            jsonb_each_text(s.items) i(item_name, quantity)
+    ) AS order_details
+FROM 
+    sales s
+WHERE 
+    s.order_date >= CURRENT_DATE - INTERVAL '7 days'
+GROUP BY 
+    s.order_id, s.order_date, s.total_amount, s.items
+HAVING 
+    SUM(s.total_amount) > 1000;
+
+SELECT 
+    e.employee_id,
+    e.first_name,
+    e.last_name,
+    d.department_name,
+    COUNT(*) OVER (PARTITION BY d.department_name) AS dept_employee_count,
+    RANK() OVER (ORDER BY e.salary DESC) AS salary_rank
+FROM 
+    employees e
+JOIN 
+    departments d ON e.department_id = d.department_id
+WHERE 
+    e.last_name LIKE 'S%'
+GROUP BY 
+    e.employee_id, e.first_name, e.last_name, d.department_name;
+
+SELECT 
+    (
+        SELECT 
+            jsonb_build_object(
+                'total_sales', s.total_amount,
+                'date', s.order_date
+            )
+        FROM 
+            sales s
+        WHERE 
+            s.order_id = 123
+    ) AS sale_info,
+    (
+        SELECT 
+            COUNT(*) 
+        FROM 
+            employees e
+        WHERE 
+            e.salary > 50000
+    ) AS high_earners_count;

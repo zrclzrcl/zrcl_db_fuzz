@@ -1,0 +1,63 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE
+);
+
+INSERT INTO test_table (name, value) VALUES 
+('Test1', 100),
+('Test2', -50),
+('Test3', 0),
+('', NULL),
+('Test4', 2147483647);
+
+ALTER TABLE test_table ADD COLUMN description TEXT;
+
+SELECT t1.id, t1.name, t2.status 
+FROM test_table t1 
+JOIN (
+    SELECT id, status FROM test_table WHERE value > 50
+) t2 ON t1.id = t2.id 
+UNION 
+SELECT id, name, status FROM test_table WHERE value < 0;
+
+CREATE INDEX idx_value_status ON test_table (value, status);
+
+DROP TABLE IF EXISTS test_partitioned;
+CREATE TABLE test_partitioned (
+    id SERIAL,
+    region TEXT NOT NULL,
+    amount NUMERIC(10,2)
+) PARTITION BY RANGE (amount);
+
+CREATE INDEX CONCURRENTLY idx_concurrent ON test_table USING GIN (to_tsvector('english', name));
+
+DO $$
+BEGIN
+    RAISE NOTICE 'Starting transaction';
+    INSERT INTO test_table (name, value) VALUES ('TransactionTest', 1000);
+    UPDATE test_table SET status = TRUE WHERE value > 500;
+    COMMIT;
+EXCEPTION 
+    WHEN others THEN
+        ROLLBACK;
+END $$;
+
+CREATE OR REPLACE FUNCTION calculate_sum(a INTEGER, b INTEGER)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN a + b;
+END $$ LANGUAGE plpgsql;
+
+SELECT *, ROW_NUMBER() OVER (ORDER BY id) FROM test_table ORDER BY created_at DESC LIMIT 10;
+
+CREATE TRIGGER log_deletions 
+BEFORE DELETE ON test_table 
+FOR EACH ROW 
+EXECUTE FUNCTION log_deletion();
+
+EXPLAIN ANALYZE SELECT * FROM test_table WHERE name ~* 'test';
+
+SELECT pg_sleep(1);

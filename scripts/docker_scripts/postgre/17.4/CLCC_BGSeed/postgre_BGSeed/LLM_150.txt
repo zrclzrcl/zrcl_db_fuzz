@@ -1,0 +1,43 @@
+SELECT getdatabaseencoding() NOT IN  ('UTF8', 'SQL_ASCII') AS skip_test \gset\if :skip_test\quit\endifSELECT getdatabaseencoding();
+
+-- Testing JSON path with various Unicode escapes
+SELECT '"\\u"'::jsonpath;
+SELECT '"\\u00"'::jsonpath;
+SELECT '"\\u000g"'::jsonpath;
+SELECT '"\\u0000"'::jsonpath;
+SELECT '"\\uaBcD"'::jsonpath;
+SELECT '"\\u1234"'::jsonpath;
+
+-- Edge cases for NULL handling
+SELECT NULL AS test_null;
+SELECT COALESCE(NULL, 'default') AS coalesce_test;
+SELECT ISNULL(NULL) AS isnull_test;
+
+-- Mathematical operations including edge cases
+SELECT 1 / 0; -- Division by zero to test error handling
+SELECT CAST('invalid_number' AS integer); -- Invalid cast
+
+-- String manipulation with special characters and escapes
+SELECT chr(92) || 'test'; -- Backslash in string
+SELECT quote_ident('\test'); -- Quoted identifier with escape
+
+-- Common Table Expressions (CTEs)
+WITH cte AS (
+    SELECT 1 AS col
+)
+SELECT * FROM cte;
+
+-- Window functions for ordering and ranking
+SELECT 
+    id, 
+    name,
+    ROW_NUMBER() OVER(ORDER BY id) AS row_num
+FROM employees; -- Assuming 'employees' table exists
+
+-- Testing mathematical operations with edge values
+SELECT -9223372036854775808::int8; -- Minimum int8 value
+SELECT 1.7976931348623157E+308::float8; -- Maximum float8 value
+
+-- Testing error handling with invalid functions or parameters
+SELECT nonexistent_function(); -- Should throw an error
+SELECT pow(-1, 2); -- Valid operation but testing negative base

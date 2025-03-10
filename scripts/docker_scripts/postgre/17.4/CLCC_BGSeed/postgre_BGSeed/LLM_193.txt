@@ -1,0 +1,32 @@
+BEGIN;
+  -- Declare cursors with various SELECT statements
+  DECLARE cur1 CURSOR FOR SELECT * FROM onek WHERE unique1 = 0;
+  DECLARE cur2 CURSOR FOR SELECT unique2 FROM onek ORDER BY unique2 DESC LIMIT 5 OFFSET 2;
+  DECLARE cur3 CURSOR FOR 
+    WITH cte AS (
+      SELECT unique1, COUNT(*) as cnt FROM onek GROUP BY unique1
+    )
+    SELECT * FROM cte WHERE cnt > 3;
+
+  -- Perform DML operations: Insert, Update, Delete
+  INSERT INTO onek (unique1, unique2) VALUES (999, 'test_insert');
+  UPDATE onek SET unique2 = 'updated_value' WHERE unique1 = 50;
+  DELETE FROM onek WHERE unique1 < 10;
+
+  -- Execute complex queries including CTE and grouping
+  WITH cte AS (
+    SELECT unique1, COUNT(*) as cnt FROM onek GROUP BY unique1 HAVING COUNT(*) > 2
+  )
+  SELECT * FROM cte LIMIT 5;
+
+  -- FETCH and close each cursor
+  FETCH ALL IN cur1;
+  CLOSE cur1;
+
+  FETCH ALL IN cur2;
+  CLOSE cur2;
+
+  FETCH ALL IN cur3;
+  CLOSE cur3;
+
+COMMIT;

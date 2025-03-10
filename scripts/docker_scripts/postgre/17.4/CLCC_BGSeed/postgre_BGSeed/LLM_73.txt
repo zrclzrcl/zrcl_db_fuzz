@@ -1,0 +1,15 @@
+-- Test edge cases for string functions with empty strings and special characters
+SELECT substring('', 0, 0), overlay('abcdef' placing '' from -1 for 10);
+
+-- Check date/time functions with extreme timestamps
+SELECT now(), age(max_timestamp, min_timestamp), max_timestamp + interval '100 years';
+
+-- Explore mathematical operations on large integers
+SELECT abs(-9223372036854775808), sqrt(9223372036854775808::float), round(1.99999999999999);
+
+-- Aggregate functions with empty result sets
+SELECT min(num), max(num), sum(num) FROM generate_series(-1, -1) AS num;
+
+-- Special SQL constructs testing limits and offsets
+SELECT * FROM generate_series(1, 5) LIMIT 0;
+SELECT * FROM generate_series(1, 3) OFFSET 4;

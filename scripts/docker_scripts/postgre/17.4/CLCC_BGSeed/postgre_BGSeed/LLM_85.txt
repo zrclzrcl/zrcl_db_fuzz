@@ -1,0 +1,85 @@
+-- Initial seed for testing various PostgreSQL features
+
+-- Create a table to test basic operations
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    value NUMERIC(10, 2),
+    category INTEGER REFERENCES another_table(category_id)
+);
+
+-- Create indexes for testing query performance
+CREATE INDEX IF NOT EXISTS idx_name ON test_table (name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_value ON test_table (value);
+
+-- Create a view for testing queries against views
+CREATE VIEW test_view AS
+SELECT id, name, description, created_at
+FROM test_table;
+
+-- Create functions to test stored procedures
+CREATE FUNCTION get_test_count() RETURNS INTEGER AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM test_table);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger function for testing triggers
+CREATE FUNCTION update_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the trigger and attach it to the table
+CREATE TRIGGER trig_update_timestamp
+BEFORE UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+-- Create a sequence for testing sequences
+CREATE SEQUENCE IF NOT EXISTS test_sequence
+    START WITH 100
+    INCREMENT BY 5
+    MINVALUE 100
+    MAXVALUE 200;
+
+-- Create roles to test permissions
+CREATE ROLE test_role1;
+CREATE ROLE test_role2;
+
+-- Grant privileges for testing access control
+GRANT SELECT, INSERT, UPDATE ON test_table TO test_role1;
+GRANT USAGE ON SEQUENCE test_sequence TO test_role2;
+
+-- Add comments for documentation testing
+COMMENT ON TABLE test_table IS 'A table used to test various PostgreSQL features.';
+COMMENT ON COLUMN test_table.id IS 'Primary key identifier';
+COMMENT ON COLUMN test_table.name IS 'Name of the entity';
+
+-- Create a composite type for testing advanced types
+CREATE TYPE IF NOT EXISTS test_type AS (
+    id INTEGER,
+    name TEXT,
+    value NUMERIC
+);
+
+-- Create an index on a function to test functional indexes
+CREATE INDEX IF NOT EXISTS idx_lower_name ON test_table (LOWER(name));
+
+-- Create a materialized view for testing data warehousing features
+CREATE MATERIALIZED VIEW test_matview AS
+SELECT 
+    id, 
+    name, 
+    value,
+    created_at
+FROM test_table;
+
+-- Add triggers to refresh the materialized view
+ALTER MATERIALIZED VIEW test_matview REFRESH WITH NO DATA;

@@ -1,0 +1,57 @@
+-- Initial seed for testing partitioned tables and related functionality
+
+-- Create a range-partitioned table
+CREATE TABLE range_part (
+    id SERIAL,
+    value INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) PARTITION BY RANGE (value);
+
+-- Create partitions for the range_part table
+CREATE TABLE range_part1 PARTITION OF range_part 
+    FOR VALUES FROM (MINVALUE) TO (50);
+    
+CREATE TABLE range_part2 PARTITION OF range_part 
+    FOR VALUES FROM (50) TO (100);
+
+CREATE TABLE range_part3 PARTITION OF range_part 
+    FOR VALUES FROM (100) TO (MAXVALUE);
+
+-- Create a list-partitioned table
+CREATE TABLE list_part (
+    id SERIAL,
+    category TEXT NOT NULL CHECK (category IN ('A', 'B', 'C'))
+) PARTITION BY LIST (category);
+
+-- Create partitions for the list_part table
+CREATE TABLE list_part_a PARTITION OF list_part 
+    FOR VALUES IN ('A');
+
+CREATE TABLE list_part_b PARTITION OF list_part 
+    FOR VALUES IN ('B');
+
+-- Create a composite range-partitioned table
+CREATE TABLE composite_range_part (
+    id SERIAL,
+    region TEXT NOT NULL,
+    value INT NOT NULL,
+    UNIQUE (id)
+) PARTITION BY RANGE (region, value);
+
+-- Create partitions for the composite_range_part table
+CREATE TABLE comp_part1 PARTITION OF composite_range_part 
+    FOR VALUES FROM ('A', MINVALUE) TO ('B', MAXVALUE);
+
+CREATE TABLE comp_part2 PARTITION OF composite_range_part 
+    FOR VALUES FROM ('C', MINVALUE) TO ('D', MAXVALUE);
+
+-- Create indexes on partition columns
+CREATE INDEX ON range_part (value);
+CREATE INDEX ON list_part (category);
+CREATE INDEX ON composite_range_part (region, value);
+
+-- Attach partitions to tables
+ALTER TABLE range_part ATTACH PARTITION range_part1;
+ALTER TABLE range_part ATTACH PARTITION range_part2;
+ALTER TABLE list_part ATTACH PARTITION list_part_a;
+ALTER TABLE list_part ATTACH PARTITION list_part_b;

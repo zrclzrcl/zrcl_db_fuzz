@@ -1,0 +1,8 @@
+CREATE TABLE test_seed (
+       id uuid,
+       name text,
+       metadata jsonb,
+       email citext,
+       is_active boolean,
+       created_at timestamp with time zone
+   );

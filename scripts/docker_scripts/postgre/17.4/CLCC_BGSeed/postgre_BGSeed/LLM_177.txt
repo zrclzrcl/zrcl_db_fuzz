@@ -1,0 +1,26 @@
+-- Initial seed for PostgreSQL testing environment setup
+-- This seed creates minimal required objects to ensure correctness of subsequent tests
+
+-- Create a simple table to serve as base for testing indexes and opclasses
+CREATE TABLE test_table (
+    id INTEGER PRIMARY KEY,
+    data TEXT
+);
+
+-- Create an index with explicit opclass and collation settings
+CREATE INDEX idx_test_data ON test_table USING btree (data COLLATE "C" text_ops);
+
+-- Ensure proper vacuuming configuration
+VACUUM ANALYZE;
+
+-- Clean up any potential deadlocks or orphaned objects
+SELECT pg_catalog.pg_locks.pid, pg_catalog.pg_stat_activity.wait_event_type,
+pg_catalog.pg_stat_activity.query FROM pg_catalog.pg_locks
+JOIN pg_catalog.pg_stat_activity ON pg_catalog.pg_locks.pid = pg_catalog.pg_stat_activity.pid
+WHERE pg_catalog.pg_locks.locktype = 'relation' AND pg_catalog.pg_locks.relation = 'test_table'::regclass;
+
+-- Verify that all necessary system objects are properly registered
+SELECT oid, relname FROM pg_class WHERE relname LIKE 'pg_%';
+
+-- Ensure the database is in a consistent state for subsequent tests
+CHECKPOINT;

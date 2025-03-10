@@ -1,0 +1,13 @@
+-- This initial seed is designed to set up a minimal environment for testing tsvector and related functions without creating any unnecessary database objects.
+
+-- Create a temporary table for testing purposes (if needed)
+CREATE TEMPORARY TABLE IF NOT EXISTS test_tsvector (
+    id SERIAL PRIMARY KEY,
+    content TEXT,
+    vector TSVECTOR
+);
+
+-- Insert sample data into the temporary table
+INSERT INTO test_tsvector (content, vector) VALUES
+('This is a test document.', to_tsvector('This is a test document.')),
+('Another example for testing purposes.', to_tsvector('Another example for testing purposes.'));

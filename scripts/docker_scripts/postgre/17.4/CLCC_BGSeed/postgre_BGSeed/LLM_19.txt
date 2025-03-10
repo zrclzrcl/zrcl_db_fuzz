@@ -1,0 +1,85 @@
+-- Create sample tables with various data types
+CREATE TABLE test_case_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    description JSONB,
+    tags TEXT[],
+    amount DECIMAL(10,2),
+    geom GEOMETRY,
+    category ENUM('low', 'medium', 'high')
+);
+
+-- Insert sample data
+INSERT INTO test_case_table (name, value, description, tags, amount)
+VALUES 
+    ('Item 1', 100, '{"color": "red", "size": "large"}', ARRAY['tag1','tag2'], 19.99),
+    ('Item 2', 200, '{"color": "blue", "size": "medium"}', ARRAY['tag3','tag4'], 29.99),
+    ('Item 3', 300, '{"color": "green", "size": "small"}', ARRAY['tag5','tag6'], 39.99);
+
+-- Update data with conditional logic
+UPDATE test_case_table 
+SET status = CASE 
+             WHEN value > 200 THEN TRUE 
+             ELSE FALSE 
+             END;
+
+-- Complex query with multiple joins and window functions
+SELECT 
+    t1.id,
+    t1.name,
+    t1.value,
+    t2.description,
+    COALESCE(t1.amount, 0) AS amount,
+    NULLIF(t1.tags[1], 'tag1') AS first_tag,
+    RANK() OVER (ORDER BY value DESC) AS value_rank
+FROM 
+    test_case_table t1
+JOIN 
+    test_case_table t2 ON t1.id = t2.id
+WHERE 
+    t1.status = TRUE
+GROUP BY 
+    t1.id, t1.name, t1.value, t2.description, t1.amount, t1.tags;
+
+-- Create and use a temporary table with CTE
+WITH temp_data AS (
+    SELECT 
+        id,
+        name,
+        value * 0.9 AS discounted_value
+    FROM 
+        test_case_table
+    WHERE 
+        amount > 20
+)
+SELECT 
+    COUNT(*) as total_records,
+    AVG(discounted_value) as avg_discounted_value
+FROM 
+    temp_data;
+
+-- Transaction with savepoint and rollback
+BEGIN;
+    CREATE TABLE temp_transaction_table (
+        id SERIAL PRIMARY KEY,
+        test_value INTEGER
+    );
+    
+    INSERT INTO temp_transaction_table (test_value) VALUES (10);
+    
+    SAVEPOINT my_savepoint;
+    
+    DELETE FROM temp_transaction_table WHERE test_value = 10;
+    
+    ROLLBACK TO my_savepoint;
+    
+    UPDATE temp_transaction_table SET test_value = 20 WHERE id = 1;
+    
+COMMIT;
+
+-- Clean up
+DROP TABLE IF EXISTS test_case_table;
+DROP TABLE IF EXISTS temp_transaction_table;

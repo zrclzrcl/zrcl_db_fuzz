@@ -1,0 +1,41 @@
+-- Test basic SELECT queries with conditions and joins
+SELECT * FROM hs1 WHERE id = 1;
+SELECT COUNT(*) AS total FROM hs2;
+SELECT h1.name, h2.description FROM hs1 h1 JOIN hs2 h2 ON h1.id = h2.hs1_id;
+
+-- Transaction management with different isolation levels
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SELECT * FROM hs3 FOR UPDATE;
+COMMIT;
+
+-- Test prepared statements and execution plans
+PREPARE pstmt AS SELECT * FROM hs1 WHERE id = $1;
+EXECUTE pstmt(1);
+DEALLOCATE pstmt;
+
+-- Locking mechanisms to test concurrency control
+LOCK TABLE hs2 IN ACCESS EXCLUSIVE MODE;
+SELECT * FROM hs2 WHERE name LIKE 'test%';
+
+-- Index operations to test DDL statements
+CREATE INDEX idx_hs3_name ON hs3(name);
+ALTER INDEX idx_hs3_name RENAME TO idx_name;
+DROP INDEX idx_name;
+
+-- Test configuration settings and session management
+SET timezone TO 'UTC';
+SHOW timezone;
+RESET timezone;
+
+-- Edge case testing with complex queries
+SELECT DISTINCT ON (name) * FROM hs1 ORDER BY name DESC LIMIT 5 OFFSET 2;
+WITH cte AS (SELECT id FROM hs2 WHERE active = true)
+SELECT COUNT(*) FROM cte;
+
+-- Test error handling and edge cases
+INSERT INTO hs4 VALUES(99, 'test');
+SELECT * FROM hs4 WHERE id > 1000; -- Should return empty result
+
+-- Cleanup operations
+DISCARD TEMP;
+CHECKPOINT;

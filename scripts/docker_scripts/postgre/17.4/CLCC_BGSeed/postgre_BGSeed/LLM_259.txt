@@ -1,0 +1,68 @@
+-- Create a new schema
+CREATE SCHEMA IF NOT EXISTS fuzz_test_schema;
+
+-- Create tables with constraints and partitions
+CREATE TABLE fuzz_test_schema.fuzz_test_table (
+    id serial PRIMARY KEY,
+    data text CHECK (length(data) > 10),
+    created_at timestamp DEFAULT current_timestamp
+);
+
+-- Create indexes on the table
+CREATE INDEX ON fuzz_test_schema.fuzz_test_table USING GIN (to_tsvector('english', data));
+
+-- Create partitioned table and its partitions
+CREATE TABLE fuzz_test_schema.fuzz_test_part (
+    id int,
+    data text
+) PARTITION BY RANGE (id);
+
+CREATE TABLE fuzz_test_schema.fuzz_test_part1 PARTITION OF fuzz_test_schema.fuzz_test_part
+FOR VALUES FROM (0) TO (100);
+
+CREATE TABLE fuzz_test_schema.fuzz_test_part2 PARTITION OF fuzz_test_schema.fuzz_test_part
+FOR VALUES FROM (100) TO (200);
+
+-- Create a materialized view
+CREATE MATERIALIZED VIEW fuzz_test_schema.fuzz_test_matview AS
+SELECT id, data, created_at FROM fuzz_test_schema.fuzz_test_table;
+
+-- Create functions
+CREATE OR REPLACE FUNCTION fuzz_test_schema.get_data_above_threshold(threshold int)
+RETURNS TABLE (id int, data text) AS $$
+    SELECT id, data FROM fuzz_test_schema.fuzz_test_table WHERE id > threshold;
+$$ LANGUAGE SQL;
+
+-- Create an aggregate function
+CREATE AGGREGATE fuzz_test_schema.sum_int (
+    SFUNC = int8_sum,
+    STYPE = int8
+);
+
+-- Create trigger function and trigger
+CREATE OR REPLACE FUNCTION fuzz_test_schema.trigger_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO fuzz_test_schema.fuzz_test_part (id, data)
+    VALUES (NEW.id, NEW.data);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER fuzz_test_trigger
+AFTER INSERT ON fuzz_test_schema.fuzz_test_table
+FOR EACH ROW
+EXECUTE FUNCTION fuzz_test_schema.trigger_func();
+
+-- Create a role and grant permissions
+CREATE ROLE test_user WITH LOGIN;
+
+GRANT USAGE ON SCHEMA fuzz_test_schema TO test_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON fuzz_test_schema.fuzz_test_table TO test_user;
+REVOKE UPDATE ON fuzz_test_schema.fuzz_test_table FROM test_user;
+
+GRANT EXECUTE ON FUNCTION fuzz_test_schema.get_data_above_threshold(int) TO test_user;
+GRANT USAGE ON AGGREGATE fuzz_test_schema.sum_int (int) TO test_user;
+
+-- Create index on materialized view
+CREATE INDEX ON fuzz_test_schema.fuzz_test_matview (id);

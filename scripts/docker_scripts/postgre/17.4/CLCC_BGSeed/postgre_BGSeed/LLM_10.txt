@@ -1,81 +1,57 @@
--- 创建一个包含各种数据类型的表，用于测试不同的数据类型边界条件
-CREATE TABLE test_edge_cases (
+-- Create a temporary table with various data types and constraints
+CREATE TEMPORARY TABLE test_table (
     id SERIAL PRIMARY KEY,
-    numeric_col NUMERIC(30, 15),
-    text_col TEXT CHECK (text_col ~ '^[a-zA-Z]+$'),
-    jsonb_col JSONB,
-    array_col INT[],
-    timestamp_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    name TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    description TEXT,
+    tags TEXT[]
 );
 
--- 插入包含边界条件和特殊字符的数据，用于测试数据处理的正确性
-INSERT INTO test_edge_cases 
-VALUES (
-    DEFAULT, 
-    '999999999999999999999999999.999999999',  -- 测试大数边界
-    'TeStInG!@#$%^&*()_+-=', 
-    '{"key": "value", "array": [1,2,3], "nested": {"object": true}}',
-    '{1,2,3,4,5}',
-    '2023-10-27 12:34:56+08'
+-- Create indexes on different columns using various methods
+CREATE INDEX idx_id ON test_table (id);
+CREATE INDEX idx_name_hash ON test_table USING hash (name);
+CREATE INDEX idx_created_at ON test_table (created_at DESC);
+CREATE INDEX idx_is_active ON test_table (is_active) WHERE is_active = true;
+CREATE INDEX idx_tags_gin ON test_table USING gin(tags);
+
+-- Insert sample data into the table
+INSERT INTO test_table (name, description, tags)
+VALUES
+('Item 1', 'First item', '{tag1, tag2}'),
+('Item 2', 'Second item', '{tag3}'),
+('Item 3', 'Third item', '{tag1, tag4}');
+
+-- Create a temporary log table for tracking changes
+CREATE TEMPORARY TABLE log_table (
+    log_id SERIAL PRIMARY KEY,
+    action TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_name TEXT
 );
 
--- 测试数组和JSONB的复杂查询
-SELECT 
-    array_col,
-    jsonb_col->'key' AS extracted_value,
-    jsonb_array_elements_text(jsonb_col->'array') AS array_element
-FROM test_edge_cases;
-
--- 使用窗口函数和CTE进行复杂的计算，测试性能和正确性
-WITH cte AS (
-    SELECT 
-        id, 
-        numeric_col,
-        RANK() OVER (ORDER BY numeric_col DESC) AS rank
-    FROM test_edge_cases
-)
-SELECT * FROM cte WHERE rank <= 10;
-
--- 测试事务控制和错误处理，确保数据库一致性
-BEGIN;
-INSERT INTO test_edge_cases VALUES (
-    DEFAULT, 
-    '123456789.12345', 
-    'Transaction Test',
-    '{"transaction": true}',
-    '{6,7,8,9,10}',
-    CURRENT_TIMESTAMP
-);
-SAVEPOINT my_savepoint;
-UPDATE test_edge_cases SET text_col = 'Updated Text' WHERE id = 1;
-ROLLBACK TO my_savepoint;
-COMMIT;
-
--- 测试PostgreSQL特有的操作符和函数，确保覆盖更多功能
-SELECT 
-    array_col[1] AS first_element,
-    jsonb_col->>'key' AS key_value,
-    LENGTH(text_col) AS text_length,
-    EXTRACT(YEAR FROM timestamp_col) AS year_extracted
-FROM test_edge_cases;
-
--- 测试边界条件和异常处理，确保程序健壮性
-DO $$
+-- Define a function to log actions into the log_table
+CREATE OR REPLACE FUNCTION log_action()
+RETURNS TRIGGER AS $$
 BEGIN
-    RAISE NOTICE 'Starting transaction';
-    INSERT INTO test_edge_cases VALUES (
-        DEFAULT, 
-        '123456789.12345', 
-        REPEAT('a', 1000),  -- 测试长字符串边界
-        '{"error": false}',
-        '{11,22,33,44,55}',
-        CURRENT_TIMESTAMP
-    );
-    RAISE EXCEPTION 'Test exception';  -- 故意触发异常，测试错误处理
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE NOTICE 'Exception caught: %', SQLERRM;
-END$$;
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO log_table (action, user_name)
+        VALUES ('Inserted', CURRENT_USER);
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO log_table (action, user_name)
+        VALUES ('Updated', CURRENT_USER);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- 清理数据，保持数据库状态整洁
-DELETE FROM test_edge_cases WHERE id > 0;
+-- Create triggers to log insert and update operations on test_table
+CREATE TRIGGER trigger_log_insert
+AFTER INSERT ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION log_action();
+
+CREATE TRIGGER trigger_log_update
+AFTER UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION log_action();

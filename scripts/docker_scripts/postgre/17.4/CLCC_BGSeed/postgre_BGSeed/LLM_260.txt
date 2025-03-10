@@ -1,0 +1,28 @@
+-- Create schema for test cases
+CREATE SCHEMA IF NOT EXISTS test_326_test;
+
+-- Create test function with all test cases
+CREATE OR REPLACE FUNCTION test_326_test.test_326()
+RETURNS BOOLEAN AS $$
+DECLARE
+    result BOOLEAN := TRUE;
+BEGIN
+    -- Test case 1: Basic array containment
+    SELECT CASE 
+        WHEN (x = any(array[1,2,3]) AND x IS NOT NULL) THEN 
+            RAISE NOTICE 'Test 1 passed';
+        ELSE 
+            result := FALSE; 
+            RAISE NOTICE 'Test 1 failed';
+    END FROM (
+        -- Your test data query here
+    ) AS t(x);
+
+    -- Add more test cases following similar pattern
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute tests and display results
+SELECT test_326_test.test_326();

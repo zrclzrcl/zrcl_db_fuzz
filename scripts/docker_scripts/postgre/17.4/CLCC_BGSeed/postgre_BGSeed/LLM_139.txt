@@ -1,0 +1,22 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT8,
+    text_col TEXT,
+    bool_col BOOLEAN,
+    json_col JSONB,
+    uuid_col UUID,
+    citext_col CITEXT
+);
+
+INSERT INTO test_edge_cases 
+(int_col, text_col, bool_col, json_col, uuid_col, citext_col)
+VALUES
+(9223372036854775807, 'Test string with special characters: ñáéíóú', TRUE, '{"key": "value", "array": [1, 2, 3]}', generate_uuid(), 'CiTeXt');
+
+UPDATE test_edge_cases SET int_col = -9223372036854775808 WHERE citext_col = 'citetxt';
+
+SELECT id, text_col, bool_col FROM test_edge_cases ORDER BY id DESC LIMIT 1 OFFSET 0;
+
+INSERT INTO test_edge_cases (text_col) VALUES ('Another test string') ON CONFLICT (id) DO NOTHING;
+
+DROP TABLE IF EXISTS test_edge_cases;

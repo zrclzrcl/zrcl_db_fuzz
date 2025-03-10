@@ -1,0 +1,15 @@
+CREATE USER regress_identity_user1 WITH PASSWORD 'regress';
+  
+  CREATE TABLE itest1 (
+      id integer NOT NULL GENERATED ALWAYS AS IDENTITY,
+      name text,
+      age integer
+  );
+  
+  ALTER SEQUENCE itest1_id_seq OWNER TO regress_identity_user1;
+  
+  INSERT INTO itest1 (name, age) VALUES ('Alice', 30);
+  INSERT INTO itest1 (name, age) VALUES ('Bob', 25);
+  
+  GRANT SELECT, INSERT ON itest1 TO regress_identity_user1;
+  GRANT USAGE ON SEQUENCE itest1_id_seq TO regress_identity_user1;

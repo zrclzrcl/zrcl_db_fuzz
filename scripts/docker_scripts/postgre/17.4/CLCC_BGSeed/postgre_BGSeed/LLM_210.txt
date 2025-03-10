@@ -1,0 +1,27 @@
+-- Create roles
+CREATE ROLE regress_rol1 WITH LOGIN;
+CREATE ROLE regress_rol2 WITH LOGIN;
+CREATE ROLE regress_user WITH LOGIN;
+
+-- Create schemas
+CREATE SCHEMA s1 AUTHORIZATION regress_rol1;
+CREATE SCHEMA s2 AUTHORIZATION regress_rol2;
+
+-- Create tables with inheritance
+CREATE TABLE base_table (id int);
+CREATE TABLE child_table (id int) INHERITS (base_table);
+
+-- Create functions and procedures
+CREATE OR REPLACE FUNCTION f1() RETURNS void AS $$ BEGIN END; $$ LANGUAGE plpgsql;
+ALTER FUNCTION f1() OWNER TO regress_rol1;
+
+CREATE OR REPLACE PROCEDURE p1() AS $$ BEGIN END; $$ LANGUAGE plpgsql;
+ALTER PROCEDURE p1() OWNER TO regress_rol2;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION f1() TO regress_user, public;
+GRANT EXECUTE ON PROCEDURE p1() TO regress_user, public;
+
+-- Set up access control lists (ACLs)
+GRANT SELECT ON TABLE base_table TO regress_rol1;
+GRANT INSERT ON TABLE child_table TO regress_rol2;

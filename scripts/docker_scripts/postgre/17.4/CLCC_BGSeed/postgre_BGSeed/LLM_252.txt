@@ -1,0 +1,70 @@
+-- Initial seed for PostgreSQL fuzz testing
+CREATE SCHEMA test_schema;
+SET search_path TO test_schema;
+
+-- Test edge cases with complex data types and constraints
+CREATE TABLE test_table (
+    id serial PRIMARY KEY,
+    text_col TEXT CHECK (length(text_col) > 10),
+    num_col NUMERIC(10,2),
+    bool_col BOOLEAN DEFAULT FALSE,
+    ts_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Test unique constraints and edge cases
+CREATE UNIQUE INDEX ON test_table (text_col);
+INSERT INTO test_table (text_col, num_col) VALUES ('test_string', 123.45);
+INSERT INTO test_table (text_col, num_col) VALUES ('test_string', NULL); -- Should fail due to duplicate
+
+-- Test temporary tables and transactions
+CREATE TEMP TABLE temp_test (
+    id INT,
+    value TEXT
+);
+
+BEGIN;
+    INSERT INTO temp_test VALUES (1, 'temp_value');
+    SAVEPOINT sp1;
+    UPDATE temp_test SET value = 'updated_temp' WHERE id = 1;
+    ROLLBACK TO sp1;
+COMMIT;
+
+-- Test triggers and functions
+CREATE OR REPLACE FUNCTION test_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger fired';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger_trig
+AFTER INSERT ON test_table
+FOR EACH ROW EXECUTE PROCEDURE test_trigger();
+
+-- Test complex queries and edge cases
+SELECT * FROM test_table WHERE text_col LIKE '%test%';
+SELECT pg_sleep(1); -- Test timing-related behavior
+
+-- Test extension-specific functionality
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+SELECT uuid_generate_v4();
+DROP EXTENSION "uuid-ossp";
+
+-- Test error handling and exceptions
+DO $$
+BEGIN
+    RAISE EXCEPTION 'Test exception';
+END;
+$$;
+
+-- Cleanup test objects
+DROP TRIGGER test_trigger_trig ON test_table;
+DROP FUNCTION test_trigger();
+DROP TABLE temp_test;
+DROP TABLE test_table;
+RESET search_path;
+DROP SCHEMA test_schema;
+
+-- Test vacuum and cleanup operations
+VACUUM FULL;

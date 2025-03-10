@@ -1,0 +1,75 @@
+-- Create a test schema to organize our test objects
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create tables with various data types
+CREATE TABLE test_schema.test_table (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    int_field INTEGER,
+    bool_field BOOLEAN,
+    array_field INTEGER[],
+    jsonb_field JSONB,
+    timestamp_field TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data with edge cases
+INSERT INTO test_schema.test_table (text_field, int_field, bool_field, array_field, jsonb_field)
+VALUES 
+    ('', NULL, TRUE, NULL, '{"key": "value"}'),
+    ('test_string', 2147483647, FALSE, '{1,2,3}', '{"array": [1,2,3]}');
+
+-- Create a function with PL/pgSQL
+CREATE OR REPLACE FUNCTION test_schema.test_function()
+RETURNS VOID AS $$
+DECLARE 
+    cnt INTEGER;
+BEGIN
+    -- Count rows in the table
+    SELECT COUNT(*) INTO cnt FROM test_schema.test_table;
+    RAISE NOTICE 'Number of rows: %', cnt;
+
+    -- Error handling example
+    BEGIN
+        -- Attempt to insert a duplicate key (since id is SERIAL, this might not trigger; adjust as needed)
+        INSERT INTO test_schema.test_table (id) VALUES (0);
+    EXCEPTION 
+        WHEN unique_violation THEN
+            RAISE NOTICE 'Duplicate key detected';
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create indexes to test query optimization
+CREATE INDEX idx_text_field ON test_schema.test_table USING GIN (text_field gin_trgm_ops);
+CREATE UNIQUE INDEX uniq_int_field ON test_schema.test_table (int_field);
+
+-- Use transactions to test commit and rollback
+BEGIN;
+    INSERT INTO test_schema.test_table (text_field) VALUES ('transaction_test');
+    SAVEPOINT my_savepoint;
+    DELETE FROM test_schema.test_table WHERE text_field = 'transaction_test';
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- Complex query with joins, subqueries, and window functions
+SELECT 
+    t1.id,
+    t1.text_field,
+    COUNT(*) OVER (PARTITION BY t1.bool_field) as bool_count
+FROM 
+    test_schema.test_table t1
+JOIN (
+    SELECT id FROM test_schema.test_table WHERE int_field > 0
+) t2 ON t1.id = t2.id
+WHERE 
+    t1.timestamp_field > NOW() - INTERVAL '1 day';
+
+-- Security-related statements
+GRANT SELECT ON test_schema.test_table TO public;
+REVOKE SELECT ON test_schema.test_table FROM public;
+
+-- Test function execution
+SELECT test_schema.test_function();
+
+-- Clean up (uncomment if necessary)
+-- DROP SCHEMA test_schema CASCADE;

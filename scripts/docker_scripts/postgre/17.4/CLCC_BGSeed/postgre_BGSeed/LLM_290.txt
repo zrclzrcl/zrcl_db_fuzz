@@ -1,0 +1,46 @@
+\-- Create a simple table for testing purposes
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+\-- Insert some sample data into the table
+INSERT INTO test_table (name, description)
+VALUES 
+    ('Test Item 1', 'This is a description for test item 1'),
+    ('Test Item 2', 'Description for test item 2'),
+    ('Test Item 3', 'Sample description for test item 3');
+
+\-- Create another table to demonstrate relationships
+CREATE TABLE IF NOT EXISTS test_related_table (
+    id SERIAL PRIMARY KEY,
+    test_id INTEGER REFERENCES test_table(id),
+    value VARCHAR(50) NOT NULL
+);
+
+\-- Insert related data
+INSERT INTO test_related_table (test_id, value)
+VALUES 
+    (1, 'Value 1'),
+    (2, 'Value 2'),
+    (3, 'Value 3');
+
+\-- Create a table with various data types for comprehensive testing
+CREATE TABLE IF NOT EXISTS test DataTypes (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT,
+    numeric_field NUMERIC(10, 2),
+    boolean_field BOOLEAN DEFAULT FALSE,
+    date_field DATE,
+    time_field TIME,
+    timestamp_field TIMESTAMP WITH TIME ZONE,
+    json_field JSONB
+);
+
+\-- Insert sample data with various types
+INSERT INTO test DataTypes (text_field, numeric_field, boolean_field, date_field, time_field, timestamp_field, json_field)
+VALUES 
+    ('Sample Text 1', 100.50, TRUE, '2023-01-01', '12:00:00', '2023-01-01 12:00:00+00:00', '{"key": "value"}'),
+    ('Sample Text 2', 200.75, FALSE, '2023-01-02', '13:00:00', '2023-01-02 13:00:00+00:00', '{"name": "test"}');

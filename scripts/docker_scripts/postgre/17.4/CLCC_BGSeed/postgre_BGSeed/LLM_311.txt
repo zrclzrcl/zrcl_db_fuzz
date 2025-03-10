@@ -1,0 +1,9 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    text_col TEXT,
+    float_col FLOAT,
+    bool_col BOOLEAN,
+    timestamp_col TIMESTAMP,
+    json_col JSONB
+);

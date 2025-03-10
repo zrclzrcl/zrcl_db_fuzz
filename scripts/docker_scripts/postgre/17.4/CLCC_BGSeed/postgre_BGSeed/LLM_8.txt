@@ -1,47 +1,57 @@
--- 基本SELECT查询，测试基础检索和排序功能
-SELECT * FROM employees ORDER BY salary DESC;
-
--- 使用聚合函数和分组，处理空值情况并进行过滤
-SELECT department_id, COUNT(*) AS employee_count, 
-       COALESCE(AVG(salary), 0) AS avg_salary 
-FROM employees 
-GROUP BY department_id 
-HAVING COUNT(*) > 5;
-
--- 测试窗口函数，计算排名和行号
-SELECT 
-    emp_no,
-    salary,
-    ROW_NUMBER() OVER (ORDER BY salary DESC) AS row_num,
-    RANK() OVER (ORDER BY salary DESC) AS rank,
-    DENSE_RANK() OVER (ORDER BY salary DESC) AS dense_rank
-FROM employees;
-
--- 使用CTE进行复杂查询，可能涉及递归或其他结构
-WITH cte_employees AS (
-    SELECT emp_no, first_name, last_name, salary 
-    FROM employees 
-    WHERE salary > 50000
-)
-SELECT first_name || ' ' || last_name AS full_name, salary 
-FROM cte_employees;
-
--- JSON数据处理，插入和查询
-INSERT INTO json_test (data) 
-VALUES ('{"name": "Alice", "age": 30, "hobbies": ["reading", "music"]}');
-
--- 查询JSON字段并更新
-SELECT data->>'name' AS name, 
-       jsonb_array_elements(data->'hobbies') AS hobby 
-FROM json_test;
-
--- 数组操作，测试数组元素和条件查询
-CREATE TABLE array_test (
-    id INT,
-    tags TEXT[]
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO array_test (id, tags) 
-VALUES (1, '{postgresql, database}');
+INSERT INTO test_table (name, age) VALUES 
+('Alice', 30),
+('Bob', 25),
+('', 40),
+(NULL, 50);
 
-SELECT * FROM array_test WHERE 'database' = ANY(tags);
+SELECT t1.name, t2.age 
+FROM test_table t1 
+JOIN (
+    SELECT id, name FROM test_table WHERE is_active = TRUE
+) t2 ON t1.id = t2.id 
+WHERE t1.created_at > '2023-01-01';
+
+ALTER TABLE test_table ADD COLUMN description TEXT;
+
+CREATE INDEX idx_name ON test_table (name);
+CREATE INDEX idx_gin_description ON test_table USING gin(description);
+
+BEGIN;
+    UPDATE test_table SET is_active = FALSE WHERE age >= 40;
+    SAVEPOINT my_savepoint;
+    DELETE FROM test_table WHERE name = 'Alice';
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+CREATE VIEW test_view AS 
+SELECT name, age, created_at::DATE AS signup_date 
+FROM test_table 
+WHERE is_active = TRUE;
+
+CREATE OR REPLACE FUNCTION increment_age()
+RETURNS TRIGGER LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.age := OLD.age + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER update_age_trigger
+BEFORE UPDATE ON test_table
+FOR EACH ROW EXECUTE PROCEDURE increment_age();
+
+SELECT * FROM test_view;
+
+DROP TRIGGER update_age_trigger ON test_table;
+DROP FUNCTION increment_age();
+DROP VIEW test_view;
+DROP TABLE test_table;

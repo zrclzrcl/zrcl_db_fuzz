@@ -1,0 +1,46 @@
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INT,
+    bool_col BOOLEAN,
+    timestamp_col TIMESTAMP,
+    unique_col VARCHAR(255) UNIQUE
+);
+
+INSERT INTO test_fuzz (text_col, int_col, bool_col, timestamp_col, unique_col)
+VALUES ('test', 100, TRUE, current_timestamp, 'unique_value_1');
+
+INSERT INTO test_fuzz (text_col, int_col, bool_col, timestamp_col, unique_col)
+VALUES ('test with special characters !@#$%^&*()', -50, FALSE, '2023-01-01 00:00:00', 'unique_value_2');
+
+INSERT INTO test_fuzz (text_col, int_col, bool_col, timestamp_col, unique_col)
+VALUES (repeat('x', 10000), NULL, TRUE, current_timestamp, 'unique_value_3');
+
+UPDATE test_fuzz SET text_col = 'updated_text' WHERE id = 1;
+
+SELECT t1.id, t2.text_col FROM test_fuzz t1
+JOIN test_fuzz t2 ON t1.id = t2.id
+WHERE t1.int_col > 50 AND t2.bool_col = TRUE;
+
+CREATE INDEX idx_timestamp ON test_fuzz (timestamp_col);
+
+CREATE VIEW view_test AS SELECT id, text_col, int_col FROM test_fuzz WHERE bool_col = TRUE;
+
+SELECT sum(int_col) as total_sum, count(*) as row_count
+FROM test_fuzz
+WHERE timestamp_col > current_timestamp - interval '1 day';
+
+DELETE FROM test_fuzz WHERE unique_col IN (
+    SELECT unique_col FROM test_fuzz WHERE id < 3
+);
+
+BEGIN;
+    INSERT INTO test_fuzz (text_col, int_col, bool_col, timestamp_col, unique_col)
+    VALUES ('transaction_test', 200, FALSE, current_timestamp, 'unique_value_4');
+ROLLBACK;
+
+SELECT * FROM view_test ORDER BY id DESC LIMIT 5;
+
+DROP INDEX idx_timestamp;
+DROP VIEW view_test;
+DROP TABLE test_fuzz;

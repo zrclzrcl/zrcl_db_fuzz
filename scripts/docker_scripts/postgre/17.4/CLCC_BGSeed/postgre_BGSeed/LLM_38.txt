@@ -1,0 +1,46 @@
+CREATE TYPE custom_type (
+    internallength = variable,
+    input = custom_in,
+    output = custom_out,
+    alignment = int4
+);
+
+CREATE FUNCTION custom_in(cstring) RETURNS custom_type
+    AS 'textin'
+    LANGUAGE internal STRICT IMMUTABLE;
+
+CREATE FUNCTION custom_out(custom_type) RETURNS cstring
+    AS 'textout'
+    LANGUAGE internal STRICT IMMUTABLE;
+
+CREATE TYPE custom_type (
+    internallength = variable,
+    input = custom_in,
+    output = custom_out,
+    alignment = int4
+);
+
+CREATE FUNCTION custom_func(custom_type) RETURNS int4
+    LANGUAGE SQL
+AS $$
+SELECT 1;
+$$;
+
+SELECT custom_func('test'::text::custom_type);
+CREATE CAST (text AS custom_type) WITHOUT FUNCTION;
+SELECT 'test'::text::custom_type;
+DROP CAST (text AS custom_type);
+
+CREATE CAST (int4 AS custom_type) WITH INOUT;
+SELECT 123::int4::custom_type;
+
+CREATE FUNCTION custom_cast_inout(int4) RETURNS custom_type
+    LANGUAGE SQL
+AS $$
+SELECT ('cast: ' || $1)::custom_type;
+$$;
+
+CREATE CAST (int4 AS custom_type) WITH FUNCTION custom_cast_inout(int4);
+SELECT 456::int4::custom_type;
+
+DROP TYPE custom_type CASCADE;

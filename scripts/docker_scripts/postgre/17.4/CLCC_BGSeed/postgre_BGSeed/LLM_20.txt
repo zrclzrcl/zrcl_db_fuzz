@@ -1,0 +1,33 @@
+BEGIN;
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    num INT NOT NULL,
+    text_field TEXT,
+    bool_field BOOLEAN DEFAULT FALSE,
+    jsonb_field JSONB,
+    range_field INT4RANGE
+);
+
+INSERT INTO test_fuzz (num, text_field, bool_field, jsonb_field, range_field) VALUES 
+(0, '', FALSE, '{}'::JSONB, '[1,5)'),
+(1, 'test', TRUE, '{"key": "value"}'::JSONB, '[2,3)'),
+(-1, NULL, NULL, NULL, '[]'),
+(1000000, 'edge case', FALSE, '{"array": [1,2,3]}'::JSONB, '(5,10]'),
+(-2147483648, 'min int', TRUE, '{"nested": {"object": true}}'::JSONB, '[,-1)');
+
+SELECT * FROM test_fuzz WHERE num = 0;
+SELECT * FROM test_fuzz WHERE text_field IS NULL;
+SELECT * FROM test_fuzz WHERE bool_field = TRUE;
+SELECT jsonb_field @> '{"key": "value"}' AS contains_key FROM test_fuzz;
+SELECT range_field && '[3,4)' AS overlaps FROM test_fuzz;
+
+WITH cte AS (
+    SELECT id, num, text_field FROM test_fuzz
+)
+SELECT * FROM cte WHERE num > 0;
+
+SELECT id, num, LEAD(num) OVER (ORDER BY id) AS next_num FROM test_fuzz;
+SELECT id, num, RANK() OVER (ORDER BY num DESC) AS rank FROM test_fuzz;
+
+COPY test_fuzz TO STDOUT WITH CSV HEADER;
+ROLLBACK;

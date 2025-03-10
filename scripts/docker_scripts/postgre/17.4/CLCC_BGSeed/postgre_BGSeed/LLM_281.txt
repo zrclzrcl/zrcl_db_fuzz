@@ -1,0 +1,29 @@
+\begin{sql}
+BEGIN;
+
+-- Create necessary extension for trigram operations
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create test table with appropriate columns
+CREATE TABLE test_table (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    text_column TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data for testing purposes
+INSERT INTO test_table (text_column) VALUES 
+('A fat cat ate a rat'),
+('The quick brown fox jumps over the lazy dog'),
+('Hello world! This is a test sentence.'),
+('Full text search capabilities in PostgreSQL are powerful'),
+('Testing with various query types and operators');
+
+-- Create index for full-text search
+CREATE INDEX idx_fts ON test_table USING GIN (to_tsvector('english', text_column));
+
+-- Create trigram index for faster LIKE queries
+CREATE INDEX idx_trigram ON test_table USING GIN (text_column gin_trgm_ops);
+
+COMMIT;
+\end{sql}

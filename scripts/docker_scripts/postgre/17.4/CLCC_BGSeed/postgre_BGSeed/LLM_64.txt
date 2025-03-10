@@ -1,0 +1,65 @@
+-- Create a schema to encapsulate all test objects
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create tables within the test schema
+CREATE TABLE test_schema.test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INT,
+    data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a table for testing specific features
+CREATE TABLE test_schema.edge_cases (
+    id INT PRIMARY KEY,
+    text_field TEXT CHECK (text_field ~ '^[A-Za-z]+$'),
+    numeric_value NUMERIC(10, 2) NOT NULL
+);
+
+-- Indexes to test query optimization paths
+CREATE INDEX idx_name ON test_schema.test_table(name);
+CREATE INDEX idx_jsonb_data ON test_schema.test_table USING GIN(data);
+
+-- Triggers and functions for testing event-driven functionality
+CREATE FUNCTION log_insertion() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO test_schema.insert_log VALUES (NEW.id, NEW.name, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_log AFTER INSERT ON test_schema.test_table FOR EACH ROW EXECUTE PROCEDURE log_insertion();
+
+-- Stored procedure for testing complex operations
+CREATE OR REPLACE PROCEDURE test_schema.increment_value(p_id INT, p_increment INT)
+LANGUAGE PLPGSQL
+AS $$
+BEGIN
+    UPDATE test_schema.test_table SET value = COALESCE(value, 0) + p_increment WHERE id = p_id;
+END $$;
+
+-- Function to test calculations
+CREATE FUNCTION calculate_area(radius FLOAT) RETURNS FLOAT AS $$
+BEGIN
+    RETURN PI() * radius^2;
+END $$ LANGUAGE plpgsql;
+
+-- Test case with CTE and window functions
+WITH cte AS (
+    SELECT id, name, value,
+           RANK() OVER (ORDER BY value DESC) as value_rank
+    FROM test_schema.test_table
+)
+SELECT * FROM cte WHERE value_rank <= 10;
+
+-- Insert sample data for testing edge cases
+INSERT INTO test_schema.test_table(name, value, data)
+VALUES ('Test1', 100, '{"key": "value"}'),
+       ('Test2', NULL, '{"array": [1,2,3]}'),
+       ('边界测试', 200, '{"name": "边界"}');
+
+-- Test JSONB operations
+UPDATE test_schema.test_table SET data = jsonb_set(data, '{new_key}', '"new_value"', true) WHERE id = 1;
+
+-- Cleanup (uncomment if necessary)
+-- DROP SCHEMA test_schema CASCADE;

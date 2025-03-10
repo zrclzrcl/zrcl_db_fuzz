@@ -1,0 +1,76 @@
+-- Create test tables for employees and departments
+CREATE TABLE IF NOT EXISTS employees (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    salary int,
+    department_id int,
+    joined_date date DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE IF NOT EXISTS departments (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    location text
+);
+
+-- Insert sample data into departments and employees tables
+INSERT INTO departments(name, location) VALUES 
+('Engineering', 'New York'),
+('Sales', 'San Francisco');
+
+INSERT INTO employees(name, salary, department_id) VALUES 
+('John Doe', 80000, 1),
+('Jane Smith', 75000, 2);
+
+-- Test basic SELECT query
+SELECT e.name AS employee_name, d.name AS department_name 
+FROM employees e 
+JOIN departments d ON e.department_id = d.id;
+
+-- Test UPDATE operation with RETURNING clause
+UPDATE employees 
+SET salary = salary * 1.1 
+WHERE department_id = 1 
+RETURNING id, name, salary;
+
+-- Test DELETE operation with LIKE condition
+DELETE FROM employees 
+WHERE name LIKE 'Jane%';
+
+-- Test transaction with savepoint and rollback
+BEGIN;
+    INSERT INTO employees(name, salary, department_id) VALUES ('Temp Employee', 60000, 1);
+    SAVEPOINT my_savepoint;
+    UPDATE employees SET salary = 70000 WHERE name = 'Temp Employee';
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- Test aggregate functions
+SELECT department_id, COUNT(*) AS employee_count, AVG(salary) AS average_salary 
+FROM employees 
+GROUP BY department_id;
+
+-- Test window function to rank salaries
+SELECT id, name, RANK() OVER (ORDER BY salary DESC) AS salary_rank 
+FROM employees;
+
+-- Create table and test JSONB operations
+CREATE TABLE IF NOT EXISTS test_json (
+    id serial PRIMARY KEY,
+    data jsonb
+);
+
+-- Insert sample JSON data
+INSERT INTO test_json(data) VALUES 
+('{"name": "John", "age": 30}'),
+('{"name": "Jane", "age": 25}');
+
+-- Query JSONB data with operators
+SELECT (data ->> 'name') AS name, (data ->> 'age')::int AS age 
+FROM test_json;
+
+SELECT * FROM test_json 
+WHERE data @> '{"age": 30}';
+
+-- Clean up JSON table
+DELETE FROM test_json;

@@ -1,0 +1,84 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    price NUMERIC(10, 2) CHECK (price >= 0),
+    stock INT CHECK (stock >= 0)
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    total_amount NUMERIC(10, 2),
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    item_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(order_id),
+    product_id INT REFERENCES products(product_id),
+    quantity INT CHECK (quantity > 0),
+    price_at_purchase NUMERIC(10, 2)
+);
+
+CREATE TABLE events (
+    event_id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL CHECK (end_time > start_time),
+    location TEXT
+);
+
+CREATE TABLE tags (
+    tag_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE user_tags (
+    user_id INT REFERENCES users(id),
+    tag_id INT REFERENCES tags(tag_id),
+    PRIMARY KEY (user_id, tag_id)
+);
+
+CREATE INDEX idx_unique_email ON users(email);
+
+INSERT INTO users (username, email, is_active) VALUES 
+('admin', 'admin@example.com', TRUE),
+('test_user', 'test@example.com', FALSE),
+('guest', 'guest@example.com', TRUE);
+
+INSERT INTO products (name, price, stock) VALUES
+('Laptop', 999.99, 10),
+('Smartphone', 699.99, 20),
+('Tablet', 349.99, 5);
+
+INSERT INTO orders (user_id, total_amount) VALUES
+(1, 1098.98),
+(2, NULL),
+(3, 349.99);
+
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
+(1, 1, 1, 999.99),
+(1, 2, 1, 699.99),
+(3, 3, 1, 349.99);
+
+INSERT INTO events (name, start_time, end_time, location) VALUES
+('Tech Conference', '2024-01-15 09:00:00', '2024-01-16 17:00:00', 'Convention Center'),
+('Workshop', '2024-02-20 10:00:00', '2024-02-20 12:00:00', 'Online');
+
+INSERT INTO tags (name) VALUES
+('admin'),
+('user'),
+('guest');
+
+INSERT INTO user_tags (user_id, tag_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);

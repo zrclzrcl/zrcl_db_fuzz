@@ -1,0 +1,41 @@
+-- Create a test table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    is_active BOOLEAN DEFAULT FALSE,
+    balance NUMERIC(10, 2),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (name, is_active, balance)
+VALUES ('Alice', TRUE, 100.50),
+       ('Bob', FALSE, NULL),
+       ('Charlie', TRUE, -50.75);
+
+-- Create an index on the name column for faster lookups
+CREATE INDEX idx_name ON test_table (LOWER(name));
+
+-- Use a Common Table Expression to calculate running totals
+WITH cte AS (
+    SELECT id, name, balance,
+           SUM(balance) OVER (ORDER BY id) as running_total
+    FROM test_table
+)
+SELECT * FROM cte WHERE running_total > 0;
+
+-- Test transaction management with savepoints
+BEGIN;
+INSERT INTO test_table (name, is_active, balance)
+VALUES ('Test Transaction', TRUE, 1000.00);
+
+SAVEPOINT my_savepoint;
+
+UPDATE test_table SET balance = -balance WHERE name = 'Test Transaction';
+
+ROLLBACK TO my_savepoint;
+
+COMMIT;
+
+-- Grant specific privileges on the table
+GRANT SELECT, INSERT ON test_table TO public;

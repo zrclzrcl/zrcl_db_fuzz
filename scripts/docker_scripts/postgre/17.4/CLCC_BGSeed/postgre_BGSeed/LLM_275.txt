@@ -1,0 +1,43 @@
+CREATE TABLE TEST_DATA (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT,
+    date_col DATE,
+    time_col TIME WITH TIME ZONE,
+    bool_col BOOLEAN,
+    num_col NUMERIC(10, 2)
+);
+
+INSERT INTO TEST_DATA (int_col, text_col, date_col, time_col, bool_col, num_col) VALUES
+    (2147483647, 'test', '9999-12-31', '23:59:59.999999+00', TRUE, 99999999.99),
+    (-2147483648, '', '2023-01-01', '00:00:00+00', FALSE, -99999999.99),
+    (0, NULL, '2000-02-29', '12:34:56.789+05', TRUE, 0.00),
+    (NULL, 'Edge Case', '1970-01-01', '12:34:56.789+00', NULL, NULL);
+
+SELECT id AS "ID", int_col + 1 AS "Incremented Int", text_col || ' appended' AS "Appended Text" FROM TEST_DATA;
+SELECT date_col - INTERVAL '1 day' AS "Previous Day" FROM TEST_DATA WHERE bool_col = TRUE;
+SELECT time_col AT TIME ZONE 'UTC' AS "Time in UTC" FROM TEST_DATA ORDER BY id DESC LIMIT 2;
+
+SELECT COUNT(*) AS "Total Records", SUM(num_col) AS "Sum of Numeric" FROM TEST_DATA GROUP BY bool_col HAVING bool_col IS NOT NULL;
+
+SELECT (int_col * 10) / 0 AS "Division by Zero" FROM TEST_DATA WHERE id = 1;
+SELECT lower(text_col), upper(text_col) FROM TEST_DATA WHERE text_col LIKE 'test%';
+SELECT EXTRACT(YEAR FROM date_col) AS "Year Extracted", bool_col::TEXT AS "Boolean as Text" FROM TEST_DATA;
+
+SELECT num_col + int_col AS "Numeric Addition" FROM TEST_DATA WHERE id = 1;
+SELECT (num_col * 2) / num_col AS "Self Division" FROM TEST_DATA WHERE num_col != 0;
+
+SELECT time_col - '1 hour'::INTERVAL AS "Time Minus Hour" FROM TEST_DATA ORDER BY time_col ASC;
+SELECT date_col + '1 month'::INTERVAL AS "Date Plus Month", text_col || int_col::TEXT AS "Concatenated String and Int" FROM TEST_DATA WHERE bool_col IS TRUE;
+
+SELECT * FROM TEST_DATA WHERE id = 0 AND bool_col = FALSE OR num_col > 99999999.98;
+SELECT * FROM TEST_DATA WHERE (text_col = 'test' AND int_col < 10) OR (bool_col IS NULL AND date_col >= '2023-01-01');
+
+SELECT * FROM TEST_DATA WHERE time_col > CURRENT_TIMESTAMP - INTERVAL '1 day';
+SELECT * FROM TEST_DATA WHERE num_col NOT IN (99999999.99, -99999999.99);
+
+SELECT id AS "ID", text_col AS "Text Column" FROM TEST_DATA LIMIT 3 OFFSET 2;
+SELECT bool_col::BOOLEAN AS "Explicit Boolean Cast" FROM TEST_DATA WHERE id = 1;
+
+SELECT (int_col || ' test') AS "Invalid Concatenation" FROM TEST_DATA WHERE id = 1;
+SELECT to_date('invalid date', 'YYYY-MM-DD') AS "Invalid Date Conversion";

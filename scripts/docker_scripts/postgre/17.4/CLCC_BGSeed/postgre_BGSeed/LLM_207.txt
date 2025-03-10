@@ -1,0 +1,98 @@
+-- Create a table with various data types to test different scenarios
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    is_active BOOLEAN DEFAULT TRUE,
+    score NUMERIC(5,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+-- Insert sample data including edge cases and NULL values
+INSERT INTO test_table (name, age, is_active, score) 
+VALUES 
+('Alice', 30, TRUE, 98.7),
+('Bob', 25, FALSE, NULL),
+('Charlie', 45, TRUE, 100.0);
+
+-- Test transaction management
+BEGIN;
+    UPDATE test_table SET updated_at = CURRENT_TIMESTAMP WHERE name = 'Alice';
+    DELETE FROM test_table WHERE name = 'Bob';
+ROLLBACK;
+
+-- Create a stored procedure to handle data manipulation
+CREATE OR REPLACE PROCEDURE insert_person(IN p_name TEXT, IN p_age INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO test_table (name, age) VALUES (p_name, p_age);
+EXCEPTION 
+    WHEN check_violation THEN
+        RAISE NOTICE 'Age must be non-negative';
+END;
+$$;
+
+-- Execute the stored procedure with valid and invalid data
+CALL insert_person('David', 28);
+CALL insert_person('Eve', -5); -- This should trigger an exception
+
+-- Create a trigger function to log updates and deletions
+CREATE OR REPLACE FUNCTION log_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        INSERT INTO change_log (table_name, action, old_data, new_data)
+        VALUES ('test_table', 'UPDATE', OLD::TEXT, NEW::TEXT);
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO change_log (table_name, action, old_data)
+        VALUES ('test_table', 'DELETE', OLD::TEXT);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- Create a table to store logs and attach the trigger
+CREATE TABLE change_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    old_data TEXT,
+    new_data TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Attach the trigger to test_table for updates and deletions
+CREATE TRIGGER track_changes
+AFTER UPDATE OR DELETE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION log_changes();
+
+-- Test the trigger by updating a record
+UPDATE test_table SET is_active = FALSE WHERE name = 'Charlie';
+
+-- Use a cursor to fetch data in batches
+DECLARE cur CURSOR FOR SELECT * FROM test_table ORDER BY age DESC;
+FETCH ALL IN cur;
+
+-- Close and deallocate the cursor
+CLOSE cur;
+DEALLOCATE cur;
+
+-- Test indexing for query optimization
+CREATE INDEX idx_name ON test_table (name);
+EXPLAIN ANALYZE SELECT * FROM test_table WHERE name = 'Alice';
+
+-- Test constraint enforcement by attempting to alter a column with existing NULLs
+ALTER TABLE test_table ALTER COLUMN score TYPE NUMERIC(5,2); -- This should fail without a default
+
+-- Clean up the tables and objects created during testing
+DROP TRIGGER track_changes ON test_table;
+DROP FUNCTION log_changes();
+DROP PROCEDURE insert_person(TEXT, INT);
+DROP INDEX idx_name;
+DROP TABLE change_log;
+DROP TABLE test_table;

@@ -1,0 +1,35 @@
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INT,
+    date_col DATE,
+    bool_col BOOLEAN,
+    json_col JSONB
+);
+
+INSERT INTO test_fuzz (text_col, int_col, date_col, bool_col, json_col)
+VALUES 
+('test', 123, '2024-01-01', TRUE, '{"key": "value"}'),
+('', NULL, '1970-01-01', FALSE, NULL),
+('edge case', -2147483648, '2024-12-31', TRUE, '{"array": [1, 2, 3]}'),
+('NULL test', 0, '2024-01-02', NULL, '{"null": null}');
+
+ANALYZE test_fuzz;
+
+SELECT COUNT(*) FROM test_fuzz;
+SELECT SUM(int_col) FROM test_fuzz WHERE int_col IS NOT NULL;
+SELECT text_col, COUNT(*) FROM test_fuzz GROUP BY text_col;
+SELECT date_col, bool_col, COUNT(*) FROM test_fuzz GROUP BY date_col, bool_col ORDER BY date_col DESC;
+
+WITH cte AS (
+    SELECT id, text_col || ' appended' AS modified_text
+    FROM test_fuzz
+)
+SELECT * FROM cte WHERE modified_text LIKE '%appended%';
+
+SELECT json_col ->> 'key' AS extracted_value FROM test_fuzz;
+SELECT json_agg(json_col) FROM test_fuzz;
+
+SELECT id, RANK() OVER (ORDER BY int_col DESC NULLS LAST) AS rank FROM test_fuzz;
+
+DROP TABLE test_fuzz;

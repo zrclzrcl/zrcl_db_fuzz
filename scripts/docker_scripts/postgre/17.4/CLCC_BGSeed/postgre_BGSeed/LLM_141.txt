@@ -1,0 +1,18 @@
+SET datestyle = 'ISO';
+SET IntervalStyle TO postgres;
+CREATE TABLE geometric_TBL (
+    f1 point,
+    f2 lseg,
+    f3 box,
+    f4 path,
+    f5 polygon,
+    f6 circle
+);
+INSERT INTO geometric_TBL (f1) VALUES ('(-1e200,-1e200)');
+INSERT INTO geometric_TBL (f2) VALUES ('((0,0),(0,0))');
+INSERT INTO geometric_TBL (f3) VALUES ('(0,0),(0,0)');
+INSERT INTO geometric_TBL (f4) VALUES ('[(0,0)]');
+INSERT INTO geometric_TBL (f5) VALUES ('{(0,0)}');
+INSERT INTO geometric_TBL (f6) VALUES ('<(0,0),0>');
+INSERT INTO geometric_TBL (f1) VALUES ('invalid_point');
+INSERT INTO geometric_TBL (f2) VALUES ('((0,0),(invalid))');

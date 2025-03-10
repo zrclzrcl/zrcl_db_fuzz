@@ -1,0 +1,40 @@
+-- Create domains first to ensure dependencies are met
+CREATE DOMAIN di AS int;
+CREATE DOMAIN orderedpair AS int[2] CHECK (value[1] < value[2]);
+CREATE DOMAIN inotnull AS int CHECK (value IS NOT NULL);
+CREATE DOMAIN mynums AS numeric(4,2)[1];
+CREATE DOMAIN testdomain1 AS int CONSTRAINT unsigned CHECK (value > 0);
+
+-- Create functions
+CREATE FUNCTION dom_check(int) RETURNS di LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE d di;
+BEGIN
+    d := 1::di;
+    RETURN d;
+END $$;
+
+-- Create tables
+CREATE TEMP TABLE op (f1 orderedpair);
+CREATE TABLE dom_table (x inotnull);
+
+-- Insert data into tables
+INSERT INTO op VALUES ('{1,2}');
+INSERT INTO op VALUES ('{2,3}');
+
+-- Update operations on tables
+UPDATE op SET f1[2] = 3 WHERE f1[2] = 2;
+UPDATE op SET f1[2] = 0 WHERE f1[2] = 3;
+
+-- Alter domain constraints
+ALTER DOMAIN di ADD CONSTRAINT pos CHECK (value > 0);
+ALTER DOMAIN testdomain1 RENAME CONSTRAINT unsigned TO unsigned_foo;
+ALTER DOMAIN testdomain1 DROP CONSTRAINT unsigned_foo;
+
+-- Drop objects in reverse order of creation
+DROP TABLE dom_table;
+DROP TABLE op;
+DROP FUNCTION dom_check(int);
+DROP DOMAIN testdomain1;
+DROP DOMAIN inotnull;
+DROP DOMAIN orderedpair;
+DROP DOMAIN di;

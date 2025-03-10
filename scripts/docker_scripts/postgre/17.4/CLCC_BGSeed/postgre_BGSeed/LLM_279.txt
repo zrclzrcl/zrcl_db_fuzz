@@ -1,0 +1,44 @@
+-- Initial seed for PostgreSQL test environment
+-- Creates basic schema and sample data for testing purposes
+
+-- Create a simple table structure with relationships
+CREATE TABLE IF NOT EXISTS public.customers (
+    customer_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES public.customers(customer_id) ON DELETE CASCADE,
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(20) CHECK (status IN ('pending', 'shipped', 'delivered', 'cancelled'))
+);
+
+-- Create indexes for faster querying
+CREATE INDEX IF NOT EXISTS idx_customer_email ON public.customers(email);
+CREATE INDEX IF NOT EXISTS idx_order_date ON public.orders(order_date);
+
+-- Insert sample data
+INSERT INTO public.customers (first_name, last_name, email, phone_number)
+VALUES 
+('John', 'Doe', 'john.doe@example.com', '+1234567890'),
+('Jane', 'Smith', 'jane.smith@example.com', '+0987654321'),
+('Bob', 'Johnson', 'bob.johnson@example.com', '+1122334455');
+
+INSERT INTO public.orders (customer_id, order_date, total_amount, status)
+VALUES 
+(1, CURRENT_DATE - INTERVAL '1 day', 100.00, 'shipped'),
+(2, CURRENT_DATE - INTERVAL '2 days', 75.50, 'delivered'),
+(3, CURRENT_DATE, 150.75, 'pending');
+
+-- Verify the data
+SELECT * FROM public.customers;
+SELECT * FROM public.orders;
+
+-- Clean up if needed (uncomment to drop tables)
+-- DROP TABLE IF EXISTS public.orders, public.customers;

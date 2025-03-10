@@ -1,0 +1,80 @@
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0),
+    is_active BOOLEAN DEFAULT TRUE,
+    balance NUMERIC(10,2) NOT NULL,
+    last_login DATE,
+    preferences JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (name, age, balance, last_login, preferences)
+VALUES 
+('John Doe', 30, 1000.50, '2023-10-01', '{"theme": "dark", "notifications": true}'),
+('', NULL, -999999.99, '1970-01-01', NULL),
+('Jane Smith', 25, 0.00, CURRENT_DATE, '{"settings": {"language": "en"}}');
+
+UPDATE users SET is_active = FALSE WHERE age > 25;
+
+CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
+
+INSERT INTO users (name, age, balance, last_login, preferences)
+VALUES 
+('Test User', 100, 999999.99, '2999-12-31', '{"test": true}');
+
+ALTER TABLE users ADD CONSTRAINT unique_email UNIQUE (email);
+
+CREATE OR REPLACE FUNCTION log_user_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'User % was updated', OLD.id;
+    ELSIF TG_OP = 'DELETE' THEN
+        RAISE NOTICE 'User % was deleted', OLD.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER user_changes_trigger
+AFTER UPDATE OR DELETE ON users
+FOR EACH ROW EXECUTE FUNCTION log_user_changes();
+
+CREATE VIEW active_users AS
+SELECT id, name, age, balance, last_login, created_at 
+FROM users 
+WHERE is_active = TRUE AND age > 18;
+
+ALTER TABLE users ADD COLUMN email VARCHAR(255);
+ALTER TABLE users ADD CONSTRAINT unique_email UNIQUE (email);
+
+INSERT INTO users (name, age, balance, email)
+VALUES ('Test Email', 30, 500.00, 'test@example.com');
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM pg_catalog.pg_tables 
+        WHERE tablename = 'users'
+    ) THEN
+        RAISE NOTICE 'Table users does not exist';
+    END IF;
+END $$;
+
+CREATE TABLE users_partitioned (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER CHECK (age >= 0)
+) PARTITION BY RANGE (age);
+
+CREATE TABLE users_child1 PARTITION OF users_partitioned FOR VALUES FROM (0) TO (18);
+CREATE TABLE users_child2 PARTITION OF users_partitioned FOR VALUES FROM (18) TO (65);
+CREATE TABLE users_child3 PARTITION OF users_partitioned DEFAULT;
+
+INSERT INTO users_partitioned (name, age)
+VALUES ('Alice', 15), ('Bob', 40), ('Charlie', 70);
+
+ANALYZE users;
+ANALYZE users_partitioned;

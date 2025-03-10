@@ -1,0 +1,37 @@
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT NOT NULL,
+    num_column INTEGER UNIQUE,
+    bool_column BOOLEAN DEFAULT FALSE,
+    jsonb_column JSONB,
+    ts_column TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX ON test_table USING GIN (text_column gin_trgm_ops);
+CREATE INDEX ON test_table USING GIN (jsonb_column);
+
+INSERT INTO test_table (text_column, num_column, bool_column, jsonb_column)
+VALUES ('test string', 123, TRUE, '{"key": "value"}'),
+       ('another test', 456, FALSE, '{"array": [1, 2, 3]}');
+
+SELECT * FROM ts_rank(to_tsvector('english', text_column), to_tsquery('english', 'test & string'))
+FROM test_table;
+
+SELECT jsonb_column ->> 'key' AS extracted_value
+FROM test_table
+WHERE jsonb_column @> '{"array": [1]}'::jsonb;
+
+WITH cte AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY num_column) as row_num,
+           RANK() OVER (PARTITION BY bool_column ORDER BY ts_column DESC) as rank_val
+    FROM test_table
+)
+SELECT * FROM cte WHERE row_num % 2 = 0;
+
+SELECT t1.id, t2.text_column
+FROM test_table t1
+JOIN LATERAL (
+    SELECT text_column
+    FROM test_table t3
+    WHERE t3.num_column > t1.num_column
+) t2 ON TRUE;

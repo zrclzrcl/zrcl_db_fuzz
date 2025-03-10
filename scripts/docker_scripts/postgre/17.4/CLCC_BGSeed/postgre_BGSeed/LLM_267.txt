@@ -1,0 +1,36 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_name ON test_table (name);
+
+ALTER TABLE test_table ADD CONSTRAINT positive_value CHECK (value >= 0);
+
+WITH recursive_cte AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM recursive_cte WHERE n < 10
+)
+INSERT INTO test_table (name, value) 
+SELECT 'Test' || n, n * 10 FROM recursive_cte;
+
+CREATE TABLE partitioned_table (
+    id SERIAL,
+    date DATE,
+    data JSONB
+) PARTITION BY RANGE (date);
+
+CREATE TABLE partition_2023 PARTITION OF partitioned_table FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+INSERT INTO test_table (name, value) 
+VALUES ('Edge Case', 9999)
+ON CONFLICT (name) DO UPDATE SET value = excluded.value + 1;
+
+SELECT t.id, t.name, t.value,
+       ROW_NUMBER() OVER (ORDER BY t.created_at),
+       RANK() OVER (PARTITION BY t.value ORDER BY t.created_at)
+FROM test_table t
+JOIN partitioned_table p ON t.id = p.id;

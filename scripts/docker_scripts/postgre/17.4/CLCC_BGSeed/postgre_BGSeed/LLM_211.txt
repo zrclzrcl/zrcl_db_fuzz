@@ -1,0 +1,81 @@
+-- Initialize the seed database with core objects
+SET default_transaction_read_only = off;
+SET client_min_messages = warning;
+
+-- Create essential users and roles
+CREATE USER regress_rls_alice WITH PASSWORD 'alice';
+CREATE USER regress_rls_bob WITH PASSWORD 'bob';
+CREATE USER regress_rls_carol WITH PASSWORD 'carol';
+CREATE USER regress_rls_dave WITH PASSWORD 'dave';
+CREATE USER regress_rls_exempt_user WITH PASSWORD 'exempt';
+
+-- Create schemas
+CREATE SCHEMA regress_rls_schema;
+
+-- Create core tables and objects
+CREATE TABLE rls_tbl (
+    c1 int,
+    c2 text
+);
+
+ALTER TABLE rls_tbl ENABLE ROW LEVEL SECURITY;
+CREATE POLICY p1 ON rls_tbl USING (c1 > 5);
+CREATE POLICY p2 ON rls_tbl FOR SELECT USING (c1 <= 3);
+CREATE POLICY p3 ON rls_tbl FOR UPDATE USING (c1 <= 3) WITH CHECK (c1 > 5);
+CREATE POLICY p4 ON rls_tbl FOR DELETE USING (c1 <= 3);
+
+-- Create force RLS table
+CREATE TABLE rls_tbl_force (
+    c1 int,
+    c2 text
+);
+
+ALTER TABLE rls_tbl_force ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rls_tbl_force FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY p1 ON rls_tbl_force USING (c1 = 5) WITH CHECK (c1 < 5);
+CREATE POLICY p2 ON rls_tbl_force FOR SELECT USING (c1 = 8);
+CREATE POLICY p3 ON rls_tbl_force FOR UPDATE USING (c1 = 8) WITH CHECK (c1 >= 5);
+CREATE POLICY p4 ON rls_tbl_force FOR DELETE USING (c1 = 8);
+
+-- Create additional objects for testing
+CREATE TABLE rls_ref (
+    id int PRIMARY KEY,
+    name text
+);
+
+INSERT INTO rls_ref VALUES (1, 'Test Record');
+
+-- Create a policy using a ROW comparison
+CREATE POLICY p_row_compare ON rls_tbl USING (ROW(c1, c2) > ROW(5, 'test'));
+
+-- Insert test data
+INSERT INTO rls_tbl VALUES (6, 'Valid'), (2, 'Invalid');
+INSERT INTO rls_tbl_force VALUES (4, 'Force RLS Test');
+
+-- Create a helper function for testing
+CREATE OR REPLACE FUNCTION test_rls_function()
+RETURNS void AS $$
+BEGIN
+    RAISE NOTICE 'RLS Function Called';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create an operator for testing purposes
+CREATE OPERATOR <-> (
+    leftarg = int,
+    rightarg = text,
+    procedure = pg_catalog.text_length
+);
+
+-- Grant necessary permissions
+GRANT SELECT ON rls_tbl TO regress_rls_bob;
+GRANT INSERT, UPDATE, DELETE ON rls_tbl_force TO regress_rls_carol;
+
+-- Create a table for testing row insertion from subquery
+CREATE TABLE rls_subquery (
+    id int,
+    data text
+);
+
+INSERT INTO rls_subquery SELECT 1, 'Subquery Test';

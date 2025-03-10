@@ -1,0 +1,36 @@
+-- Initial seed for PostgreSQL date/time tests
+
+-- Create a test table
+CREATE TABLE IF NOT EXISTS date_test (
+    id SERIAL PRIMARY KEY,
+    test_date DATE NOT NULL
+);
+
+-- Insert test data
+INSERT INTO date_test (test_date) VALUES
+('2024-01-01'), -- Test start of year
+('2023-12-31'), -- Test end of year
+('2024-02-29'), -- Test leap day
+('2023-03-01'), -- Test spring forward (DST)
+('2023-11-05');  -- Test fall back (DST)
+
+-- Test date arithmetic and intervals
+SELECT 
+    test_date,
+    test_date + INTERVAL '1 day' AS tomorrow,
+    test_date - INTERVAL '1 week' AS last_week,
+    AGE(test_date, CURRENT_DATE) AS age_from_today,
+    EXTRACT(YEAR FROM test_date) AS year_component,
+    EXTRACT(MONTH FROM test_date) AS month_component,
+    EXTRACT(DAY FROM test_date) AS day_component
+FROM date_test;
+
+-- Test time zones
+SELECT 
+    test_date AT TIME ZONE 'UTC' AS utc_time,
+    test_date AT TIME ZONE 'America/New_York' AS ny_time,
+    test_date AT TIME ZONE 'Asia/Tokyo' AS tokyo_time
+FROM date_test;
+
+-- Clean up
+DROP TABLE IF EXISTS date_test;

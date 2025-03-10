@@ -1,0 +1,36 @@
+-- Initial seed for PostgreSQL test environment
+-- Creates tables with initial data and basic structure
+
+-- Create base table with primary key and check constraints
+CREATE TABLE few (
+    id SERIAL PRIMARY KEY,
+    data INTEGER NOT NULL CHECK (data > 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN few.data IS 'Positive integer value';
+
+-- Insert initial test data using generate_series
+INSERT INTO few (data)
+SELECT i FROM generate_series(1, 10) AS i;
+
+-- Create supporting table for additional test cases
+CREATE TABLE fewmore (
+    id SERIAL PRIMARY KEY,
+    value INTEGER NOT NULL UNIQUE,
+    description TEXT
+);
+
+COMMENT ON COLUMN fewmore.value IS 'Unique integer identifier';
+
+-- Add index on frequently queried columns
+CREATE INDEX idx_few_data ON few (data);
+CREATE INDEX idx_fewmore_value ON fewmore (value);
+
+-- Add additional constraints if needed
+ALTER TABLE few ADD CONSTRAINT valid_data_range CHECK (data <= 1000);
+
+-- Seed initial data for fewmore table
+INSERT INTO fewmore (value, description)
+SELECT i, 'Value ' || i::text FROM generate_series(1, 5) AS i;

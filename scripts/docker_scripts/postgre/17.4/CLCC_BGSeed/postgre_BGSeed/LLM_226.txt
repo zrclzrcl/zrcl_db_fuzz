@@ -1,0 +1,60 @@
+create table test_edge_case(
+    id int4,
+    p point,
+    b box,
+    t text,
+    j jsonb,
+    u uuid,
+    ci citext
+);
+insert into test_edge_case (id, p, b, t, j, u, ci)
+select g, 
+       point(g*10, g*10),
+       box(point(g, g), point(g+5, g+5)),
+       'test' || repeat('a', 100) || g,
+       jsonb_build_object('id', g, 'name', 'test' || g),
+       uuid_generate_v4(),
+       'TestCi' 
+from generate_series(1, 10000) g;
+create index test_point_idx on test_edge_case using gist(p);
+create index test_box_idx on test_edge_case using spgist(b);
+create index test_text_idx on test_edge_case using gin(t gin_trgm_ops);
+create index test_jsonb_idx on test_edge_case using gin(j);
+vacuum analyze test_edge_case;
+begin;
+insert into test_edge_case (id, p, b, t, j, u, ci)
+select g + 10000,
+       point(g*10, g*10),
+       box(point(g, g), point(g+5, g+5)),
+       'test' || repeat('a', 100) || (g + 10000),
+       jsonb_build_object('id', g + 10000, 'name', 'test' || (g + 10000)),
+       uuid_generate_v4(),
+       'TestCi' 
+from generate_series(1, 5000) g;
+rollback;
+create table test_large_data(
+    id int8,
+    data text
+);
+insert into test_large_data select i, repeat('x', 1024 * 1024) from generate_series(1, 1000) i;
+create index test_large_data_idx on test_large_data (id);
+vacuum full test_large_data;
+create table test_transaction(
+    id int,
+    value numeric
+);
+insert into test_transaction select g, random() * 1000000 from generate_series(1, 1000) g;
+update test_transaction set value = value + 500 where id % 2 = 0;
+delete from test_transaction where id % 3 = 0;
+vacuum test_transaction;
+create table test_unique(
+    id uuid primary key,
+    name citext unique
+);
+insert into test_unique select uuid_generate_v4(), 'test' || g from generate_series(1, 500) g;
+alter table test_unique add constraint test_unique_check check (length(name) > 5);
+vacuum analyze test_unique;
+create index test_ci_idx on test_edge_case using btree(ci collate "C");
+create extension if not exists pg_trgm;
+create index test_trgm_idx on test_edge_case using gist(t gin_trgm_ops);
+analyze test_edge_case;

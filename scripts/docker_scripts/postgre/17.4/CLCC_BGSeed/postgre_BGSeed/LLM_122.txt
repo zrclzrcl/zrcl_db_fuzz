@@ -1,0 +1,32 @@
+BEGIN;
+-- Create a simple table structure for testing
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    department_id INT NOT NULL,
+    salary NUMERIC(10,2) NOT NULL,
+    hire_date DATE NOT NULL
+);
+
+-- Insert some sample data
+INSERT INTO employees (employee_id, first_name, last_name, department_id, salary, hire_date)
+SELECT 
+    i AS employee_id,
+    'First' || i AS first_name,
+    'Last' || i AS last_name,
+    (i % 3) + 1 AS department_id,
+    CASE 
+        WHEN (i % 3) = 0 THEN 50000
+        WHEN (i % 3) = 1 THEN 60000
+        ELSE 70000
+    END AS salary,
+    CURRENT_DATE AS hire_date
+FROM generate_series(1, 100) AS i;
+
+-- Create some indexes for testing queries
+CREATE INDEX idx_department_id ON employees (department_id);
+CREATE INDEX idx_salary ON employees (salary);
+CREATE INDEX idx_last_name ON employees (last_name);
+
+COMMIT;

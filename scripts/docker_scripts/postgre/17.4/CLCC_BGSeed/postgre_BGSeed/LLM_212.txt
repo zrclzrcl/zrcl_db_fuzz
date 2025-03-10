@@ -1,0 +1,54 @@
+-- Initial seed for PostgreSQL testing environment
+
+-- Create test tables
+CREATE TABLE IF NOT EXISTS tenk1 (
+    unique1 integer,
+    unique2 integer,
+    two integer,
+    four integer,
+    ten integer,
+    twenty integer,
+    hundred integer,
+    thousand integer,
+    twothousand integer,
+    fivethous integer,
+    tenthous integer,
+    odd integer,
+    even integer,
+    stringu1 text,
+    stringu2 text,
+    string4 text
+);
+
+CREATE TABLE IF NOT EXISTS int8_tbl (
+    q1 bigint,
+    q2 bigint
+);
+
+-- Populate test tables with sample data
+COPY tenk1 (unique1, unique2, two, four, ten, twenty, hundred, thousand, twothousand, fivethous, tenthous, odd, even, stringu1, stringu2, string4) FROM stdin;
+1	1	1	1	1	1	1	1	1	1	1	1	1	a	a	a
+2	2	2	2	2	2	2	2	2	2	2	2	2	b	b	b
+3	3	3	3	3	3	3	3	3	3	3	3	3	c	c	c
+4	4	4	4	4	4	4	4	4	4	4	4	4	d	d	d
+5	5	5	5	5	5	5	5	5	5	5	5	5	e	e	e
+\.
+COPY int8_tbl (q1, q2) FROM stdin;
+9223372036854775807	-9223372036854775808
+\.
+
+-- Create additional test objects
+CREATE TABLE IF NOT EXISTS compositetable (
+    a text,
+    b text
+);
+
+INSERT INTO compositetable (a, b) VALUES ('fa', 'fb');
+
+-- Ensure proper permissions
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+
+-- Verify table creation and data insertion
+SELECT COUNT(*) FROM tenk1;
+SELECT COUNT(*) FROM int8_tbl;
+SELECT COUNT(*) FROM compositetable;

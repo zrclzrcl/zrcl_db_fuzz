@@ -1,0 +1,50 @@
+CREATE TABLE int_t (f1 integer);
+INSERT INTO int_t VALUES (-2147483648);
+INSERT INTO int_t VALUES (0);
+INSERT INTO int_t VALUES (2147483647);
+
+CREATE TABLE text_t (f1 text);
+INSERT INTO text_t VALUES ('');
+INSERT INTO text_t VALUES ('a');
+INSERT INTO text_t VALUES ('abcdefghijklmnopqrstuvwxyz');
+INSERT INTO text_t VALUES ('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+INSERT INTO text_t VALUES ('0123456789');
+INSERT INTO text_t VALUES ('!@#$%^&*()_+{}|:"<>?~`');
+INSERT INTO text_t VALUES ('   ');
+INSERT INTO text_t VALUES ('  leading space');
+INSERT INTO text_t VALUES ('trailing space   ');
+
+CREATE TABLE bool_t (f1 boolean);
+INSERT INTO bool_t VALUES (true);
+INSERT INTO bool_t VALUES (false);
+INSERT INTO bool_t VALUES (null);
+
+CREATE TABLE numeric_t (f1 numeric(20,10));
+INSERT INTO numeric_t VALUES (-9999999999.9999999999);
+INSERT INTO numeric_t VALUES (0);
+INSERT INTO numeric_t VALUES (9999999999.9999999999);
+
+CREATE TABLE date_t (f1 date);
+INSERT INTO date_t VALUES ('4713-01-01 BC');
+INSERT INTO date_t VALUES ('2000-02-29');  -- Leap day
+INSERT INTO date_t VALUES ('9999-12-31');
+
+CREATE TABLE time_t (f1 time);
+INSERT INTO time_t VALUES ('00:00:00');
+INSERT INTO time_t VALUES ('12:34:56.789');
+INSERT INTO time_t VALUES ('23:59:59.999');
+
+CREATE TABLE timestamp_t (f1 timestamp);
+INSERT INTO timestamp_t VALUES ('-infinity');
+INSERT INTO timestamp_t VALUES ('+infinity');
+INSERT INTO timestamp_t VALUES ('2024-02-29 12:34:56');  -- Future date
+
+CREATE TABLE interval_t (f1 interval);
+INSERT INTO interval_t VALUES ('-1 year');
+INSERT INTO interval_t VALUES ('0 seconds');
+INSERT INTO interval_t VALUES ('1 century');
+
+CREATE TABLE jsonb_t (f1 jsonb);
+INSERT INTO jsonb_t VALUES ('{"key": "value"}');
+INSERT INTO jsonb_t VALUES ('[1, 2, 3]');
+INSERT INTO jsonb_t VALUES ('null');

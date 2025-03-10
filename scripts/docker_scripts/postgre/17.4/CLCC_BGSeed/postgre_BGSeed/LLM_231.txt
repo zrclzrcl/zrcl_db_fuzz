@@ -1,0 +1,1 @@
+SELECT ST_AsText(ST_GeomFromText('POINT(0 0)'));

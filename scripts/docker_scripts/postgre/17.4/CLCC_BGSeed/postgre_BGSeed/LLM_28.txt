@@ -1,0 +1,82 @@
+-- Initial seed for PostgreSQL database fuzz testing
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO test_table (name, value) VALUES ('test1', 100);
+INSERT INTO test_table (name, value) VALUES ('test2', 200);
+INSERT INTO test_table (name, value) VALUES ('test3', 300);
+
+BEGIN;
+    INSERT INTO test_table (name, value) VALUES ('txn_test1', 400);
+    INSERT INTO test_table (name, value) VALUES ('txn_test2', 500);
+    SAVEPOINT my_savepoint;
+        UPDATE test_table SET value = value + 100 WHERE name = 'txn_test1';
+        SELECT * FROM test_table WHERE name = 'txn_test1';
+    ROLLBACK TO my_savepoint;
+    SELECT * FROM test_table WHERE name = 'txn_test1';
+COMMIT;
+
+CREATE INDEX idx_value ON test_table (value);
+
+SELECT id, name, value 
+FROM (
+    SELECT *, ROW_NUMBER() OVER (ORDER BY value DESC) AS row_num
+    FROM test_table
+) subquery
+WHERE row_num <= 5;
+
+CREATE VIEW test_view AS 
+SELECT name, value, created_at 
+FROM test_table 
+WHERE value > 100;
+
+INSERT INTO test_table (name, value) VALUES ('test4', 400);
+INSERT INTO test_table (name, value) VALUES ('test5', 500);
+
+BEGIN;
+    INSERT INTO test_table (name, value) SELECT 'txn_test3', 600 RETURNING *;
+    INSERT INTO test_table (name, value) SELECT 'txn_test4', 700 RETURNING *;
+    ROLLBACK;
+
+CREATE TRIGGER update_trigger
+BEFORE UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION trigger_function();
+
+SELECT name, 
+       CASE 
+           WHEN value < 200 THEN 'Low'
+           WHEN value >= 200 AND value < 400 THEN 'Medium'
+           ELSE 'High'
+       END AS category
+FROM test_table;
+
+CREATE OR REPLACE FUNCTION get_top_values()
+RETURNS TABLE(id INT, name TEXT, value INT) AS $$
+BEGIN
+    RETURN QUERY 
+        SELECT id, name, value 
+        FROM test_table 
+        ORDER BY value DESC LIMIT 3;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_top_values();
+
+WITH cte AS (
+    SELECT value, COUNT(*) as count
+    FROM test_table
+    GROUP BY value
+)
+SELECT value, count 
+FROM cte 
+WHERE count > 1;
+
+UPDATE test_table SET name = 'updated_test' WHERE id = 1;
+DELETE FROM test_table WHERE value > 500;
+
+SELECT * FROM test_view;

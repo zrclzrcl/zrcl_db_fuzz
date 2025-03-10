@@ -1,0 +1,42 @@
+DROP TABLE IF EXISTS test_numbers;
+CREATE TABLE test_numbers (
+    id SERIAL PRIMARY KEY,
+    integer_value INTEGER,
+    text_value TEXT,
+    boolean_value BOOLEAN
+);
+
+INSERT INTO test_numbers (integer_value, text_value, boolean_value) VALUES 
+(0, '', TRUE),
+(-1, 'test', FALSE),
+(2147483647, NULL, NULL),
+(-2147483648, '\x5c\x27\x22', TRUE);
+
+DROP TABLE IF EXISTS test_geometric;
+CREATE TABLE test_geometric (
+    id SERIAL PRIMARY KEY,
+    circle_value CIRCLE,
+    point_value POINT
+);
+
+INSERT INTO test_geometric (circle_value, point_value) VALUES 
+('<(0,0),0>', '(0,0)'),
+('<(-1,-2), 3.141592653589793>', '(-100, 200)'),
+('<(1000, -1000), 1e6>', NULL),
+(NULL, '(1.23456789, 987654321)');
+
+DROP TABLE IF EXISTS test_uuid_json;
+CREATE TABLE test_uuid_json (
+    id SERIAL PRIMARY KEY,
+    uuid_value UUID,
+    jsonb_value JSONB
+);
+
+INSERT INTO test_uuid_json (uuid_value, jsonb_value) VALUES 
+('12345678-90ab-cdef-1234-567890abcdef', '{"key": "value"}'),
+('00000000-0000-0000-0000-000000000000', '[]'),
+('ffffffff-ffff-ffff-ffff-ffffffffffff', '{"nested": {"object": [1, 2, 3]}}');
+
+SELECT id, integer_value, text_value, boolean_value FROM test_numbers;
+SELECT circle_value <-> point_value AS distance FROM test_geometric;
+SELECT uuid_value, jsonb_set(jsonb_value, '{nested, object}', '["a", "b"]') FROM test_uuid_json;

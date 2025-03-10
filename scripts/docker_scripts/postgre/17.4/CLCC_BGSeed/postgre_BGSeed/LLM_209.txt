@@ -1,0 +1,40 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    description TEXT,
+    metadata JSONB
+);
+
+INSERT INTO test_table (name, value, description)
+VALUES 
+('Item 1', 100, 'First item'),
+('Item 2', 200, NULL),
+('Item 3', 300, 'Third item with metadata', '{"category": "A", "tags": ["test", "example"]}');
+
+ALTER TABLE test_table ADD COLUMN last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE test_table
+SET value = value * 2,
+    last_updated = CURRENT_TIMESTAMP
+WHERE id IN (1, 2);
+
+DELETE FROM test_table WHERE value > 500;
+
+CREATE OR REPLACE FUNCTION update_last_updated()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_last_updated
+BEFORE UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION update_last_updated();
+
+INSERT INTO test_table (name, value)
+VALUES ('Item 4', 400) RETURNING id, name, value, created_at, last_updated;

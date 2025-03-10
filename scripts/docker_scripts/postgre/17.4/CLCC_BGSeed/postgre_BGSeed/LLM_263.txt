@@ -1,0 +1,76 @@
+-- Create test tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value INTEGER DEFAULT 0,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    json_data JSONB
+);
+
+-- Partitioned table for testing partitioning functionality
+CREATE TABLE IF NOT EXISTS test_partitioned (
+    id SERIAL,
+    data TEXT,
+    region VARCHAR(20)
+) PARTITION BY RANGE (id);
+
+-- Create partitions for the partitioned table
+CREATE TABLE test_partition_1 PARTITION OF test_partitioned FOR VALUES FROM (1) TO (100);
+CREATE TABLE test_partition_2 PARTITION OF test_partitioned FOR VALUES FROM (101) TO (200);
+
+-- Add constraints and indexes
+ALTER TABLE test_table ADD CONSTRAINT positive_value CHECK (value >= 0);
+CREATE INDEX idx_json_data ON test_table USING GIN (json_data jsonb_path_ops);
+
+-- Create a reference table for foreign key constraint
+CREATE TABLE IF NOT EXISTS test_reference (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Add foreign key constraint to test_table
+ALTER TABLE test_table ADD COLUMN ref_id INTEGER REFERENCES test_reference(id);
+
+-- Function that returns count of records meeting criteria
+CREATE OR REPLACE FUNCTION get_count(value_threshold INTEGER)
+RETURNS TABLE (count INTEGER) AS $$
+BEGIN
+    RETURN QUERY SELECT COUNT(*) FROM test_table WHERE value >= value_threshold;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function to log changes
+CREATE OR REPLACE FUNCTION log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO change_log VALUES (OLD.*);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger that uses the log_changes function
+CREATE TRIGGER test_trigger
+AFTER UPDATE ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION log_changes();
+
+-- Insert sample data into test_reference and test_table
+INSERT INTO test_reference (name) VALUES ('Test1'), ('Test2');
+INSERT INTO test_table (name, value, description, json_data)
+VALUES ('Item1', 100, 'Description for Item1', '{"key": "value"}'),
+       ('Item2', 200, NULL, '{"array": [1,2,3]}');
+
+-- Complex query using CTE and window functions
+WITH filtered_data AS (
+    SELECT id, name, value,
+           RANK() OVER (ORDER BY value DESC) as value_rank
+    FROM test_table
+)
+SELECT * FROM filtered_data WHERE value_rank <= 5;
+
+-- Transaction with FOR UPDATE lock
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+UPDATE test_table SET value = value + 1 WHERE id = 1 FOR UPDATE;
+COMMIT;

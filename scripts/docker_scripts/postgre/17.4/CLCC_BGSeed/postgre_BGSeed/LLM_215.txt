@@ -1,0 +1,68 @@
+SET client_min_messages TO 'warning';
+CREATE USER regress_user1 WITH SUPERUSER;
+CREATE USER regress_user2 WITH NOCREATEDB;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    age INTEGER CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_name ON test_table(name);
+CREATE UNIQUE INDEX idx_unique_age ON test_table(age);
+
+CREATE VIEW test_view AS SELECT id, name FROM test_table WHERE age > 18;
+
+CREATE FUNCTION test_function() RETURNS TEXT AS $$
+BEGIN
+    RETURN 'Hello, World!';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger BEFORE INSERT ON test_table FOR EACH ROW EXECUTE PROCEDURE test_function();
+
+CREATE DOMAIN positive_integer AS INTEGER CHECK (VALUE > 0);
+
+CREATE SEQUENCE test_seq INCREMENT BY 5 START WITH 10;
+
+INSERT INTO test_table(name, age) VALUES ('Alice', 30);
+INSERT INTO test_table(name, age) VALUES ('Bob', 25);
+
+ALTER TABLE test_table ADD CONSTRAINT chk_age CHECK (age < 120);
+
+SELECT COUNT(*) FROM test_view;
+
+GRANT SELECT ON test_table TO regress_user2;
+REVOKE INSERT ON test_table FROM regress_user2;
+
+SECURITY LABEL FOR pg_read_data ON TABLE test_table IS 'restricted';
+
+DO $$
+DECLARE
+    cnt INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO cnt FROM test_table;
+    RAISE NOTICE 'Number of rows: %', cnt;
+END;
+$$ LANGUAGE plpgsql;
+
+SAVEPOINT sp1;
+UPDATE test_table SET name = 'Charlie' WHERE id = 1;
+ROLLBACK TO sp1;
+
+ALTER TABLE test_table RENAME COLUMN created_at TO modified_at;
+
+SELECT * FROM pg_catalog.pg_tables WHERE tablename = 'test_table';
+
+DROP SEQUENCE test_seq;
+DROP TRIGGER test_trigger ON test_table;
+DROP FUNCTION test_function();
+DROP VIEW test_view;
+DROP TABLE test_table;
+
+REVOKE ALL PRIVILEGES ON DATABASE postgres FROM regress_user2;
+DROP USER regress_user1;
+DROP USER regress_user2;
+
+RESET client_min_messages;

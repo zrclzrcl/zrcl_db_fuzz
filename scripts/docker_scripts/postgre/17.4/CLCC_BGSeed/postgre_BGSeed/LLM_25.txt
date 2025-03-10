@@ -1,0 +1,11 @@
+-- Create the collate_Tests schema
+CREATE SCHEMA collate_tests;
+
+-- Set the search path to include collate_Tests
+SET search_path = 'collate_tests';
+
+-- Set client message level to warning to reduce noise
+SET client_min_messages TO warning;
+
+-- Create a test collation using ICU
+CREATE COLLATION test_coll1 (LOCALE = 'fr-FR-x-icu');

@@ -1,80 +1,32 @@
--- 创建一个包含多种数据类型的表
-CREATE TABLE test_fuzz (
+CREATE TYPE test_enum AS ENUM ('value1', 'value2', NULL);
+CREATE TABLE test_table (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    age INT,
-    score DECIMAL(5,2),
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN
+    enum_col test_enum,
+    text_col TEXT,
+    int_col INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 插入示例数据
-INSERT INTO test_fuzz (name, age, score, is_active)
-VALUES 
-('Alice', 30, 98.76, true),
-('Bob', 45, 87.65, false),
-('Charlie', NULL, 80.00, true),
-('', 25, 100.00, true);
+INSERT INTO test_table (enum_col, text_col) VALUES ('value1', 'test'), (NULL, 'null_test');
 
--- 复杂查询：包含子查询、连接和聚合函数
-SELECT 
-    t1.name,
-    t1.age,
-    (SELECT COUNT(*) FROM test_fuzz WHERE is_active = true) AS active_count,
-    SUM(t2.score) OVER (ORDER BY t2.id) AS cumulative_score
-FROM 
-    test_fuzz t1
-JOIN 
-    test_fuzz t2 ON t1.id = t2.id
-GROUP BY 
-    t1.name, t1.age;
-
--- 使用窗口函数和CTE（公共表表达式）
 WITH cte AS (
-    SELECT 
-        id,
-        name,
-        RANK() OVER (ORDER BY score DESC) AS score_rank
-    FROM 
-        test_fuzz
+    SELECT id, enum_col, text_col FROM test_table WHERE int_col = 0
 )
-SELECT 
-    id,
-    name,
-    score_rank,
-    LAG(name, 1, 'N/A') OVER (ORDER BY id) AS previous_name
-FROM 
-    cte;
+SELECT *, RANK() OVER (ORDER BY created_at DESC) AS rank FROM cte;
 
--- 测试边界条件：极端值和特殊字符
-INSERT INTO test_fuzz (name, age, score, is_active)
-VALUES 
-('', -2147483648, 99.99, true),
-('测试', 2147483647, 0.00, false);
+ALTER TABLE test_table ADD COLUMN new_col BOOLEAN DEFAULT FALSE;
+UPDATE test_table SET new_col = TRUE WHERE id % 2 = 0;
 
--- 测试事务控制
-BEGIN;
-    UPDATE test_fuzz SET score = 100.00 WHERE name = 'Alice';
-    SAVEPOINT my_savepoint;
-    DELETE FROM test_fuzz WHERE age < 0;
-    ROLLBACK TO my_savepoint;
-COMMIT;
+CREATE INDEX idx_computed ON test_table ((text_col || enum_col::TEXT));
 
--- 复杂的条件查询和特殊运算符
-SELECT 
-    *
-FROM 
-    test_fuzz
-WHERE 
-    (age > 20 AND score >= 80) OR (is_active = true AND name LIKE 'A%')
-ORDER BY 
-    CASE WHEN age < 30 THEN name ELSE score END DESC;
+SELECT * FROM test_table ORDER BY created_at OFFSET 10 LIMIT 5;
 
--- 测试PostgreSQL特有的功能：使用窗口函数和递归CTE
-WITH RECURSIVE rcte AS (
-    SELECT id, name, age, score FROM test_fuzz WHERE id = 1
-    UNION ALL
-    SELECT t.id, t.name, t.age, t.score 
-    FROM test_fuzz t JOIN rcte ON t.id = rcte.id + 1
-)
-SELECT * FROM rcte;
+DELETE FROM test_table WHERE int_col < 0;
+
+CREATE TABLE partitioned_table (
+    id INT,
+    region TEXT
+) PARTITIONED BY (region);
+
+CREATE TABLE partitioned_table_eu PARTITION OF partitioned_table FOR VALUES IN ('eu');
+INSERT INTO partitioned_table SELECT generate_series(1, 100), 'eu' WHERE MOD(generate_series, 2) = 0;

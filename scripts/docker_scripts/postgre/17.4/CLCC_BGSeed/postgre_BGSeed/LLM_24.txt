@@ -1,0 +1,58 @@
+-- Initial seed for PostgreSQL testing
+-- Objective: Create tables, indexes, and perform basic operations for testing purposes
+
+-- Create test tables
+CREATE TABLE clstrpart (
+    a int,
+    b text,
+    c numeric
+);
+
+CREATE TABLE clstr_4 (
+    id serial PRIMARY KEY,
+    hundred int,
+    thousand int,
+    tenthous int,
+    tenk int,
+    odd int,
+    even int
+);
+
+CREATE TABLE clstr_1 (
+    id serial PRIMARY KEY,
+    name text,
+    value int
+);
+
+CREATE TABLE clstr_2 (
+    id serial PRIMARY KEY,
+    description text,
+    quantity int
+);
+
+-- Create indexes for test tables
+CREATE INDEX clstrpart_idx ON clstrpart (a);
+CREATE INDEX cluster_sort ON clstr_4 (hundred, thousand, tenthous);
+
+-- Insert sample data into tables
+INSERT INTO clstr_1 (name, value) VALUES 
+('Test 1', 100),
+('Test 2', 200),
+('Test 3', 300);
+
+INSERT INTO clstr_2 (description, quantity) VALUES 
+('Item A', 5),
+('Item B', 10),
+('Item C', 15);
+
+-- Cluster tables based on indexes
+CLUSTER clstrpart USING clstrpart_idx;
+CLUSTER clstr_4 USING cluster_sort;
+
+-- Verify data insertion and clustering
+SELECT * FROM clstr_1 ORDER BY id;
+SELECT * FROM clstr_2 ORDER BY id;
+SELECT * FROM clstr_4 ORDER BY hundred, thousand, tenthous;
+
+-- Clean up (uncomment if needed)
+-- DROP TABLE clstrpart, clstr_4, clstr_1, clstr_2;

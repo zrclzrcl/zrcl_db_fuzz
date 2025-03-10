@@ -1,0 +1,58 @@
+-- Create a test table with various data types
+CREATE TABLE cp_test (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    text_col TEXT,
+    bool_col BOOLEAN DEFAULT FALSE,
+    date_col DATE,
+    num_col NUMERIC(10, 2)
+);
+
+-- Insert sample data into the table
+INSERT INTO cp_test (int_col, text_col, bool_col, date_col, num_col) VALUES
+(1, 'test', TRUE, CURRENT_DATE, 100.50),
+(2, 'example', FALSE, DATE '2023-01-01', 200.75);
+
+-- Create a function that performs calculations
+CREATE FUNCTION cp_test_func(numeric, numeric) RETURNS NUMERIC AS $$
+    SELECT $1 + $2;
+$$ LANGUAGE SQL;
+
+-- Test the function with different values
+SELECT cp_test_func(100.50, 200.75);
+SELECT cp_test_func(-100.50, 100.50);
+
+-- Create a stored procedure with parameters
+CREATE PROCEDURE cp_test_proc(INOUT text_col TEXT, OUT num_result NUMERIC)
+AS $$
+BEGIN
+    IF text_col IS NULL THEN
+        text_col := 'default_value';
+    END IF;
+    num_result := (SELECT num_col FROM cp_test WHERE id = 1);
+END;
+$$ LANGUAGE PLPGSQL;
+
+-- Call the stored procedure with different inputs
+CALL cp_test_proc(NULL, NULL);
+CALL cp_test_proc('new_value', NULL);
+
+-- Test ALTER statements for schema changes
+ALTER TABLE cp_test ADD COLUMN new_col TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER FUNCTION cp_test_func(numeric, numeric) RENAME TO cp_test_sum;
+
+-- Create a user and test permissions
+CREATE USER regress__cp_user1 WITH PASSWORD 'securepassword';
+GRANT SELECT ON cp_test TO regress__cp_user1;
+SET ROLE regress__cp_user1;
+SELECT * FROM cp_test;
+RESET ROLE;
+
+-- Test security-related operations
+REVOKE SELECT ON cp_test FROM regress__cp_user1;
+DROP USER regress__cp_user1;
+
+-- Clean up the test objects
+DROP TABLE cp_test;
+DROP FUNCTION cp_test_sum(numeric, numeric);
+DROP PROCEDURE cp_test_proc(INOUT TEXT, OUT NUMERIC);

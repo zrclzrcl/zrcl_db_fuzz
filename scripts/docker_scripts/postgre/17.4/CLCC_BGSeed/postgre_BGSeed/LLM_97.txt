@@ -1,0 +1,39 @@
+-- Initial seed for PostgreSQL test cases
+CREATE TEMPORARY TABLE IF NOT EXISTS test_float8 (
+    id SERIAL PRIMARY KEY,
+    value FLOAT8
+);
+
+INSERT INTO test_float8 (value) VALUES
+    -- Zero and infinity
+    (0::FLOAT8),
+    (-0::FLOAT8),
+    (INFINITY::FLOAT8),
+    (-INFINITY::FLOAT8),
+    
+    -- Special values
+    ('NaN'::FLOAT8),
+    (1.0::FLOAT8),
+    (-1.0::FLOAT8),
+    (2.5::FLOAT8),
+    (-3.75::FLOAT8),
+    
+    -- Denormalized numbers
+    (1e-324::FLOAT8),  -- Smallest positive denormalized number
+    (-1e-324::FLOAT8), -- Smallest negative denormalized number
+    
+    -- Various exponents
+    (1.5e1::FLOAT8),
+    (1.5e2::FLOAT8),
+    (1.5e3::FLOAT8),
+    (1.5e4::FLOAT8),
+    
+    -- Large and small numbers
+    (9.999999999999999e308::FLOAT8),  -- Largest finite number
+    (-9.999999999999999e308::FLOAT8),
+    
+    -- Common fractions
+    (0.125::FLOAT8),
+    (0.25::FLOAT8),
+    (0.5::FLOAT8),
+    (0.75::FLOAT8);

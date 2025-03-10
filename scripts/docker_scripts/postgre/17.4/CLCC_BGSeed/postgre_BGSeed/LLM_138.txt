@@ -1,0 +1,46 @@
+/*
+ * Initial Seed for PostgreSQL Testing
+ */
+
+-- Create test table for int8 operations
+CREATE TABLE int8_test (
+    a int8,
+    b int8
+);
+
+-- Insert test data for various int8 operations
+INSERT INTO int8_test (a, b) VALUES 
+(0::int8, 0::int8),
+(0::int8, 29893644334::int8),
+(288484263558::int8, 29893644334::int8),
+(-288484263558::int8, 29893644334::int8),
+((-9223372036854775808)::int8, 1::int8),
+((-9223372036854775808)::int8, 9223372036854775807::int8),
+((-9223372036854775808)::int8, 4611686018427387904::int8);
+
+-- Test int8 division and modulo operations
+SELECT a / b AS division_result, a % b AS modulo_result FROM int8_test;
+
+-- Test int8 GCD calculations
+SELECT 
+    a, 
+    b,
+    gcd(a, b) AS positive_gcd,
+    gcd(a, -b) AS mixed_sign_gcd,
+    gcd(b, a) AS swapped_positive_gcd,
+    gcd(-b, a) AS swapped_mixed_sign_gcd
+FROM int8_test;
+
+-- Test edge cases for GCD function
+SELECT gcd((-9223372036854775808)::int8, 0::int8);
+SELECT gcd((-9223372036854775808)::int8, (-9223372036854775808)::int8);
+
+-- Test int8 LCM calculations
+SELECT 
+    a, 
+    b,
+    lcm(a, b) AS positive_lcm,
+    lcm(a, -b) AS mixed_sign_lcm,
+    lcm(b, a) AS swapped_positive_lcm,
+    lcm(-b, a) AS swapped_mixed_sign_lcm
+FROM int8_test;

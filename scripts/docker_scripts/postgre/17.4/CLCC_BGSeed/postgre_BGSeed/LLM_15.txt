@@ -1,55 +1,27 @@
--- 创建一个测试表
-CREATE TABLE test_table (
+-- Create a test table with sample data
+CREATE TABLE testtbl (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    value INT UNIQUE,
-    data JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    value INT NOT NULL
 );
 
--- 插入测试数据
-INSERT INTO test_table (name, value, data) VALUES 
-('Test1', 1234567890, '{"key": "value", "array": [1,2,3]}'),
-('Test2', -987654321, '{"nested": {"object": true}}'),
-('Test3', NULL, null);
+-- Insert sample values into the table
+INSERT INTO testtbl (value) VALUES
+(1), (2), (3), (4), (5),
+(6), (7), (8), (9), (10);
 
--- 复杂的CTE查询
-WITH 
-    cte1 AS (
-        SELECT id, name, value,
-            ROW_NUMBER() OVER (ORDER BY value) as rank
-        FROM test_table
-    ),
-    cte2 AS (
-        SELECT id, name, value,
-            SUM(value) OVER (PARTITION BY (value % 10)) as sum_partition
-        FROM cte1
-    )
-SELECT 
-    cte2.id, 
-    cte2.name, 
-    cte2.value,
-    cte2.rank,
-    cte2.sum_partition,
-    test_table.data ->> 'key' as json_key
-FROM cte2
-JOIN test_table ON cte2.id = test_table.id
-WHERE value > 1000 OR (value < 0 AND name LIKE 'Test%')
-ORDER BY rank DESC;
+-- Test boolean conditions with numerical comparisons
 
--- 使用窗口函数和复杂条件的更新语句
-UPDATE test_table 
-SET data = jsonb_set(data, '{nested,object}', to_jsonb(true))
-FROM (
-    SELECT id, value FROM test_table WHERE value > 1000
-) as sub
-WHERE test_table.id = sub.id AND (value % 2 = 0);
+-- Select rows where value is greater than 5
+SELECT id, value FROM testtbl WHERE value > 5 ORDER BY id;
 
--- 复杂的删除语句
-DELETE FROM test_table 
-USING (
-    SELECT id FROM test_table 
-    WHERE (data ->> 'key')::text = 'value' 
-    AND value IN (SELECT value FROM test_table WHERE name LIKE 'Test1')
-) as sub
-WHERE test_table.id = sub.id;
+-- Select rows where value is less than or equal to 3
+SELECT id, value FROM testtbl WHERE value <= 3 ORDER BY id;
+
+-- Test combined conditions using AND
+SELECT id, value FROM testtbl WHERE value >= 4 AND value <=7 ORDER BY id;
+
+-- Test combined conditions using OR
+SELECT id, value FROM testtbl WHERE value <=2 OR value >=9 ORDER BY id;
+
+-- Clean up by dropping the test table
+DROP TABLE testtbl;

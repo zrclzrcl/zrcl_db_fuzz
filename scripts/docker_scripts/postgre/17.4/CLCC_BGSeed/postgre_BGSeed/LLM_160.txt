@@ -1,0 +1,39 @@
+CREATE TABLE test_data (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    value NUMERIC(10, 2) DEFAULT 0.00,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    description TEXT,
+    data JSONB,
+    tags TEXT[],
+    geom POINT,
+    CONSTRAINT positive_value CHECK (value >= 0)
+);
+
+INSERT INTO test_data (name, value, active, description) VALUES
+('Test1', NULL, FALSE, 'This is a test entry.'),
+('', -5.5, TRUE, ''),
+('边界情况', 999999999.99, FALSE, '这是一个测试条目。'),
+('SpecialChars', 123.45, TRUE, '!"#$%&''()*+,-./:;<=>?@[\\]^_`{|}~'),
+('EmptyString', 0.00, TRUE, ''),
+('InvalidDate', NULL, FALSE, 'invalid date here');
+
+CREATE INDEX idx_name ON test_data USING btree (name);
+CREATE INDEX idx_active ON test_data USING hash (active);
+
+UPDATE test_data SET active = FALSE WHERE id % 2 = 0;
+DELETE FROM test_data WHERE value < 0;
+
+INSERT INTO test_data SELECT 
+    NULL AS name,
+    md5('test')::uuid as value,
+    TRUE as active,
+    CURRENT_TIMESTAMP as created_at,
+    'Generated entry' as description,
+    '{"key": "value"}'::jsonb as data,
+    ARRAY['tag1', 'tag2'] as tags,
+    POINT '(0,0)' as geom
+FROM generate_series(1, 5);
+
+CREATE INDEX idx_geom ON test_data USING gist (geom);

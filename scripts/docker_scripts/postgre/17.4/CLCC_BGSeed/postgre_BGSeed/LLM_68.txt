@@ -1,0 +1,60 @@
+create table test_table(
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    is_active BOOLEAN DEFAULT false
+);
+
+insert into test_table(name, age) values('Alice', 30) returning *;
+insert into test_table(name, age) values('Bob', 25) returning id;
+
+update test_table set is_active = true where age > 25 returning name, age;
+
+create index idx_name on test_table(name);
+
+insert into test_table(name, age) values('Charlie', 30) on conflict (name) do update set age = excluded.age + 1;
+
+create function get_active_users() returns boolean as $$
+begin
+    return exists(select 1 from test_table where is_active);
+end;
+$$ language plpgsql;
+
+select get_active_users();
+
+drop table if exists another_table cascade;
+
+create table another_table(
+    id SERIAL PRIMARY KEY,
+    value TEXT UNIQUE
+);
+
+insert into another_table(value) values('test_value');
+
+create or replace function calculate_average() returns numeric as $$
+begin
+    return (select avg(age) from test_table);
+end;
+$$ language plpgsql;
+
+select calculate_average();
+
+alter table test_table add column last_login TIMESTAMP DEFAULT current_timestamp;
+
+select name, age, row_number() over(order by age desc) as rank
+from test_table;
+
+drop function if exists get_active_users();
+
+create procedure test_proc()
+language plpgsql
+as $$
+begin
+    perform pg_sleep(1);
+    insert into another_table(value) values('proc_value');
+exception when others then
+    raise notice 'An error occurred: %', SQLERRM;
+end;
+$$;
+
+call test_proc();

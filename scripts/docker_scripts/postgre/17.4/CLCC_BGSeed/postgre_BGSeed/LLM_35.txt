@@ -1,0 +1,72 @@
+create table test_table (
+    id integer primary key,
+    text_field text,
+    num_field numeric(10,2),
+    bool_field boolean,
+    date_field date,
+    geom geometry(point,4326)
+);
+
+insert into test_table values (1, 'test string', 123.45, true, '2023-01-01', ST_GeomFromText('POINT(1 2)',4326));
+insert into test_table values (2, null, null, false, null, null);
+insert into test_table values (3, 'test string with special chars !@#$%^&*()', 987.654, true, '2024-12-31', ST_GeomFromText('POINT(3 4)',4326));
+
+create index idx_num_field on test_table (num_field);
+create view v_test as select id, text_field || bool_field::text as combined from test_table;
+
+begin;
+    insert into test_table values (4, 'transaction test', 500.00, false, current_date, ST_GeomFromText('POINT(5 6)',4326));
+    savepoint sp1;
+        update test_table set bool_field = not bool_field where id = 4;
+    rollback to sp1;
+commit;
+
+select pg_sleep(0.1); 
+select * from test_table where geom && ST_MakeEnvelope(1,2,3,4,4326);
+select text_field || ' ' || num_field::text as combined_col from test_table order by id desc limit 2 offset 1;
+select count(*) filter (where bool_field = true) over () as cnt_true from test_table;
+
+with cte_test as (
+    select id, text_field from test_table where num_field > 100
+)
+select * from cte_test join test_table using (id);
+
+select distinct on (bool_field) * from test_table order by bool_field, id;
+select rank() over (order by num_field desc) as ranking from test_table;
+
+drop table if exists temp_table;
+create temporary table temp_table (like test_table);
+insert into temp_table select * from test_table where id <= 2;
+select * from temp_table union all select * from test_table where id > 2 order by id;
+
+select 1/0; 
+select 'invalid cast'::int;
+
+create function sleep_func() returns void language plpgsql as $$
+begin
+    perform pg_sleep(0.5);
+end$$;
+select sleep_func();
+
+select xmlserialize(content as text) from (select '<test>data</test>'::xml as content) sub;
+select quote_literal('single''quote test');
+select encode(decode('dGVzdA==', 'base64'), 'hex');
+
+create sequence seq_test start 10 increment by 5;
+alter sequence seq_test restart with 20;
+
+create trigger trg_test before insert on test_table for each row execute procedure pg_notify('test_channel', 'insert detected');
+drop trigger trg_test on test_table;
+
+select * from information_schema.columns where table_name = 'test_table';
+select current_database(), current_user, version();
+
+create policy pol_test on test_table as permissive using (bool_field = true);
+revoke all on test_table from public;
+grant select on test_table to readonly_user;
+
+select jsonb_build_object('key', id, 'value', text_field) as json_obj from test_table limit 1;
+select array_agg(id) as id_array from test_table group by bool_field;
+
+select * from test_table where date_field is not distinct from null;
+select exists(select 1 from test_table where id = 99);

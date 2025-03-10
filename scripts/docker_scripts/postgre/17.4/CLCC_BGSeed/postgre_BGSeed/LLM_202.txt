@@ -1,0 +1,57 @@
+-- Initial seed for testing various PostgreSQL range types and operations
+
+CREATE TABLE range_test_cases (
+    id SERIAL PRIMARY KEY,
+    test_type TEXT NOT NULL,
+    input TEXT NOT NULL,
+    expected_output TEXT NOT NULL,
+    description TEXT
+);
+
+-- Test case 1: Basic integer range containment
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT 5 <@ int4range(1,10)', 't', 'Test if 5 is contained within [1,10]');
+
+-- Test case 2: Numeric range containment
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('numrange', 'SELECT 3.5 <@ numrange(1.1,10.5)', 't', 'Test if 3.5 is contained within [1.1,10.5]');
+
+-- Test case 3: Date range containment
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('daterange', 'SELECT ''2024-01-15''::DATE <@ daterange(''2024-01-01'', ''2024-03-01'')', 't', 'Test if 2024-01-15 is within [2024-01-01, 2024-03-01]');
+
+-- Test case 4: Timestamp range containment
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('tsrange', 'SELECT ''2024-01-15 12:00''::TIMESTAMP <@ tsrange(''2024-01-15 08:00'', ''2024-01-15 16:00'')', 't', 'Test if 2024-01-15 12:00 is within [2024-01-15 08:00, 2024-01-15 16:00]');
+
+-- Test case 5: Timestamp with timezone range containment
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('tstzrange', 'SELECT ''2024-01-15 12:00+00''::TIMESTAMPTZ <@ tstzrange(''2024-01-15 08:00+00'', ''2024-01-15 16:00+00'')', 't', 'Test if 2024-01-15 12:00+00 is within [2024-01-15 08:00+00, 2024-01-15 16:00+00]');
+
+-- Test case 6: Range overlap
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT int4range(2,3) && int4range(3,4)', 't', 'Test if [2,3) overlaps with [3,4)');
+
+-- Test case 7: Range adjacency
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT int4range(1,5) -|- int4range(5,9)', 't', 'Test if [1,5) is adjacent to [5,9)');
+
+-- Test case 8: Range union
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT int4range(1,3) + int4range(2,4)', '[1,4)', 'Test the union of [1,3) and [2,4)');
+
+-- Test case 9: Range intersection
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT int4range(1,5) * int4range(3,7)', '[3,5)', 'Test the intersection of [1,5) and [3,7)');
+
+-- Test case 10: Array containment with range
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT ARRAY[2,3] <@ int4range(1,4)', 't', 'Test if array [2,3] is contained within [1,4)');
+
+-- Test case 11: Multiple range operations
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('int4range', 'SELECT a <@ b FROM (SELECT int4range(1,5) AS a, int4range(2,3) AS b) AS t', 't', 'Test if [1,5) contains [2,3)');
+
+-- Test case 12: Custom composite type range
+INSERT INTO range_test_cases (test_type, input, expected_output, description)
+VALUES ('two_ints_range', 'SELECT (2,3) <@ int4range(1,4)', 't', 'Test if two_ints (2,3) is contained within [1,4)');

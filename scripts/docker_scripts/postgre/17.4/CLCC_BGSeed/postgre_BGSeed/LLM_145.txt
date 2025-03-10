@@ -1,0 +1,44 @@
+-- Initial seed for testing full-text search functionality with JSON data types in PostgreSQL.
+
+-- Create table for storing text content with JSON structures
+CREATE TABLE IF NOT EXISTS test_search_data (
+    id SERIAL PRIMARY KEY,
+    content JSONB
+);
+
+-- Insert sample data that will be used by the provided SQL statements
+INSERT INTO test_search_data (content) VALUES 
+(
+    {
+        "text_column": "This is a sample text containing various keywords and phrases for testing full-text search functionality.",
+        "json_object": {
+            "nested_text": "Nested content with important information",
+            "numbers": [123, 456, 789],
+            "boolean_values": true,
+            "null_value": null
+        },
+        "array_of_strings": ["first element", "second element", "third element"],
+        "mixed_types": {
+            "text": "Some text",
+            "integer": 12345,
+            "boolean": false
+        }
+    }
+),
+(
+    {
+        "text_column": "Another sample with different content and keywords.",
+        "json_object": {
+            "more_text": "Additional nested content for comprehensive testing",
+            "numbers": [987, 654, 321],
+            "boolean_values": false,
+            "null_value": null
+        },
+        "array_of_strings": ["alpha", "beta", "gamma"],
+        "mixed_types": {
+            "text": "More sample text",
+            "integer": 98765,
+            "boolean": true
+        }
+    }
+);

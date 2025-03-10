@@ -1,0 +1,37 @@
+-- Create a table to store IPv6 addresses with proper structure and constraints
+CREATE TABLE ipv6_addresses (
+    id SERIAL PRIMARY KEY,
+    address TEXT NOT NULL UNIQUE
+);
+
+-- Insert the provided IPv6 addresses into the table
+INSERT INTO ipv6_addresses (address)
+VALUES
+('::4:3:2:0/24'),
+('::4:3:2:1/24'),
+('::4:3:2:2/24'),
+('ffff:83e7:f118:57dc:6093:6d92:689d:58cf/70'),
+('ffff:84b0:4775:536e:c3ed:7116:a6d6:34f0/44'),
+('ffff:8566:f84:5867:47f1:7867:d2ba:8a1a/69'),
+('ffff:8883:f028:7d2:4d68:d510:7d6b:ac43/73'),
+('ffff:8ae8:7c14:65b3:196:8e4a:89ae:fb30/89'),
+('ffff:8dd0:646:694c:7c16:7e35:6a26:171/104'),
+('ffff:8eef:cbf:700:eda3:ae32:f4b4:318b/121'),
+('ffff:90e7:e744:664:a93:8efe:1f25:7663/122'),
+('ffff:9597:c69c:8b24:57a:8639:ec78:6026/111'),
+('ffff:9e86:79ea:f16e:df31:8e4d:7783:532e/88'),
+('ffff:a0c7:82d3:24de:f762:6e1f:316d:3fb2/23'),
+('ffff:fffa:ffff:ffff:ffff:ffff:ffff:ffff/0'),
+('ffff:fffb:ffff:ffff:ffff:ffff:ffff:ffff/0'),
+('ffff:fffc:ffff:ffff:ffff:ffff:ffff:ffff/0'),
+('ffff:fffd:ffff:ffff:ffff:ffff:ffff:ffff/0'),
+('ffff:fffe:ffff:ffff:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:fffa:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:fffb:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:fffc:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:fffd::/128'),
+('ffff:ffff:ffff:fffd:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:fffe::/128'),
+('ffff:ffff:ffff:fffe:ffff:ffff:ffff:ffff/0'),
+('ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/0')
+ON CONFLICT (address) DO NOTHING;

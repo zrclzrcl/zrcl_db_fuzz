@@ -1,0 +1,66 @@
+-- Create an extension for additional functionality
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+
+-- Create a table with various data types including PostgreSQL-specific ones
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT,
+    integer_column INT DEFAULT 0,
+    jsonb_column JSONB,
+    timestamp_column TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    unique_column VARCHAR(100) UNIQUE,
+    CHECK (integer_column >= 0)
+);
+
+-- Create a table for full-text search
+CREATE TABLE document (
+    id SERIAL PRIMARY KEY,
+    content TEXT,
+    title TEXT,
+    ts_vector_col TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', title || ' ' || content)) STORED
+);
+
+-- Add indexes to improve query performance
+CREATE INDEX idx_text_column ON test_table USING GIN (text_column gin_trgm_ops);
+CREATE INDEX idx_timestamp ON test_table (timestamp_column DESC);
+CREATE INDEX idx_jsonb ON test_table USING GIN (jsonb_column jsonb_path_ops);
+CREATE INDEX idx_ts_vector ON document USING GIN (ts_vector_col);
+
+-- Insert sample data into the tables
+INSERT INTO test_table (text_column, integer_column, jsonb_column)
+VALUES ('Sample text 1', 42, '{"key": "value", "array": [1, 2, 3]}');
+INSERT INTO document (title, content)
+VALUES ('Test Document', 'This is a sample document for testing full-text search functionality.');
+
+-- Create a view with window functions
+CREATE VIEW test_view AS
+SELECT 
+    id,
+    text_column,
+    RANK() OVER (ORDER BY integer_column DESC) as rank_desc,
+    DENSE_RANK() OVER (PARTITION BY jsonb_column->>'key') as dense_rank_key
+FROM test_table;
+
+-- Create a stored procedure to handle data insertion
+CREATE OR REPLACE FUNCTION insert_test_data()
+RETURNS void AS $$
+BEGIN
+    INSERT INTO test_table (text_column, integer_column)
+    VALUES ('Data inserted by function', 100);
+EXCEPTION 
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error occurred: %', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger that calls the stored procedure after insert
+CREATE TRIGGER test_trigger
+AFTER INSERT ON test_table
+FOR EACH ROW
+EXECUTE FUNCTION insert_test_data();
+
+-- Analyze table to update statistics for query optimization
+ANALYZE test_table;
+
+-- Vacuum the database to reclaim space and optimize performance
+VACUUM ANALYZE;

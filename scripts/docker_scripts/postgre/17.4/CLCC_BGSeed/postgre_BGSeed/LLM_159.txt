@@ -1,0 +1,42 @@
+-- Create the macaddr8 extension if it doesn't exist
+CREATE EXTENSION IF NOT EXISTS macaddr8;
+
+-- Drop the table if it exists to avoid conflicts
+DROP TABLE IF EXISTS macaddr8_data;
+
+-- Create the test table with columns 'a' and 'b'
+CREATE TABLE macaddr8_data (
+    a INT,
+    b MACADDR8
+);
+
+-- Insert all test data into the table in a single statement for efficiency
+INSERT INTO macaddr8_data (a, b) VALUES
+(1, '00:00:00:00:00:00'),
+(2, 'ff:ff:ff:ff:ff:ff'),
+(3, '12:34:56:78:9a:bc'),
+(4, 'AA:bb:cc:dd:ee:ff'),
+(5, '123.456.789'),
+(6, '0:0:0:0:0:0'),
+(7, '255.255.255.255.255.255'),
+(8, '1234.5678.abcd'),
+(9, '1234:5678:abcd'),
+(10, '00-00-00-00-00-00'),
+(11, 'ff-ff-ff-ff-ff-ff'),
+(12, '12-34-56-78-ab-cd'),
+(13, 'aa:bb:cc:dd:ee:ff'),
+(14, '123.45.67.89.ab.cd'),
+(15, '00:00:00::0'),
+(16, '::'), -- Default to 0s
+(17, ':'), -- Invalid but might be handled as default
+(18, '1234:5678:abcd'), -- Using IPv6 notation
+(19, '1234.5678.abcd'), -- Another format
+(20, 'aa:bb::cc'), -- Partial notation
+(21, '::'); -- All zeros
+
+-- Create indexes on the 'b' column for efficient querying
+CREATE INDEX idx_macaddr8_btree ON macaddr8_data USING BTREE (b);
+CREATE INDEX idx_macaddr8_hash ON macaddr8_data USING HASH (b);
+
+-- Optional: Vacuum to ensure table is properly cleaned and indexed
+VACUUM macaddr8_data;

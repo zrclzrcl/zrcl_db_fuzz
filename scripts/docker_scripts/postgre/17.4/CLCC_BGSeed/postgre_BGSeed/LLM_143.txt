@@ -1,0 +1,44 @@
+CREATE TABLE tbl1 (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT,
+    bool_col BOOLEAN,
+    ts_col TIMESTAMP
+);
+
+INSERT INTO tbl1 (int_col, text_col, bool_col, ts_col) VALUES 
+(0, 'zero', TRUE, '2023-01-01 00:00:00'),
+(-1, 'negative', FALSE, '2023-01-01 00:00:01'),
+(2147483647, 'max int', TRUE, '2023-01-01 00:00:02'),
+(2147483648, 'overflow', FALSE, '2023-01-01 00:00:03'),
+(NULL, NULL, NULL, NULL),
+('', 'empty string', TRUE, '2023-01-01 00:00:04');
+
+CREATE TABLE tbl2 (
+    id SERIAL PRIMARY KEY,
+    int_col INTEGER,
+    text_col TEXT
+);
+
+INSERT INTO tbl2 (int_col, text_col) VALUES 
+(1, 'one'),
+(2, 'two'),
+(3, 'three'),
+(NULL, NULL),
+('', 'empty string');
+
+UPDATE tbl1 SET bool_col = FALSE WHERE id = 5;
+
+DELETE FROM tbl2 WHERE int_col > 2;
+
+CREATE INDEX idx_int_col ON tbl1 (int_col);
+
+ANALYZE tbl1;
+
+WITH subquery AS (
+    SELECT id FROM tbl1 WHERE text_col LIKE '%string%'
+)
+SELECT t1.id, t2.text_col 
+FROM tbl1 t1
+JOIN tbl2 t2 ON t1.id = t2.id
+WHERE t1.id IN (SELECT id FROM subquery);

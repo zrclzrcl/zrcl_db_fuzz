@@ -1,0 +1,106 @@
+-- Test case for PostgreSQL initial seed generation
+
+-- Create a test schema
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create a test table with various column types and constraints
+CREATE TABLE IF NOT EXISTS test_schema.test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    metadata JSONB
+);
+
+-- Create a table for testing inheritance
+CREATE TABLE IF NOT EXISTS test_inherits.parent_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+-- Create a child table that inherits from parent_table
+CREATE TABLE IF NOT EXISTS test_inherits.child_table (
+    value INTEGER NOT NULL DEFAULT 0
+) INHERITS (test_inherits.parent_table);
+
+-- Create an index on the name column of the parent table
+CREATE INDEX IF NOT EXISTS idx_parent_name ON test_inherits.parent_table(name);
+
+-- Create a composite index on created_at and status columns
+CREATE INDEX IF NOT EXISTS idx_test_table_created_status ON test_schema.test_table(created_at, status);
+
+-- Create a GIN index for JSONB data type
+CREATE INDEX IF NOT EXISTS idx_metadata ON test_schema.test_table USING GIN (metadata);
+
+-- Create a table for testing constraints
+CREATE TABLE IF NOT EXISTS test_schema.test_constraints (
+    id SERIAL PRIMARY KEY,
+    age INTEGER CHECK (age >= 0 AND age <= 150),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    registration_date DATE DEFAULT CURRENT_DATE
+);
+
+-- Insert sample data into the test table
+INSERT INTO test_schema.test_table (name, description, status, metadata)
+VALUES 
+('Test Record 1', 'This is a sample record for testing purposes.', TRUE, '{"key": "value", "test": [1,2,3]}'),
+('Test Record 2', 'Another sample record with different attributes.', FALSE, '{"status": "active"}');
+
+-- Create a function that returns the first element of an array
+CREATE OR REPLACE FUNCTION test_schema.get_first_element(anyelement)
+RETURNS anyelement AS $$
+    SELECT $1;
+$$ LANGUAGE SQL;
+
+-- Create a table for testing JSONB operations
+CREATE TABLE IF NOT EXISTS test_schema.test_jsonb (
+    id SERIAL PRIMARY KEY,
+    data JSONB NOT NULL
+);
+
+-- Insert sample JSONB data into the table
+INSERT INTO test_schema.test_jsonb (data)
+VALUES 
+('{"name": "John Doe", "age": 30, "email": "john.doe@example.com"}'),
+('{"name": "Jane Smith", "age": 25, "email": "jane.smith@example.com"}');
+
+-- Create a trigger function
+CREATE OR REPLACE FUNCTION test_schema.log_insertions()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO test_schema.insert_log (table_name, inserted_at)
+    VALUES (TG_TABLE_NAME, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a table to log insertions
+CREATE TABLE IF NOT EXISTS test_schema.insert_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    inserted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a trigger that logs insertions into the test_table
+CREATE TRIGGER log_test_table_insertions
+BEFORE INSERT ON test_schema.test_table
+FOR EACH ROW EXECUTE PROCEDURE test_schema.log_insertions();
+
+-- Create a partitioned table for testing range partitions
+CREATE TABLE IF NOT EXISTS test_schema.test_partitioned (
+    id SERIAL,
+    date TIMESTAMP NOT NULL,
+    value INTEGER
+) PARTITION BY RANGE (date);
+
+-- Create a partition for the year 2023
+CREATE TABLE IF NOT EXISTS test_schema.test_partitioned_2023 PARTITION OF test_schema.test_partitioned 
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Insert sample data into the partitioned table
+INSERT INTO test_schema.test_partitioned (date, value)
+VALUES 
+('2023-05-01', 100),
+('2023-06-01', 200);

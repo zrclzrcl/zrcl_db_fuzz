@@ -1,0 +1,10 @@
+GRANT SELECT ON pg_proc TO CURRENT_USER;
+SELECT prosrc FROM pg_proc WHERE proname = 'pg_stat_activity';
+CREATE TABLE test_table (id SERIAL PRIMARY KEY, data TEXT, ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+INSERT INTO test_table (data) VALUES ('test string');
+WITH cte AS (SELECT id, data FROM test_table) SELECT * FROM cte;
+EXPLAIN ANALYZE SELECT * FROM test_table WHERE data LIKE '%test%';
+CREATE INDEX idx_test_data ON test_table USING GIN (to_tsvector('english', data));
+BEGIN; INSERT INTO test_table (data) VALUES ('another test'); COMMIT;
+DELETE FROM test_table WHERE id = 1;
+VACUUM ANALYZE test_table;

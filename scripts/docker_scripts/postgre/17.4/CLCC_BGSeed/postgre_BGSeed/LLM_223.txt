@@ -1,0 +1,66 @@
+-- Create a test table with various data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    status BOOLEAN DEFAULT FALSE,
+    score DECIMAL(5,2),
+    category INT REFERENCES categories(id)
+);
+
+-- Create indexes for testing query performance
+CREATE INDEX idx_name ON test_table(name);
+CREATE UNIQUE INDEX idx_unique_score ON test_table(score);
+
+-- Create a view with security barriers for testing permissions
+CREATE VIEW secure_view AS
+SELECT id, name, status FROM test_table WHERE status = TRUE WITH CHECK OPTION;
+
+CREATE VIEW insecure_view AS
+SELECT id, name, description FROM test_table;
+
+-- Insert sample data
+INSERT INTO test_table (name, description, score)
+VALUES ('Test Item 1', 'This is a test item with a score of 95.5', 95.5),
+       ('Test Item 2', 'Another test item with a lower score', 80.2);
+
+-- Create functions for testing
+CREATE OR REPLACE FUNCTION raise_notice()
+RETURNS VOID AS $$
+BEGIN
+    RAISE NOTICE 'This is a test notice';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION error_function()
+RETURNS INT AS $$
+BEGIN
+    RAISE EXCEPTION 'Test error condition';
+    RETURN 0;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN -1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Prepare statements for testing query execution plans
+PREPARE test_plan (INT) AS 
+SELECT * FROM test_table WHERE id = $1;
+
+EXECUTE test_plan(1);
+
+-- Test session authorization and permissions
+GRANT SELECT ON test_table TO public;
+GRANT INSERT, UPDATE ON test_table TO authenticated_users;
+
+SET SESSION AUTHORIZATION 'test_user';
+
+-- Execute prepared statements under different user contexts
+EXECUTE test_plan(2);
+
+RESET SESSION AUTHORIZATION;
+
+-- Cleanup
+DEALLOCATE ALL;

@@ -1,0 +1,81 @@
+-- Initial seed for PostgreSQL foreign key constraint tests
+
+-- Test for operator class references in pg_amop
+DO $$
+BEGIN
+  -- Setup temporary objects
+  CREATE TEMPORARY TABLE test_opclass (opclassid oid);
+  INSERT INTO test_opclass SELECT opcoid FROM pg_opclass LIMIT 1;
+
+  -- Insert sample data
+  INSERT INTO pg_amop VALUES (
+    (SELECT oid FROM pg_am WHERE amname = 'btree'),
+    (SELECT oid FROM pg_type WHERE typname = 'integer'),
+    (SELECT opclassid FROM test_opclass)
+  );
+
+EXCEPTION WHEN others THEN
+  -- Handle any exceptions during setup
+  RAISE NOTICE 'Test skipped due to error: %', SQLERRM;
+END $$;
+
+-- Test for operator family references in pg_amop
+DO $$
+BEGIN
+  -- Setup temporary objects
+  CREATE TEMPORARY TABLE test_opfamily (opfamiloid oid);
+  INSERT INTO test_opfamily SELECT opf_OID FROM pg_opfamily LIMIT 1;
+
+  -- Insert sample data
+  INSERT INTO pg_amop VALUES (
+    (SELECT oid FROM pg_am WHERE amname = 'btree'),
+    (SELECT oid FROM pg_type WHERE typname = 'integer'),
+    (SELECT opfamiloid FROM test_opfamily)
+  );
+
+EXCEPTION WHEN others THEN
+  -- Handle any exceptions during setup
+  RAISE NOTICE 'Test skipped due to error: %', SQLERRM;
+END $$;
+
+-- Test for operator references in pg_amproc
+DO $$
+BEGIN
+  -- Setup temporary objects
+  CREATE TEMPORARY TABLE test_operator (oproid oid);
+  INSERT INTO test_operator SELECT oid FROM pg_operator LIMIT 1;
+
+  -- Insert sample data
+  INSERT INTO pg_amproc VALUES (
+    (SELECT oid FROM pg_am WHERE amname = 'btree'),
+    (SELECT oid FROM pg_type WHERE typname = 'integer'),
+    0,
+    (SELECT oprid FROM test_operator)
+  );
+
+EXCEPTION WHEN others THEN
+  -- Handle any exceptions during setup
+  RAISE NOTICE 'Test skipped due to error: %', SQLERRM;
+END $$;
+
+-- Test for operator family references in pg_amproc
+DO $$
+BEGIN
+  -- Setup temporary objects
+  CREATE TEMPORARY TABLE test_opfamily (opfamiloid oid);
+  INSERT INTO test_opfamily SELECT opf_OID FROM pg_opfamily LIMIT 1;
+
+  -- Insert sample data
+  INSERT INTO pg_amproc VALUES (
+    (SELECT oid FROM pg_am WHERE amname = 'btree'),
+    (SELECT oid FROM pg_type WHERE typname = 'integer'),
+    0,
+    (SELECT opfamiloid FROM test_opfamily)
+  );
+
+EXCEPTION WHEN others THEN
+  -- Handle any exceptions during setup
+  RAISE NOTICE 'Test skipped due to error: %', SQLERRM;
+END $$;
+
+-- Continue with similar tests for other foreign key constraints...

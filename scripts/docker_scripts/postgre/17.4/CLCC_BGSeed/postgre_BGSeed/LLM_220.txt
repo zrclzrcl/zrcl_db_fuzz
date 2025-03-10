@@ -1,0 +1,111 @@
+-- Create a test table with various data types
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age INTEGER,
+    description TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB,
+    search_vector TSVECTOR,
+    status BOOLEAN DEFAULT FALSE
+);
+
+-- Insert sample data
+INSERT INTO test_table (name, age, description, metadata)
+VALUES
+('Alice', 30, '{"engineer", "developer"}', '{"role": "Senior Engineer", "department": "Engineering"}'),
+('Bob', 25, '{"student", "researcher"}', '{"role": "PhD Candidate", "university": "MIT"}'),
+('Charlie', NULL, '{"artist"}', '{"role": "Painter", "gallery": "Modern Art Gallery"}'),
+('David', 40, '{"manager", "executive"}', '{"role": "CTO", "company": "Tech Corp"}');
+
+-- Create a GIN index for JSONB data
+CREATE INDEX IF NOT EXISTS idx_jsonb_metadata ON test_table USING GIN (metadata);
+
+-- Create a GiST index for full-text search
+CREATE INDEX IF NOT EXISTS idx_tsvector_search ON test_table USING GiST (search_vector);
+
+-- Update the search vector column
+UPDATE test_table SET 
+    search_vector = to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(description::text, ''));
+
+-- Complex query using CTE and window functions
+WITH ranked_results AS (
+    SELECT 
+        id,
+        name,
+        age,
+        metadata ->> 'role' as role,
+        ROW_NUMBER() OVER (ORDER BY created_at DESC) as rank
+    FROM test_table
+)
+SELECT * FROM ranked_results WHERE rank <= 5;
+
+-- Test JSONB operations
+SELECT 
+    id, 
+    name, 
+    metadata ->> 'department' as department,
+    metadata #>> '{role}' as role
+FROM test_table
+WHERE metadata ? 'department';
+
+-- Test full-text search capabilities
+SELECT 
+    id, 
+    name, 
+    description,
+    ts_headline('english', COALESCE(name, '') || ' ' || COALESCE(description::text, ''), search_vector)
+FROM test_table
+WHERE search_vector @@ to_tsquery('english', 'engineer & developer');
+
+-- Test array operations
+SELECT 
+    id, 
+    name, 
+    description,
+    unnest(description) as keyword
+FROM test_table
+WHERE 'developer' = ANY(description);
+
+-- Create a partitioned table for time-based queries
+CREATE TABLE IF NOT EXISTS logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    log_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    log_level TEXT,
+    message TEXT
+) PARTITION BY RANGE (log_time);
+
+CREATE TABLE logs_2023 PARTITION OF logs 
+FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
+
+-- Insert sample log data
+INSERT INTO logs (log_level, message)
+VALUES
+('INFO', 'System started successfully'),
+('WARNING', 'Low disk space detected'),
+('ERROR', 'Failed to connect to database'),
+('DEBUG', 'Debugging network issues');
+
+-- Test partitioned table query
+SELECT 
+    log_id,
+    log_time,
+    log_level,
+    message
+FROM logs
+WHERE log_time >= '2023-01-01 00:00:00';
+
+-- Create a role and grant permissions
+CREATE ROLE test_user WITH LOGIN PASSWORD 'testpass';
+GRANT SELECT ON TABLE test_table TO test_user;
+
+-- Revoke privileges
+REVOKE SELECT ON TABLE test_table FROM test_user;
+DROP ROLE test_user;
+
+-- Clean up the test objects
+DROP INDEX IF EXISTS idx_jsonb_metadata;
+DROP INDEX IF EXISTS idx_tsvector_search;
+DROP TABLE IF EXISTS logs_2023;
+DROP TABLE IF EXISTS logs;
+DROP TABLE IF EXISTS test_table;

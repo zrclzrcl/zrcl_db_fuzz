@@ -1,0 +1,79 @@
+-- Initial seed for PostgreSQL fuzz testing
+drop table if exists test_edge_cases;
+
+create table test_edge_cases (
+    id serial primary key,
+    int_col integer,
+    text_col text,
+    bool_col boolean,
+    timestamp_col timestamp,
+    json_col jsonb
+);
+
+insert into test_edge_cases (int_col, text_col, bool_col, timestamp_col, json_col)
+values 
+    (NULL, NULL, NULL, NULL, NULL),
+    (-2147483648, '', false, '1970-01-01 00:00:01', '{"key": "min"}'),
+    (2147483647, repeat('a', 1000), true, '294277-12-31 23:59:59', '{"key": "max"}');
+
+create or replace function recursive_lock_test(n integer) returns void as $$
+begin
+    if n <= 0 then
+        return;
+    end if;
+    
+    perform pg_sleep(0.1);
+    execute 'select pg_advisory_lock(' || n || ');';
+    perform recursive_lock_test(n - 1);
+end;
+$$ language plpgsql;
+
+create or replace function memory_stress_test(m integer) returns void as $$
+declare
+    large_text text := repeat('x', 1024 * 1024); -- 1MB of data
+begin
+    if m <= 0 then
+        return;
+    end if;
+    
+    insert into pg_temp.test_memory values (large_text);
+    perform memory_stress_test(m - 1);
+end;
+$$ language plpgsql;
+
+create or replace function test_exception_handling() returns void as $$
+begin
+    begin
+        raise exception 'Test exception';
+    exception
+        when others then
+            insert into test_edge_cases (text_col) values ('Exception caught');
+    end;
+end;
+$$ language plpgsql;
+
+-- Test isolation levels and transactions
+set transaction isolation level serializable;
+begin;
+    select * from pg_class where relname = 'test_edge_cases';
+    perform test_exception_handling();
+commit;
+
+begin;
+    insert into test_edge_cases (int_col) values (generate_series(1, 1000));
+    savepoint my_savepoint;
+    delete from test_edge_cases;
+    rollback to my_savepoint;
+    commit;
+
+-- Test system catalog queries
+select * from pg_locks where locktype = 'relation';
+select count(*) as total_tables from pg_class where relkind = 'r';
+
+-- Cleanup
+drop function if exists recursive_lock_test(integer);
+drop function if exists memory_stress_test(integer);
+drop function if exists test_exception_handling();
+drop table if exists test_edge_cases;
+
+vacuum full;

@@ -1,0 +1,43 @@
+-- Create alpha table with partitions
+CREATE TABLE alpha (
+    a integer,
+    b integer,
+    c text
+) PARTITION BY LIST (a);
+
+CREATE TABLE alpha_a1 PARTITION OF alpha FOR VALUES IN (1);
+CREATE TABLE alpha_a2 PARTITION OF alpha FOR VALUES IN (2);
+
+-- Insert sample data into alpha
+INSERT INTO alpha (a, b, c)
+VALUES 
+(1, 100, 'alpha_a1_b100'),
+(1, 150, 'alpha_a1_b150'),
+(1, 199, 'alpha_a1_b199'),
+(2, 200, 'alpha_a2_b200'),
+(2, 250, 'alpha_a2_b250'),
+(2, 299, 'alpha_a2_b299');
+
+-- Create beta table with partitions
+CREATE TABLE beta (
+    a integer,
+    b integer,
+    c text
+) PARTITION BY LIST (a);
+
+CREATE TABLE beta_a1 PARTITION OF beta FOR VALUES IN (1);
+CREATE TABLE beta_a2 PARTITION OF beta FOR VALUES IN (2);
+
+-- Insert sample data into beta
+INSERT INTO beta (a, b, c)
+VALUES 
+(1, 105, 'beta_a1_b105'),
+(1, 155, 'beta_a1_b155'),
+(1, 195, 'beta_a1_b195'),
+(2, 205, 'beta_a2_b205'),
+(2, 255, 'beta_a2_b255'),
+(2, 295, 'beta_a2_b295');
+
+-- Verify the data
+SELECT * FROM alpha ORDER BY a, b;
+SELECT * FROM beta ORDER BY a, b;

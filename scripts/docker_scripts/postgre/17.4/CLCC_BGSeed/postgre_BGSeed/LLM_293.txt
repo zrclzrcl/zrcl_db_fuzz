@@ -1,0 +1,29 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    uuid_column UUID,
+    text_column TEXT DEFAULT 'default_value',
+    num_column INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE test_table ADD CONSTRAINT unique_uuid_constraint UNIQUE (uuid_column);
+INSERT INTO test_table(uuid_column, num_column) VALUES (gen_random_uuid(), 10), (gen_random_uuid(), 20);
+SELECT * FROM test_table WHERE uuid_column = gen_random_uuid();
+SELECT id, text_column || ' appended text' AS modified_text FROM test_table;
+UPDATE test_table SET text_column = 'updated_value' WHERE id = 1;
+DELETE FROM test_table WHERE num_column < 15;
+
+CREATE INDEX idx_num ON test_table (num_column);
+EXPLAIN SELECT * FROM test_table WHERE num_column > 10;
+SELECT pg_size_pretty(pg_total_relation_size('test_table'));
+
+CREATE TABLE test_join (
+    id SERIAL PRIMARY KEY,
+    related_uuid UUID REFERENCES test_table(uuid_column)
+);
+
+INSERT INTO test_join(related_uuid) VALUES (gen_random_uuid());
+SELECT t.id, j.related_uuid FROM test_table t JOIN test_join j ON t.uuid_column = j.related_uuid;
+
+TRUNCATE test_table, test_join;
+DROP TABLE test_table, test_join;

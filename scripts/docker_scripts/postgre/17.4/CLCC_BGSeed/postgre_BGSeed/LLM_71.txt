@@ -1,0 +1,35 @@
+CREATE TABLE test_table (
+    id integer,
+    name text,
+    active boolean,
+    created_date date,
+    amount numeric
+);
+
+INSERT INTO test_table VALUES 
+(1, 'Alice', true, '2023-01-01', 100.50),
+(2, NULL, false, '2024-12-31', -50.75),
+(3, 'Charlie', true, '1970-01-01', NULL);
+
+INSERT INTO test_table 
+SELECT id + 100, name || ' Test', NOT active, created_date + interval '1 year', amount * 2 
+FROM test_table;
+
+SELECT id, name, CASE WHEN amount > 100 THEN 'High' ELSE 'Low' END AS category 
+FROM test_table ORDER BY id DESC;
+
+WITH cte AS (
+    SELECT id, amount FROM test_table WHERE active
+)
+SELECT SUM(amount) FROM cte;
+
+SELECT COUNT(DISTINCT name), MAX(created_date) FROM test_table;
+
+SELECT id, name, RANK() OVER (ORDER BY amount DESC) AS rank 
+FROM test_table;
+
+CREATE INDEX idx_test_id ON test_table(id);
+
+BEGIN;
+    INSERT INTO test_table VALUES (4, 'Transaction Test', true, CURRENT_DATE, 200.00);
+COMMIT;

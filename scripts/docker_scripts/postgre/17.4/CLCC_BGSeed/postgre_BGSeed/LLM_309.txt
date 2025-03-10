@@ -1,0 +1,53 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+CREATE INDEX idx_name ON test_table (name);
+CREATE INDEX idx_age ON test_table (age DESC);
+CREATE UNIQUE INDEX unique_idx_name_age ON test_table (name, age);
+
+CREATE TABLE partitioned_data (
+    id SERIAL PRIMARY KEY,
+    log_time TIMESTAMP NOT NULL,
+    data TEXT
+) PARTITION BY RANGE (log_time);
+
+CREATE TABLE partition_2023 PARTITION OF partitioned_data FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+INSERT INTO test_table (name, age, data)
+VALUES ('Alice', 30, '{"key": "value"}'),
+       ('Bob', 25, '{"data": [1,2,3]}');
+
+CREATE VIEW combined_view AS
+SELECT t.name, t.age, p.data
+FROM test_table t
+JOIN partitioned_data p ON t.id = p.id;
+
+WITH cte AS (
+    SELECT name, COUNT(*) as count
+    FROM test_table
+    GROUP BY name
+)
+SELECT * FROM cte WHERE count > 1;
+
+CREATE OR REPLACE FUNCTION notify_after_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('test_channel', NEW.name);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_notify AFTER INSERT ON test_table
+FOR EACH ROW EXECUTE PROCEDURE notify_after_insert();
+
+CREATE MATERIALIZED VIEW mv_test AS
+SELECT name, AVG(age) as average_age
+FROM test_table
+GROUP BY name;
+
+ANALYZE test_table;

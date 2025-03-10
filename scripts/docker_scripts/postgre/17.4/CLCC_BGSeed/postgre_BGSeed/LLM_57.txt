@@ -1,0 +1,42 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    int_col INT NOT NULL,
+    text_col TEXT,
+    date_col DATE DEFAULT CURRENT_DATE,
+    bool_col BOOLEAN DEFAULT FALSE,
+    array_col INT[] DEFAULT '{}',
+    jsonb_col JSONB
+);
+
+INSERT INTO test_table (int_col, text_col, bool_col, array_col, jsonb_col)
+VALUES 
+(0, 'test_string', TRUE, '{1,2,3}', '{"key": "value", "array": [1, 2, 3]}'),
+(-2147483648, NULL, FALSE, '{}', NULL),
+(2147483647, 'another_test', TRUE, '{4,5,6}', '{"nested": {"object": true}}');
+
+CREATE INDEX idx_int_col ON test_table (int_col);
+CREATE INDEX idx_text_col ON test_table USING gist (text_col gist_trgm_ops);
+
+UPDATE test_table 
+SET text_col = 'updated_string' 
+WHERE id IN (
+    SELECT id FROM test_table WHERE int_col > 0
+);
+
+DELETE FROM test_table 
+WHERE bool_col IS FALSE;
+
+WITH cte AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY int_col) as rn
+    FROM test_table
+)
+SELECT * FROM cte;
+
+INSERT INTO test_table (int_col, text_col, jsonb_col)
+SELECT t.int_col + 10, t.text_col || '_appended', 
+jsonb_set(t.jsonb_col, '{new_key}', 'to_json('test')')
+FROM test_table t
+WHERE t.id = 1;
+
+SELECT array_col[1], bool_col::TEXT, date_col + INTERVAL '1 day'
+FROM test_table;

@@ -1,0 +1,40 @@
+-- Create table for storing point data with geometric constraints
+CREATE TABLE POINT_Tbl (
+    id SERIAL PRIMARY KEY,
+    point_col POINT NOT NULL,
+    x INT CHECK (x >= 0),
+    y INT CHECK (y >= 0)
+);
+
+-- Create table for storing circle data with radius constraint
+CREATE TABLE CIRCLE_Tbl (
+    id SERIAL PRIMARY KEY,
+    center POINT NOT NULL,
+    radius DECIMAL CHECK (radius > 0),
+    circle_col CIRCLE GENERATED ALWAYS AS (center, radius) STORED
+);
+
+-- Create table for storing polygon data with geometric constraints
+CREATE TABLE POLYGON_Tbl (
+    id SERIAL PRIMARY KEY,
+    vertices PATH NOT NULL,
+    polygon_col POLYGON NOT NULL
+);
+
+-- Create table for storing box data
+CREATE TABLE BOX_TBL (
+    id SERIAL PRIMARY KEY,
+    box_col BOX NOT NULL
+);
+
+-- Create table for storing line segment data
+CREATE TABLE LINESEGMENT_TBL (
+    id SERIAL PRIMARY KEY,
+    lseg_col LSEG NOT NULL
+);
+
+-- Create table for storing path data
+CREATE TABLE PATH_TBL (
+    id SERIAL PRIMARY KEY,
+    path_col PATH NOT NULL
+);

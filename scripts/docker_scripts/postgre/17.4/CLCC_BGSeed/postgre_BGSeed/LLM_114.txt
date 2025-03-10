@@ -1,0 +1,43 @@
+\connect postgres;
+
+-- Test basic date/time formatting and extraction functions
+SELECT '2023-10-25 14:30:00'::timestamp AS formatted_timestamp;
+SELECT EXTRACT(YEAR FROM '2023-10-25 14:30:00'::timestamp) AS extract_year;
+SELECT TO_CHAR('2023-10-25 14:30:00'::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS formatted_string;
+
+-- Test edge date cases
+SELECT '2024-02-29'::date AS leap_year_date;
+SELECT '2023-02-28 + 1 day'::date AS end_of_month;
+SELECT '2023-01-31 + 1 day'::date AS month_transition;
+
+-- Test timezone handling
+SET TIME ZONE 'UTC';
+SELECT CURRENT_TIMESTAMP AS utc_time;
+SET TIME ZONE 'America/New_York';
+SELECT CURRENT_TIMESTAMP AS ny_time;
+RESET TIME ZONE;
+
+-- Test interval arithmetic
+SELECT INTERVAL '1 hour' + INTERVAL '30 minutes' AS combined_interval;
+SELECT '2023-10-25 14:30:00'::timestamp + INTERVAL '2 days' AS future_timestamp;
+
+-- Test date extraction functions
+SELECT 
+    EXTRACT(YEAR FROM CURRENT_TIMESTAMP) AS year,
+    EXTRACT(MONTH FROM CURRENT_TIMESTAMP) AS month,
+    EXTRACT(DAY FROM CURRENT_TIMESTAMP) AS day,
+    EXTRACT(HOUR FROM CURRENT_TIMESTAMP) AS hour,
+    EXTRACT(MINUTE FROM CURRENT_TIMESTAMP) AS minute,
+    EXTRACT(SECOND FROM CURRENT_TIMESTAMP) AS second;
+
+-- Test timestamp with timezone
+SELECT 
+    '2023-10-25 14:30:00+00'::timestamptz AS utc_tstamp,
+    '2023-10-25 14:30:00 America/New_York'::timestamptz AS ny_tstamp;
+
+-- Test date validation
+SELECT '2023-02-30'::date AS invalid_date; -- Should return error
+SELECT '2023-04-31'::date AS another_invalid_date; -- Should return error
+
+-- Clean up
+RESET TIME ZONE;

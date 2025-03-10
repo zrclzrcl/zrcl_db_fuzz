@@ -1,0 +1,28 @@
+CREATE TABLE test_edge_cases (
+    id SERIAL PRIMARY KEY,
+    int_col INT CHECK (int_col >= -2147483648 AND int_col <= 2147483647),
+    text_col TEXT,
+    macaddr_col MACADDR,
+    date_col DATE,
+    time_col TIME,
+    bool_col BOOLEAN,
+    point_col POINT,
+    lseg_col LSEG,
+    circle_col CIRCLE,
+    array_col INT[],
+    unique_col VARCHAR(10) UNIQUE
+);
+
+INSERT INTO test_edge_cases (int_col, text_col, macaddr_col, date_col, time_col, bool_col, point_col, lseg_col, circle_col, array_col, unique_col)
+VALUES 
+(-2147483648, '', '00:00:00:00:00:00', '1970-01-01', '00:00:00', FALSE, '(0,0)', '[(0,0),(1,1)]', '<(0,0),2>', '{1}', 'A'),
+(2147483647, 'test_string', 'FF:FF:FF:FF:FF:FF', '9999-12-31', '23:59:59', TRUE, '(1000000,1000000)', '[(1000000,1000000),(2000000,2000000)]', '<(1000000,1000000),1000000>', '{999999}', 'B'),
+(-1, '!@#$%^&*()', '01:23:45:67:89:AB', '2024-02-29', '12:34:56', FALSE, '(-1,-1)', '[(-1,-1),(1,1)]', '<(0,0),0>', '{}', 'C'),
+(0, 'hello_world', 'ff:ff:ff:ff:ff:ff', '2023-12-31', '23:59:59', TRUE, '(0.5,0.5)', '[(0.5,0.5),(1.5,1.5)]', '<(0.5,0.5), 0.5>', '{1,2,3}', 'D'),
+(1, 'тест_строка', '08:00:2b:01:02:03', '2000-02-29', '12:00:00', FALSE, '(100, 200)', '[(100,200),(300,400)]', '<(200,300),50>', '{null}', 'E');
+
+CREATE INDEX idx_int_col_btree ON test_edge_cases USING btree (int_col);
+CREATE INDEX idx_text_col_hash ON test_edge_cases USING hash (text_col);
+CREATE INDEX idx_macaddr_col_gist ON test_edge_cases USING gist (macaddr_col);
+
+SELECT md5(text_col || macaddr_col) FROM test_edge_cases WHERE id = 1;

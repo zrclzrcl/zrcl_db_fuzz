@@ -1,0 +1,45 @@
+-- PostgreSQL Initial Seed Setup
+
+-- Create base tables
+CREATE TABLE mvtest_v (
+    a integer
+);
+
+CREATE TABLE mvtest_foo_data (
+    i integer,
+    md5 text
+);
+
+-- Create materialized views
+CREATE MATERIALIZED VIEW mvtest_mv_v AS 
+SELECT a FROM mvtest_v WHERE a <= 5;
+
+CREATE MATERIALIZED VIEW mvtest_error AS 
+SELECT 1/0 as x WITH NO DATA;
+
+-- Create indexes
+CREATE UNIQUE INDEX mvtest_mv_v_ii ON mvtest_mv_v (a);
+
+-- Create role for testing permissions
+CREATE ROLE regress_user_ mvtest;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO regress_user_ mvtest;
+
+-- Reset to default role
+RESET ROLE;
+
+-- Create function that creates materialized views
+CREATE FUNCTION mvtest_func() 
+RETURNS void AS $$
+BEGIN
+    CREATE MATERIALIZED VIEW mvtest1 AS SELECT 1 AS x;
+    CREATE MATERIALIZED VIEW mvtest2 AS SELECT 1 AS x WITH NO DATA;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Insert initial data
+INSERT INTO mvtest_v (a)
+SELECT generate_series(1, 10);
+
+-- Set up materialized view data
+INSERT INTO mvtest_foo_data (i, md5)
+SELECT i, md5(random()::text) FROM generate_series(1, 10) i;

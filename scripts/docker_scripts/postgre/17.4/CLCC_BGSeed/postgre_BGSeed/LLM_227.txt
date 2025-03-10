@@ -1,0 +1,61 @@
+-- Initial setup: Create tables with various data types and constraints
+CREATE TABLE test_table1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE test_table2 (
+    id SERIAL PRIMARY KEY,
+    value INTEGER NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    description TEXT
+);
+
+-- Insert sample data into test_table1
+INSERT INTO test_table1 (name) VALUES ('Alice'), ('Bob'), ('Charlie');
+
+-- Insert sample data into test_table2
+INSERT INTO test_table2 (value, description) 
+VALUES (100, 'First entry'),
+       (200, 'Second entry'),
+       (300, 'Third entry');
+
+-- Update operations
+UPDATE test_table1 SET name = 'Alicia' WHERE id = 1;
+UPDATE test_table2 SET is_active = FALSE WHERE value < 200;
+
+-- Delete operations
+DELETE FROM test_table1 WHERE name LIKE 'Test%';
+DELETE FROM test_table2 WHERE is_active = FALSE;
+
+-- Transaction with savepoint and rollback
+BEGIN;
+    INSERT INTO test_table1 (name) VALUES ('Diana');
+    INSERT INTO test_table2 (value, description) VALUES (400, 'Fourth entry');
+    SAVEPOINT p1;
+    INSERT INTO test_table1 (name) VALUES ('Eve');
+    INSERT INTO test_table2 (value, description) VALUES (500, 'Fifth entry');
+    ROLLBACK TO p1;
+COMMIT;
+
+-- Complex SELECT queries
+SELECT t1.name, t2.value 
+FROM test_table1 t1
+JOIN test_table2 t2 ON t1.id = t2.id;
+
+WITH cte AS (
+    SELECT id, name 
+    FROM test_table1 
+    WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '1 day'
+)
+SELECT * FROM cte;
+
+-- Alter table structure
+ALTER TABLE test_table1 ADD CONSTRAINT unique_name UNIQUE (name);
+
+-- Truncate tables to remove data
+TRUNCATE TABLE test_table1, test_table2;
+
+-- Clean up: Drop the tables
+DROP TABLE test_table1, test_table2;

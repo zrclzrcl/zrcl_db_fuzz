@@ -1,0 +1,58 @@
+-- Create temporary tables with various constraints and relationships
+CREATE TEMPORARY TABLE temp_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE,
+    value INT
+);
+
+CREATE TEMPORARY TABLE another_temp_table (
+    ref_id INT REFERENCES temp_table(id),
+    category TEXT
+);
+
+-- Insert sample data into the tables
+INSERT INTO temp_table (name, value) VALUES
+('Alice', 10),
+('Bob', 20),
+('Charlie', 30);
+
+INSERT INTO another_temp_table (ref_id, category) VALUES
+(1, 'A'),
+(2, 'B');
+
+-- Test SELECT statements with grouping and expressions
+SELECT id, name FROM temp_table GROUP BY id, name;
+
+SELECT length(name), count(*) FROM temp_table GROUP BY length(name);
+
+SELECT *, row_number() OVER (ORDER BY value) AS rank FROM temp_table;
+
+-- Perform inner join to test relationships between tables
+SELECT t.name, a.category 
+FROM temp_table t
+INNER JOIN another_temp_table a ON t.id = a.ref_id;
+
+-- Test left join where some references may be null
+SELECT t.name, a.category 
+FROM temp_table t
+LEFT JOIN another_temp_table a ON t.id = a.ref_id;
+
+-- Prepare and execute a statement to test prepared queries
+PREPARE stmt AS SELECT id, name FROM temp_table WHERE value > $1;
+EXECUTE stmt(15);
+DEALLOCATE stmt;
+
+-- Create a view based on grouped data and then drop it
+CREATE VIEW temp_view AS
+SELECT value, count(*) as count 
+FROM temp_table 
+GROUP BY value;
+
+DROP VIEW temp_view;
+
+-- Test altering table structure by adding an index
+ALTER TABLE temp_table ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE temp_table ADD INDEX idx_name (name);
+
+-- Clean up temporary tables at the end of the session
+-- (Automatically handled as they are temporary)

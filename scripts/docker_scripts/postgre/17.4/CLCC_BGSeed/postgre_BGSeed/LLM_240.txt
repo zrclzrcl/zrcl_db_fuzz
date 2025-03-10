@@ -1,0 +1,45 @@
+\echo Generating high-quality initial seeds for PostgreSQL fuzz testing...
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT,
+    numeric_column NUMERIC(10,2),
+    date_column DATE DEFAULT CURRENT_DATE,
+    boolean_column BOOLEAN NOT NULL,
+    jsonb_column JSONB
+);
+
+INSERT INTO test_table (text_column, numeric_column, boolean_column, jsonb_column)
+VALUES ('Test string', 123.45, TRUE, '{"key": "value"}');
+
+CREATE INDEX idx_numeric ON test_table (numeric_column);
+CREATE INDEX idx_text ON test_table (text_column text_pattern_ops);
+
+CREATE OR REPLACE FUNCTION trigger_function()
+RETURNS TRIGGER LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE NOTICE 'Trigger function executed';
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER test_trigger
+AFTER INSERT ON test_table
+FOR EACH ROW
+EXECUTE PROCEDURE trigger_function();
+
+SELECT * FROM test_table WHERE id IN (1,2);
+
+WITH cte AS (
+    SELECT text_column, date_column,
+           RANK() OVER (PARTITION BY boolean_column ORDER BY date_column) as rank_col
+    FROM test_table
+)
+SELECT * FROM cte WHERE rank_col <= 3;
+
+SELECT jsonb_pretty(jsonb_column) FROM test_table LIMIT 1;
+
+ALTER TABLE test_table ADD CONSTRAINT unique_text UNIQUE (text_column);
+
+ANALYZE test_table;

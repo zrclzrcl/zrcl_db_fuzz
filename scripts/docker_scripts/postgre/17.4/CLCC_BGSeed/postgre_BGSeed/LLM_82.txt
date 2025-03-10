@@ -1,0 +1,65 @@
+BEGIN;
+-- Create roles for testing permissions
+CREATE ROLE test_user1 WITH LOGIN PASSWORD 'testpass';
+CREATE ROLE test_user2 WITH LOGIN NOCREATEDB;
+
+-- Create schemas and tables with various constraints
+CREATE SCHEMA test_schema1;
+SET SEARCH_PATH TO test_schema1;
+CREATE TABLE test_table1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX unique_name_idx ON test_table1(name);
+
+-- Test partitioned table
+CREATE TABLE test_partitioned (
+    id INT,
+    category INT,
+    value DECIMAL
+) PARTITION BY RANGE (category);
+CREATE TABLE test_partition_1 PARTITION OF test_partitioned FOR VALUES FROM (0) TO (10);
+
+-- Create indexes with different methods
+CREATE INDEX idx_gin ON test_table1 USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_bloom ON test_table1 USING Bloom (id, name);
+
+-- Test triggers
+CREATE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger fired';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER row_trigger BEFORE INSERT ON test_table1 FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+CREATE TRIGGER stmt_trigger AFTER UPDATE ON test_table1 FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func();
+
+-- Test views and materialized views
+CREATE VIEW test_view AS SELECT id, name FROM test_table1 WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '1 day';
+CREATE MATERIALIZED VIEW test_matview AS SELECT COUNT(*) as total FROM test_table1;
+
+-- Test functions and stored procedures
+CREATE FUNCTION compute_sum(a INT, b INT) RETURNS INT AS $$
+BEGIN
+    RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test security labels
+SECURITY LABEL FOR pg_read ON TABLE test_table1 IS 'public';
+SECURITY LABEL FOR pg_write ON test_table1 TO test_user1;
+
+-- Test event triggers
+CREATE EVENT TRIGGER ddl_trigger ON ddl_command_start EXECUTE PROCEDURE trigger_func();
+
+-- Test constraints and partitions
+ALTER TABLE test_partitioned ADD CONSTRAINT positive_value CHECK (value > 0);
+ALTER TABLE test_table1 ADD FOREIGN KEY (id) REFERENCES test_partition_1(id);
+
+-- Test various SELECT statements
+SELECT id, name FROM test_table1 WHERE created_at < CURRENT_TIMESTAMP;
+SELECT * FROM test_view JOIN test_matview ON true;
+
+COMMIT;

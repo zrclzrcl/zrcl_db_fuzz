@@ -1,0 +1,44 @@
+CREATE TABLE test_data (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    int_col INTEGER,
+    bool_col BOOLEAN,
+    timestamp_col TIMESTAMP,
+    numeric_col NUMERIC(10, 2)
+);
+
+INSERT INTO test_data (text_col, int_col, bool_col, timestamp_col, numeric_col) VALUES
+('', NULL, TRUE, '2023-01-01 00:00:00', 100.00),
+('test', -2147483648, FALSE, '9999-12-31 23:59:59', 9999999999.99),
+('', NULL, TRUE, '2023-01-01 00:00:00', 100.00),
+('test', -2147483648, FALSE, '9999-12-31 23:59:59', 9999999999.99);
+
+WITH recursive_cte AS (
+    SELECT 1 AS value
+    UNION ALL
+    SELECT value + 1 FROM recursive_cte WHERE value < 10
+)
+SELECT * FROM recursive_cte;
+
+SELECT 
+    id,
+    text_col,
+    int_col,
+    bool_col,
+    timestamp_col,
+    numeric_col,
+    ROW_NUMBER() OVER (ORDER BY id) AS row_num,
+    RANK() OVER (PARTITION BY bool_col ORDER BY id) AS rank
+FROM test_data;
+
+SELECT 
+    SUM(numeric_col),
+    COUNT(*),
+    MAX(int_col),
+    MIN(timestamp_col)
+FROM test_data
+WHERE bool_col = TRUE;
+
+(SELECT * FROM test_data WHERE id < 5)
+UNION ALL
+(SELECT * FROM test_data WHERE id >= 5);

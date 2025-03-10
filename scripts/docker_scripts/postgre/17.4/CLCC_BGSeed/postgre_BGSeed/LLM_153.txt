@@ -1,0 +1,23 @@
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    int_col INT,
+    text_col TEXT,
+    jsonb_col JSONB,
+    line_col LINE
+);
+
+INSERT INTO test_fuzz (int_col, text_col, jsonb_col, line_col) VALUES 
+(2147483647, 'test', '{}', '{(0,0),(1,1)}'),
+(-2147483648, '', '[]', '{(2,2),(3,3)}'),
+(0, '特殊字符', '{"key": "value"}', '{(4,4),(5,5)}'),
+(123456789, '长文本字段长文本字段长文本字段长文本字段长文本字段长文本字段', '{"array": [1,2,3]}', '{(6,6),(7,7)}'),
+(987654321, '""', '{"nested": {"object": true}}', '{(8,8),(9,9)}');
+
+INSERT INTO test_fuzz (int_col, text_col, jsonb_col) VALUES 
+(2147483648, 'test', '"invalid_json'),
+(-2147483649, '', '{"key": "value"'),
+(0, '特殊字符', '{"array": [1, 2, 3]}');
+SELECT COUNT(*) FROM test_fuzz;
+SELECT SUM(int_col) FROM test_fuzz WHERE text_col LIKE '%test%';
+SELECT jsonb_col->>'key' FROM test_fuzz WHERE id = 1;
+SELECT line_col @> '{(0,0),(1,1)}'::line FROM test_fuzz WHERE id = 1;

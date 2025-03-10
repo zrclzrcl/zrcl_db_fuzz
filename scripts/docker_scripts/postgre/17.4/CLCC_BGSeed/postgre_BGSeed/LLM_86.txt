@@ -1,0 +1,102 @@
+-- PostgreSQL Initial Seed for Fuzz Testing --
+
+-- Test table creation with various data types and constraints
+CREATE TABLE fuzz_test (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT NOT NULL,
+    int_col INT UNIQUE CHECK (int_col > 0),
+    float_col FLOAT DEFAULT 0.0,
+    bool_col BOOLEAN DEFAULT FALSE,
+    timestamp_col TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    json_col JSONB
+);
+
+-- Test index creation with different methods
+CREATE INDEX idx_text ON fuzz_test USING GIN (text_col gin_trgm_ops);
+CREATE INDEX idx_int ON fuzz_test (int_col) INCLUDE (timestamp_col);
+CREATE UNIQUE INDEX idx_unique ON fuzz_test (float_col, bool_col);
+
+-- Test partitioned table
+CREATE TABLE fuzz_partition (
+    id SERIAL,
+    region TEXT NOT NULL,
+    amount DECIMAL(10,2)
+) PARTITION BY RANGE (amount);
+
+-- Create partitions for different ranges
+CREATE TABLE fuzz_partition_low PARTITION OF fuzz_partition FOR VALUES FROM (-infinity TO 1000);
+CREATE TABLE fuzz_partition_med PARTITION OF fuzz_partition FOR VALUES FROM [1000, 5000);
+CREATE TABLE fuzz_partition_high PARTITION OF fuzz_partition FOR VALUES FROM [5000, infinity);
+
+-- Test trigger function
+CREATE OR REPLACE FUNCTION trigger_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.timestamp_col := CURRENT_TIMESTAMP;
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.text_col IS NULL THEN
+            RAISE EXCEPTION 'text_col cannot be null';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger
+CREATE TRIGGER fuzz_trigger
+BEFORE INSERT OR UPDATE ON fuzz_test
+FOR EACH ROW EXECUTE FUNCTION trigger_func();
+
+-- Test stored procedure with exception handling
+CREATE OR REPLACE PROCEDURE test_proc()
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_count INTEGER := 0;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM fuzz_test;
+    RAISE NOTICE 'Number of rows: %', v_count;
+    
+    IF v_count > 10 THEN
+        DELETE FROM fuzz_test WHERE id % 2 = 0;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'An error occurred: %', SQLERRM;
+END;
+$$;
+
+-- Test data manipulation with edge cases
+INSERT INTO fuzz_test (text_col, int_col, float_col, bool_col)
+VALUES ('test1', 100, 3.14, TRUE),
+       ('test2', 200, NULL, FALSE);
+
+-- Test unique constraint violation
+INSERT INTO fuzz_test (int_col) VALUES (100); -- Should fail due to duplicate
+
+-- Test check constraint violation
+INSERT INTO fuzz_test (int_col) VALUES (-50); -- Should fail due to check constraint
+
+-- Test JSONB operations
+UPDATE fuzz_test SET json_col = '{"key": "value"}' WHERE id = 1;
+SELECT * FROM fuzz_test WHERE json_col @> '{"key": "value"}';
+
+-- Test trigger functionality
+UPDATE fuzz_test SET text_col = NULL WHERE id = 1; -- Should raise exception
+
+-- Test stored procedure execution
+CALL test_proc();
+
+-- Test ALTER operations
+ALTER TABLE fuzz_test ADD COLUMN new_col TEXT;
+ALTER TABLE fuzz_test DROP COLUMN new_col;
+
+-- Test index operations
+REINDEX INDEX idx_text;
+DROP INDEX idx_unique;
+
+-- Clean up (commented out to avoid accidental execution)
+-- DROP PROCEDURE test_proc;
+-- DROP TRIGGER fuzz_trigger ON fuzz_test;
+-- DROP FUNCTION trigger_func();
+-- DROP TABLE fuzz_partition_high, fuzz_partition_med, fuzz_partition_low, fuzz_partition, fuzz_test;

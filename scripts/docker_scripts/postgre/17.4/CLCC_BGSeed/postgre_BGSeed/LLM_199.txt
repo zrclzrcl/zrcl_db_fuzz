@@ -1,0 +1,80 @@
+-- Create test roles with specific privileges
+CREATE ROLE test_role1 WITH LOGIN PASSWORD 'testpass';
+CREATE ROLE test_role2 WITH LOGIN SUPERUSER;
+CREATE ROLE test_role3 NOINHERIT;
+
+-- Create schemas for testing
+CREATE SCHEMA test_schema1 AUTHORIZATION test_role1;
+CREATE SCHEMA test_schema2;
+
+-- Create tables in the schemas
+CREATE TABLE test_schema1.test_table1 (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE test_schema2.test_table2 (
+    id INT UNIQUE,
+    value DECIMAL(10, 2),
+    description TEXT
+) PARTITION BY RANGE (id);
+
+-- Create indexes on tables
+CREATE INDEX idx_test_table1_name ON test_schema1.test_table1 (name);
+CREATE INDEX idx_test_table2_id ON test_schema2.test_table2 (id);
+
+-- Insert sample data into tables
+INSERT INTO test_schema1.test_table1 (name) VALUES ('Test Record 1');
+INSERT INTO test_schema2.test_table2 (id, value, description) VALUES (10, 100.5, 'Sample Description');
+
+-- Create a view that joins two tables
+CREATE VIEW test_schema1.view_joint AS
+SELECT t1.name, t2.value 
+FROM test_schema1.test_table1 t1
+JOIN test_schema2.test_table2 t2 ON t1.id = t2.id;
+
+-- Create a trigger function and trigger for testing
+CREATE FUNCTION log_updates() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO test_schema1.update_log (table_name, updated_at)
+    VALUES (TG_TABLE_NAME, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE test_schema1.update_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER trig_test_table1_update AFTER UPDATE ON test_schema1.test_table1
+FOR EACH ROW EXECUTE PROCEDURE log_updates();
+
+-- Create a materialized view for testing
+CREATE MATERIALIZED VIEW test_schema2.mv_test AS
+SELECT id, value, description
+FROM test_schema2.test_table2;
+
+-- Create publications for logical replication
+CREATE PUBLICATION pub_test_tables FOR TABLE test_schema1.test_table1, test_schema2.test_table2;
+
+-- Alter roles and grants
+GRANT SELECT ON ALL TABLES IN SCHEMA test_schema1 TO test_role3;
+REVOKE INSERT ON test_schema1.test_table1 FROM test_role3;
+
+-- Test role switching and ownership changes
+SET ROLE test_role1;
+ALTER TABLE test_schema1.test_table1 OWNER TO test_role2;
+RESET ROLE;
+
+-- Clean up the created objects
+DROP TRIGGER trig_test_table1_update ON test_schema1.test_table1;
+DROP FUNCTION log_updates();
+DROP VIEW test_schema1.view_joint;
+DROP MATERIALIZED VIEW test_schema2.mv_test;
+DROP TABLE test_schema1.update_log, test_schema1.test_table1, test_schema2.test_table2;
+DROP SCHEMA test_schema1, test_schema2;
+DROP PUBLICATION pub_test_tables;
+DROP ROLE test_role1, test_role2, test_role3;

@@ -1,0 +1,86 @@
+-- Create schemas for testing different functionalities
+CREATE SCHEMA IF NOT EXISTS test_schema1;
+CREATE SCHEMA IF NOT EXISTS test_schema2;
+
+-- Create tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_schema1.basic_types (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INT CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+CREATE TABLE IF NOT EXISTS test_schema2.complex_data (
+    id UUID PRIMARY KEY DEFAULT gen_uuid(),
+    metadata JSONB,
+    last_updated TIMESTAMPTZ,
+    description TEXT,
+    status TEXT CHECK (status IN ('active', 'inactive'))
+);
+
+-- Create indexes for different access methods
+CREATE INDEX idx_name_lower ON test_schema1.basic_types USING btree (lower(name));
+CREATE INDEX idx_jsonb_metadata ON test_schema2.complex_data USING GIN (metadata);
+CREATE INDEX idx_created_at_hash ON test_schema1.basic_types USING hash (created_at);
+
+-- Define functions and triggers
+CREATE FUNCTION log_changes() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO test_schema1.change_log VALUES (OLD.*);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE IF NOT EXISTS test_schema1.change_log (
+    id INT,
+    name TEXT,
+    age INT,
+    created_at TIMESTAMP,
+    is_active BOOLEAN
+);
+
+CREATE TRIGGER trigger_log_changes AFTER UPDATE ON test_schema1.basic_types FOR EACH ROW EXECUTE FUNCTION log_changes();
+
+-- Create views and materialized views
+CREATE VIEW test_schema1.user_summary AS 
+SELECT 
+    id, 
+    name, 
+    age, 
+    CASE WHEN is_active THEN 'Active' ELSE 'Inactive' END AS status 
+FROM test_schema1.basic_types;
+
+CREATE MATERIALIZED VIEW test_schema2.data_snapshot AS 
+WITH latest_data AS (
+    SELECT * FROM test_schema2.complex_data WHERE last_updated >= NOW() - INTERVAL '1 day'
+)
+SELECT COUNT(*) as count, MAX(last_updated) as last_update FROM latest_data;
+
+-- Partitioned table example
+CREATE TABLE IF NOT EXISTS test_schema1.sales (
+    id SERIAL PRIMARY KEY,
+    amount NUMERIC(10, 2),
+    sale_date DATE
+) PARTITION BY RANGE (sale_date);
+
+CREATE INDEX idx_sale_amount ON test_schema1.sales USING btree (amount DESC);
+
+-- Insert sample data using a function to populate tables
+INSERT INTO test_schema1.basic_types (name, age, is_active)
+SELECT 
+    'User' || generate_series(1, 10),
+    18 + x,
+    TRUE
+FROM generate_series(0, 9) as x;
+
+-- Test special SQL constructs with a CTE and join
+WITH recent_sales AS (
+    SELECT * FROM test_schema1.sales WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days'
+)
+SELECT 
+    s.id, 
+    s.amount, 
+    u.name as salesman
+FROM recent_sales s
+JOIN test_schema1.basic_types u ON s.id = u.id;

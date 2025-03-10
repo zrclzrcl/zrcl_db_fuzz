@@ -1,0 +1,44 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT FALSE,
+    balance NUMERIC(10, 2),
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO test_table (name, is_active, balance) VALUES 
+('Test User 1', TRUE, 100.50),
+('Test User 2', FALSE, NULL),
+('Test User 3', TRUE, -50.75),
+('Test User 4', FALSE, 0);
+
+ALTER TABLE test_table ADD COLUMN notes TEXT;
+
+UPDATE test_table SET is_active = TRUE WHERE balance > 0;
+DELETE FROM test_table WHERE name LIKE 'Test User %' AND id < 2;
+
+SELECT t1.id, t1.name, t2.balance 
+FROM test_table AS t1
+JOIN (
+    SELECT id, balance 
+    FROM test_table 
+    WHERE is_active = TRUE
+) AS t2 ON t1.id = t2.id;
+
+BEGIN;
+INSERT INTO test_table (name, is_active, balance) VALUES ('Test User 5', TRUE, 200.00);
+COMMIT;
+
+GRANT SELECT, INSERT ON test_table TO public;
+
+CREATE INDEX idx_balance ON test_table (balance);
+
+SELECT 
+    id,
+    name,
+    is_active,
+    balance,
+    last_updated,
+    notes
+FROM test_table
+WHERE balance > 100 OR is_active = TRUE;

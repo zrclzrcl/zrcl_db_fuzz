@@ -1,0 +1,79 @@
+create table test_table (
+    id serial primary key,
+    name varchar(100),
+    age int,
+    balance numeric(10,2),
+    last_login timestamp,
+    status boolean,
+    metadata jsonb,
+    description text,
+    created_at timestamptz default current_timestamp,
+    updated_at timestamptz
+);
+
+create index idx_age on test_table(age);
+create unique index idx_name_unique on test_table(name);
+create index idx_last_login on test_table(last_login desc);
+
+insert into test_table (name, age, balance, last_login, status, metadata)
+values ('Alice', 30, 1000.50, '2024-03-15 14:30:00', true, '{"role": "admin", "active": true}');
+insert into test_table (name, age, balance, last_login, status, metadata)
+values ('Bob', 25, 500.75, '2024-03-16 09:15:00', false, '{"role": "user", "active": false}');
+insert into test_table (name, age, balance, last_login, status, metadata)
+values ('Charlie', 40, 2500.00, '2024-03-17 11:45:00', true, '{"role": "guest", "active": true}');
+
+create view test_view as
+select name, age, balance, status, metadata->>'role' as role
+from test_table;
+
+create table test_partitioned (
+    id int,
+    region varchar(20),
+    amount numeric(10,2)
+) partition by list (region);
+
+create table test_partitioned_north partition of test_partitioned for values in ('north');
+create table test_partitioned_south partition of test_partitioned for values in ('south');
+
+insert into test_partitioned (id, region, amount)
+values (1, 'north', 100.50), (2, 'south', 200.75);
+
+select t.*, v.role
+from test_table t
+join test_view v on t.name = v.name;
+
+with cte as (
+    select name, age, balance,
+           row_number() over (order by balance desc) as rank
+    from test_table
+)
+select * from cte where rank <= 5;
+
+select count(*) filter (where status = true) as active_count,
+       count(*) filter (where status = false) as inactive_count
+from test_table;
+
+update test_table
+set updated_at = current_timestamp
+where id in (1,2);
+
+create index idx_metadata on test_table using gin(metadata);
+select * from test_table where metadata @> '{"role": "admin"}';
+
+create extension if not exists pg_trgm;
+select name, similarity(name, 'Alice') as similarity_score
+from test_table order by similarity_score desc;
+
+create table ts_test (
+    id serial primary key,
+    content text,
+    content_search tsvector
+);
+insert into ts_test (content, content_search)
+values ('This is a test document', to_tsvector('english', 'This is a test document'));
+select * from ts_test where content_search @@ to_tsquery('test & document');
+
+select distinct on (name) name, age, balance
+from test_table order by name, updated_at desc;
+
+analyze verbose test_table;

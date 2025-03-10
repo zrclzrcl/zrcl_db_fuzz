@@ -1,0 +1,43 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INT,
+    text_col TEXT,
+    boolean_col BOOLEAN DEFAULT FALSE,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    unique_col VARCHAR(100) UNIQUE
+);
+
+INSERT INTO test_table (integer_col, text_col, boolean_col, timestamp_col, unique_col)
+VALUES (NULL, 'test_string', TRUE, CURRENT_TIMESTAMP, 'unique_value_1');
+
+CREATE TABLE test_partitioned (
+    id INT,
+    value INT,
+    category VARCHAR(50)
+) PARTITION BY RANGE (category);
+
+CREATE INDEX idx_integer_col ON test_table(integer_col);
+
+CREATE FUNCTION trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.integer_col > 100 THEN
+        RAISE NOTICE 'Value exceeds limit';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER test_trigger BEFORE INSERT OR UPDATE ON test_table
+FOR EACH ROW EXECUTE FUNCTION trigger_function();
+
+WITH cte AS (
+    SELECT id, integer_col, RANK() OVER (ORDER BY integer_col DESC) as rank
+    FROM test_table
+)
+SELECT * FROM cte WHERE rank <= 5;
+
+CREATE TABLE test_json (
+    data JSONB
+);
+
+INSERT INTO test_json VALUES ('{"key": "value", "array": [1,2,3]}');

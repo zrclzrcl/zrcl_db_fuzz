@@ -1,0 +1,38 @@
+create table test_table (
+    id serial primary key,
+    name text,
+    value numeric(10,2),
+    created_at timestamp default current_timestamp,
+    status boolean default false
+);
+
+insert into test_table (name, value) values ('test1', 100.5);
+insert into test_table (name, value) values ('test2', NULL), ('test3', 200.7), ('test4', 150.3);
+update test_table set status = true where id = 1;
+
+create table related_data (
+    id serial primary key,
+    data jsonb,
+    tags text[],
+    ref_id int references test_table(id)
+);
+
+insert into related_data (data, tags, ref_id) values
+('{"key": "value", "array": [1,2,3]}', '{tag1, tag2}', 1),
+('{"name": "sample"}', '{}', 2);
+
+with avg_cte as (
+    select avg(value) as average from test_table
+)
+update test_table set value = value + (select average from avg_cte) where status is true;
+
+select 
+    t.id,
+    t.name,
+    t.value,
+    r.data ->> 'key' as json_key,
+    unnest(r.tags) as tag
+from test_table t
+left join related_data r on t.id = r.ref_id
+order by t.created_at desc
+limit 10 offset 5;

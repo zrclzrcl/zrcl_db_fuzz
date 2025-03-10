@@ -1,0 +1,68 @@
+-- Create a table with a wide range of data types
+CREATE TABLE datatype_table (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    numeric_col NUMERIC(10, 2),
+    bool_col BOOLEAN NOT NULL DEFAULT FALSE,
+    date_col DATE,
+    time_col TIME,
+    timestamp_col TIMESTAMP WITH TIME ZONE,
+    interval_col INTERVAL,
+    uuid_col UUID,
+    jsonb_col JSONB,
+    array_int_col INT[],
+    range_int_col INT4RANGE,
+    point_col POINT,
+    ltree_col LTREE
+);
+
+-- Create a table with inheritance and constraints
+CREATE TABLE person (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    age INT CHECK (age >= 0)
+);
+
+CREATE TABLE emp (
+    salary NUMERIC(10, 2),
+    job_title VARCHAR(50)
+) INHERITS (person);
+
+-- Create a partitioned table
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    event_date DATE NOT NULL,
+    description TEXT
+) PARTITION BY RANGE (event_date);
+
+CREATE TABLE events_2023 PARTITION OF events FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+CREATE TABLE events_2024 PARTITION OF events FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+
+-- Create indexes with different methods
+CREATE INDEX idx_btree ON datatype_table USING BTREE (id);
+CREATE INDEX idx_hash ON datatype_table USING HASH (bool_col);
+CREATE INDEX idx Gin ON datatype_table USING GIN (jsonb_col);
+CREATE INDEX idx_gist ON datatype_table USING GiST (point_col);
+
+-- Add constraints and triggers
+ALTER TABLE person ADD CONSTRAINT unique_name UNIQUE (name);
+ALTER TABLE emp ADD COLUMN hire_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Create a table with specific storage parameters
+CREATE TABLE storage_test (
+    id INT PRIMARY KEY,
+    data TEXT
+) WITH (fillfactor = 70, autovacuum_enabled = FALSE);
+
+-- Include PostgreSQL-specific features
+CREATE EXTENSION IF NOT EXISTS ltree;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create a table with JSONB and GIN index for advanced querying
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    content JSONB,
+    metadata JSONB
+);
+
+CREATE INDEX idx.Documents_Content USING GIN (content);

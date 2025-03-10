@@ -1,0 +1,80 @@
+-- Initial seed for PostgreSQL fuzz testing
+-- This seed includes a variety of SQL statements designed to test edge cases, cover functionalities, and potentially trigger bugs.
+
+\gset\if 0=1\quit\endif -- Conditional exit if false to test conditional execution paths
+
+-- Create temporary table for testing
+CREATE TEMPORARY TABLE IF NOT EXISTS test_data (
+    id SERIAL PRIMARY KEY,
+    text_col TEXT,
+    num_col NUMERIC(10,2),
+    bool_col BOOLEAN DEFAULT FALSE,
+    ts_col TIMESTAMPTZ,
+    uuid_col UUID,
+    jsonb_col JSONB
+);
+
+-- Test edge cases with NULL and zero values
+SELECT 
+    NULL AS null_value,
+    0::INT AS zero_int,
+    0.0::FLOAT AS zero_float,
+    TRUE AS true_bool,
+    FALSE AS false_bool,
+    now() AS current_timestamp,
+    gen_random_uuid() AS random_uuid;
+
+-- Test JSON operations with edge cases
+SELECT 
+    jsonb_set('{"key": "value"}'::jsonb, '{new_key}', '"new_value"') AS set_result,
+    jsonb_pretty('{"a":1,"b":2}'::jsonb) AS pretty_json,
+    ( '{"array":[null, true, false, 0, "string"]}'::jsonb ) AS array_test;
+
+-- Test string functions with edge cases
+SELECT 
+    length('') AS empty_string_length,
+    substring('abc', 2, 10) AS substring_overflow,
+    translate('hello', 'aeiou', '') AS remove_vowels;
+
+-- Test date/time functions with edge cases
+SELECT 
+    age(now(), now() + interval '1 year') AS one_year_old,
+    date_trunc('second', now()) AS truncated_time,
+    EXTRACT(YEAR FROM '2024-02-29'::DATE) AS leap_year;
+
+-- Test window functions with edge cases
+SELECT 
+    id, num_col,
+    RANK() OVER (ORDER BY num_col DESC) AS rank_desc,
+    NTILE(4) OVER (ORDER BY text_col) AS ntile_4
+FROM test_data;
+
+-- Test Common Table Expressions (CTEs)
+WITH 
+    cte1 AS (
+        SELECT 1 AS a, 'one' AS b
+    ),
+    cte2 AS (
+        SELECT 2 AS a, 'two' AS b
+    )
+SELECT * FROM cte1 UNION ALL SELECT * FROM cte2;
+
+-- Test aggregate functions with edge cases
+SELECT 
+    COUNT(*) AS total_count,
+    SUM(num_col) FILTER (WHERE bool_col) AS sum_true_bool,
+    MAX(ts_col) OVER () AS max_timestamp
+FROM test_data;
+
+-- Test join operations with edge cases
+SELECT 
+    t1.id, t2.id
+FROM test_data t1
+FULL OUTER JOIN test_data t2 ON t1.id = t2.id + 100
+WHERE t1.id < 10 AND t2.id IS NULL;
+
+-- Test UUID functions with edge cases
+SELECT 
+    uuid_generate_v4() AS v4_uuid,
+    uuid_nil() AS nil_uuid,
+    uuid_is_nil(uuid_nil()) AS is_nil;

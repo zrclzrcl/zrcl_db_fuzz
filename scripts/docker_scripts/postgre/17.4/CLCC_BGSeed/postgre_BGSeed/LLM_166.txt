@@ -1,0 +1,52 @@
+-- Drop table if exists to avoid conflicts
+DROP TABLE IF EXISTS fuzz_test;
+
+-- Create a table with various data types
+CREATE TABLE fuzz_test (
+    id SERIAL PRIMARY KEY,
+    text_column TEXT,
+    varchar_column VARCHAR(50),
+    int_column INTEGER,
+    bool_column BOOLEAN,
+    timestamp_column TIMESTAMP,
+    jsonb_column JSONB
+);
+
+-- Insert sample data with edge cases
+INSERT INTO fuzz_test (text_column, varchar_column, int_column, bool_column, timestamp_column, jsonb_column)
+VALUES 
+    ('', 'test', 0, FALSE, NULL, '{"key": "value"}'),
+    ('This is a test string.', 'test', 123456789, TRUE, '2023-10-01 12:34:56', '{"array": [1, 2, 3]}'),
+    ('Long string to test length functions.', 'test', -987654321, FALSE, '2023-10-02 00:00:00', '{"nested": {"object": true}}'),
+    (NULL, NULL, NULL, NULL, NULL, NULL),
+    ('Special characters: !@#$%^&*()', 'test', 12345, TRUE, '2023-10-03 23:59:59', '{"special": "characters"}');
+
+-- Create indexes to test different indexing strategies
+CREATE INDEX idx_text_column ON fuzz_test USING btree (text_column);
+CREATE INDEX idx_varchar_column ON fuzz_test USING hash (varchar_column);
+
+-- Vacuum the table to clean up and optimize storage
+VACUUM ANALYZE fuzz_test;
+
+-- Perform various SELECT queries to test functionality
+SELECT * FROM fuzz_test;
+
+SELECT id, text_column 
+FROM fuzz_test 
+WHERE int_column > 100 AND bool_column = TRUE;
+
+SELECT COUNT(*) FROM fuzz_test WHERE timestamp_column IS NULL;
+
+SELECT MAX(int_column) FROM fuzz_test;
+
+SELECT text_column, LENGTH(text_column) AS string_length 
+FROM fuzz_test 
+WHERE text_column ~* 'test';
+
+SELECT jsonb_column, jsonb_array_length(jsonb_column -> 'array') 
+FROM fuzz_test 
+WHERE jsonb_column ? 'array';
+
+SELECT SUBSTRING(varchar_column, 2, 3) FROM fuzz_test WHERE id = 2;
+
+SELECT TRIM(text_column), bool_column FROM fuzz_test ORDER BY timestamp_column DESC LIMIT 1;

@@ -1,0 +1,17 @@
+-- PostgreSQL Initial Seed
+
+-- Create a simple function to add two integers
+CREATE FUNCTION int4_add(integer, integer) 
+RETURNS integer AS $$
+SELECT $1 + $2;
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+
+-- Create an aggregate using the function
+CREATE AGGREGATE sum_integers (integer) (
+    SFUNC = int4_add,
+    STYPE = integer,
+    INITCOND = 0
+);
+
+-- Verify the aggregate function works correctly
+SELECT sum_integers(generate_series(1,5)) AS total_sum;

@@ -1,0 +1,28 @@
+-- Test case for timestamp with time zone (timestamptz) operations
+
+-- Basic timestamptz conversions and comparisons
+SELECT 
+    '2017-01-18 00:00+00'::timestamptz AT TIME ZONE 'UTC',
+    '2017-01-18 00:00+03'::timestamptz AT TIME ZONE 'MSK';
+
+-- Test DST transition in March
+SELECT 
+    '2011-03-26 22:00+00'::timestamptz AT TIME ZONE 'UTC',
+    '2011-03-26 22:00+04'::timestamptz AT TIME ZONE 'MSK';
+
+-- Test DST transition in October
+SELECT 
+    '2014-10-25 22:00+00'::timestamptz AT TIME ZONE 'UTC',
+    '2014-10-25 22:00+03'::timestamptz AT TIME ZONE 'MSK';
+
+-- Test timestamptz in table with index
+CREATE TEMP TABLE tmptz (
+    f1 timestamptz PRIMARY KEY
+);
+
+INSERT INTO tmptz VALUES ('2017-01-18 00:00+00');
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM tmptz WHERE f1 AT TIME ZONE 'UTC' = '2017-01-18 00:00';
+
+SELECT * FROM tmptz WHERE f1 AT TIME ZONE 'UTC' = '2017-01-18 00:00';

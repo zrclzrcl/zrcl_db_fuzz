@@ -1,0 +1,47 @@
+CREATE TABLE test_fuzz (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    age INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN
+);
+
+INSERT INTO test_fuzz(name, age, is_active) VALUES 
+('test1', 100, true),
+('test2', NULL, false),
+('', -2147483648, true),
+('max_age', 2147483647, false);
+
+SELECT id, name, md5(name), substring(name from 1 for 5) FROM test_fuzz;
+
+UPDATE test_fuzz SET age = age + 10 WHERE is_active = true RETURNING *;
+
+CREATE INDEX idx_name ON test_fuzz(name);
+CREATE INDEX idx_age ON test_fuzz(age);
+
+BEGIN;
+    INSERT INTO test_fuzz(name, age, is_active) VALUES ('tx_test', 50, true);
+    UPDATE test_fuzz SET is_active = false WHERE name = 'tx_test';
+COMMIT;
+
+CREATE OR REPLACE FUNCTION trigger_log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        RAISE NOTICE 'New record added: %', NEW.name;
+    ELSIF TG_OP = 'UPDATE' THEN
+        RAISE NOTICE 'Record updated: %', OLD.name;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER log_changes_trigger BEFORE INSERT OR UPDATE ON test_fuzz
+FOR EACH ROW EXECUTE PROCEDURE trigger_log_changes();
+
+CALL some_procedure();
+
+VACUUM ANALYZE test_fuzz;
+
+DROP TABLE test_fuzz;
+DROP FUNCTION trigger_log_changes();

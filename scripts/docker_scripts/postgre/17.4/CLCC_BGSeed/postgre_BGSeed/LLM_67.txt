@@ -1,0 +1,60 @@
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    value INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    data JSONB
+);
+
+INSERT INTO test_table (name, value) VALUES ('Alice', 100);
+INSERT INTO test_table (name, value, is_active) VALUES ('Bob', 200, FALSE);
+INSERT INTO test_table DEFAULT VALUES;
+
+CREATE UNIQUE INDEX idx_unique_name ON test_table (name);
+
+INSERT INTO test_table (name, value) VALUES ('Alice', 150) ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;
+
+UPDATE test_table SET value = value + 1 WHERE id = -1;
+UPDATE test_table SET data = '{"key": "value"}' WHERE id IN (SELECT id FROM test_table WHERE value > 100);
+
+DELETE FROM test_table WHERE name = 'Bob';
+DELETE FROM test_table WHERE is_active = FALSE RETURNING *;
+
+SELECT COUNT(*), SUM(value) FROM test_table;
+SELECT AVG(value), MAX(value), MIN(value) FROM test_table GROUP BY is_active HAVING COUNT(*) > 1;
+SELECT id, name, ROW_NUMBER() OVER (ORDER BY value DESC) AS rank FROM test_table ORDER BY rank;
+
+BEGIN;
+    INSERT INTO test_table (name, value) VALUES ('TransactionTest', 50);
+    SAVEPOINT sp1;
+    DELETE FROM test_table WHERE name = 'TransactionTest';
+    ROLLBACK TO sp1;
+COMMIT;
+
+CREATE VIEW test_view AS SELECT name, value FROM test_table WHERE is_active;
+CREATE MATERIALIZED VIEW test_mview AS SELECT COUNT(*) as cnt FROM test_table;
+
+CREATE FUNCTION trigger_func() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.value > 100 THEN
+        RAISE NOTICE 'Value exceeds limit';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER value_trigger BEFORE INSERT ON test_table FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+
+WITH cte AS (SELECT name, value FROM test_table WHERE is_active)
+SELECT * FROM cte WHERE value > 50;
+
+WITH RECURSIVE numbers(n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM numbers WHERE n < 10
+)
+SELECT * FROM numbers;
+
+ALTER TABLE test_table ADD COLUMN new_col TEXT;
+ALTER TABLE test_table DROP COLUMN new_col;

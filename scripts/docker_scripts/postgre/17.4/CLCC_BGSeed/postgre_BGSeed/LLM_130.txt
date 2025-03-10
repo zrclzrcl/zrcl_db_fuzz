@@ -1,0 +1,89 @@
+-- Initial seed SQL for PostgreSQL testing
+\connect postgres;
+
+-- Create a test schema
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Create tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_schema.test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    status BOOLEAN DEFAULT FALSE,
+    value NUMERIC(10, 2),
+    data JSONB
+);
+
+CREATE TABLE IF NOT EXISTS test_schema.test_table2 (
+    id SERIAL PRIMARY KEY,
+    test_id INTEGER REFERENCES test_schema.test_table(id),
+    name TEXT UNIQUE,
+    description TEXT,
+    metadata JSONB
+);
+
+-- Create indexes
+CREATE INDEX ON test_schema.test_table (name);
+CREATE INDEX ON test_schema.test_table2 (test_id, name);
+
+-- Add some test data
+INSERT INTO test_schema.test_table (name, status, value)
+VALUES ('Test Record 1', TRUE, 100.5),
+       ('Test Record 2', FALSE, 200.75);
+
+-- Create a view
+CREATE VIEW test_schema.test_view AS
+SELECT t.id, t.name, t.status, tt.name as related_name
+FROM test_schema.test_table t
+LEFT JOIN test_schema.test_table2 tt ON t.id = tt.test_id;
+
+-- Create a function
+CREATE OR REPLACE FUNCTION test_schema.add_numbers(a INT, b INT)
+RETURNS INT AS $$
+BEGIN
+    RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger function
+CREATE OR REPLACE FUNCTION test_schema.log_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Change detected on table % at time %', TG_TABLE_NAME, CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach trigger to a table
+CREATE TRIGGER test_trigger
+AFTER INSERT OR UPDATE ON test_schema.test_table
+FOR EACH ROW
+EXECUTE FUNCTION test_schema.log_changes();
+
+-- Create an ENUM type
+DO $$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM pg_type WHERE typname = 'status_enum') THEN
+        CREATE TYPE status_enum AS ENUM ('active', 'inactive', 'pending');
+    END IF;
+END $$;
+
+-- Use the enum in a table
+CREATE TABLE IF NOT EXISTS test_schema.test_enums (
+    id SERIAL PRIMARY KEY,
+    status status_enum DEFAULT 'active'
+);
+
+-- Insert data into enum table
+INSERT INTO test_schema.test_enums (status)
+VALUES ('active'), ('pending');
+
+-- Create a composite index
+CREATE INDEX ON test_schema.test_table USING GIN (data);
+
+-- Add a unique constraint
+ALTER TABLE test_schema.test_table ADD CONSTRAINT unique_name_constraint UNIQUE (name);
+
+-- Add a check constraint
+ALTER TABLE test_schema.test_table2 ADD CONSTRAINT valid_description CHECK (description IS NOT NULL OR metadata IS NOT NULL);

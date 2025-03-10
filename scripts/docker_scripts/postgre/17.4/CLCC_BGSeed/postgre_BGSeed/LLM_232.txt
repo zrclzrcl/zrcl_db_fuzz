@@ -1,0 +1,67 @@
+-- Create a test table with various data types
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    integer_col INT,
+    text_col TEXT,
+    timestamp_col TIMESTAMP,
+    boolean_col BOOLEAN
+);
+
+-- Insert sample data into the table
+INSERT INTO test_table (integer_col, text_col, timestamp_col, boolean_col)
+VALUES 
+(100, 'Test String 1', CURRENT_TIMESTAMP, TRUE),
+(200, 'Test String 2', CURRENT_TIMESTAMP - INTERVAL '1 day', FALSE),
+(300, 'Test String 3', CURRENT_TIMESTAMP + INTERVAL '1 hour', TRUE);
+
+-- Test basic SELECT with WHERE clause
+SELECT id, integer_col FROM test_table WHERE integer_col > 50;
+
+-- Test JOIN operation
+CREATE TABLE related_table (
+    id SERIAL PRIMARY KEY,
+    test_id INT REFERENCES test_table(id),
+    value TEXT
+);
+
+INSERT INTO related_table (test_id, value)
+VALUES 
+(1, 'Related Value 1'),
+(2, 'Related Value 2');
+
+SELECT t.id, r.value FROM test_table t JOIN related_table r ON t.id = r.test_id;
+
+-- Test aggregate functions
+SELECT COUNT(*) as total_rows FROM test_table;
+SELECT MAX(integer_col) as max_value FROM test_table;
+
+-- Test GROUP BY and HAVING clauses
+SELECT boolean_col, COUNT(*) as count 
+FROM test_table 
+GROUP BY boolean_col 
+HAVING COUNT(*) > 1;
+
+-- Test ORDER BY and LIMIT
+SELECT text_col FROM test_table ORDER BY timestamp_col DESC LIMIT 2;
+
+-- Test transaction handling
+BEGIN;
+    UPDATE test_table SET integer_col = 10 WHERE id = 1;
+    SAVEPOINT my_savepoint;
+    DELETE FROM test_table WHERE id = 2;
+    ROLLBACK TO my_savepoint;
+COMMIT;
+
+-- Test indexes
+CREATE INDEX idx_integer_col ON test_table(integer_col);
+
+-- Test EXPLAIN for query optimization
+EXPLAIN ANALYZE SELECT * FROM test_table WHERE integer_col > 150;
+
+-- Test subqueries
+SELECT id FROM test_table 
+WHERE integer_col IN (SELECT integer_col FROM test_table WHERE boolean_col = TRUE);
+
+-- Clean up the tables
+DROP TABLE related_table;
+DROP TABLE test_table;

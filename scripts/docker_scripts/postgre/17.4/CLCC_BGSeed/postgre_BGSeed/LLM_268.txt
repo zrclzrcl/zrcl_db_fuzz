@@ -1,0 +1,101 @@
+-- Create a schema for testing (if not exists)
+CREATE SCHEMA IF NOT EXISTS test_schema;
+
+-- Set search path to our test schema
+SET search_path = test_schema;
+
+-- Create tables with various data types and constraints
+CREATE TABLE IF NOT EXISTS test_table (
+    id SERIAL PRIMARY KEY,
+    text_field TEXT NOT NULL,
+    bytea_field BYTEA,
+    jsonb_field JSONB,
+    timestamp_field TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    bool_field BOOLEAN DEFAULT FALSE,
+    CONSTRAINT positive_id CHECK (id > 0)
+);
+
+-- Create indexes to cover different types of queries
+CREATE UNIQUE INDEX idx_unique_text ON test_table (text_field);
+CREATE INDEX idx_gin_jsonb ON test_table USING GIN (jsonb_field);
+
+-- Insert sample data with edge cases
+INSERT INTO test_table (text_field, bytea_field, jsonb_field)
+VALUES 
+    ('Test '' String', '\x01\x02\x03', '{"key": "value", "array": [1, 2, null]}'),
+    ('Edge Case Test', '', '{"special": true}'),
+    ('Long Text Field', '\xff\xff\xff', '{"numbers": {"int": 42, "float": 3.14}}');
+
+-- Create a table for testing recursive CTEs
+CREATE TABLE IF NOT EXISTS cte_test (
+    id INT,
+    parent_id INT,
+    value INT
+);
+
+-- Insert data for CTE test
+WITH RECURSIVE cte AS (
+    SELECT 1 as id, NULL::INT as parent_id, 100 as value
+    UNION ALL
+    SELECT id + 1, id, value * 2 FROM cte WHERE id < 5
+)
+INSERT INTO cte_test
+SELECT * FROM cte;
+
+-- Create a table for testing window functions
+CREATE TABLE IF NOT EXISTS window_test (
+    id INT,
+    group_id INT,
+    value DECIMAL
+);
+
+-- Insert data for window test
+INSERT INTO window_test (id, group_id, value)
+VALUES 
+    (1, 1, 10.5),
+    (2, 1, 20.3),
+    (3, 2, 15.2),
+    (4, 2, 25.7);
+
+-- Create a JSONB-specific test table
+CREATE TABLE IF NOT EXISTS jsonb_test (
+    id INT PRIMARY KEY,
+    data JSONB
+);
+
+-- Insert complex JSONB data
+INSERT INTO jsonb_test (id, data)
+VALUES 
+    (1, '{"name": "test", "details": {"status": "active", "timestamp": "2023-01-01T00:00:00Z"}}'),
+    (2, '{"array": [1, 2, 3], "nested": {"more": {"data": true}}}'::JSONB);
+
+-- Create a partitioned table
+CREATE TABLE IF NOT EXISTS logs (
+    id BIGINT,
+    timestamp TIMESTAMP,
+    data TEXT
+) PARTITION BY RANGE (timestamp);
+
+-- Create partitions
+CREATE TABLE logs_2023 PARTITION OF logs FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+-- Insert into partitioned table
+INSERT INTO logs (id, timestamp, data)
+VALUES 
+    (1, '2023-01-01', 'Initial log entry'),
+    (2, '2023-06-01', 'Mid-year log');
+
+-- Create a function for testing PL/pgSQL
+CREATE OR REPLACE FUNCTION test_function()
+RETURNS VOID AS $$
+BEGIN
+    RAISE NOTICE 'Function executed successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Execute the function
+SELECT test_function();
+
+-- Cleanup (uncomment if needed)
+-- DROP TABLE IF EXISTS test_table, cte_test, window_test, jsonb_test, logs;
+-- DROP SCHEMA IF EXISTS test_schema CASCADE;

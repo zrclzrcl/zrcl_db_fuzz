@@ -1,0 +1,45 @@
+SET randomize = true;
+SET transaction_isolation = 'serializable';
+SET statement_timeout = 1000;
+
+CREATE TABLE test_table (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO test_table (name) VALUES ('test1'), ('test2'), ('test3');
+INSERT INTO test_table (name, created_at) VALUES ('test4', now() - interval '1 day');
+
+CREATE INDEX idx_name ON test_table (name);
+CREATE UNIQUE INDEX uniq_name ON test_table (name);
+CREATE INDEX idx_created_at ON test_table (created_at DESC);
+
+ALTER TABLE test_table ADD COLUMN description TEXT;
+ALTER TABLE test_table ADD CONSTRAINT chk_description CHECK (description IS NOT NULL OR name = 'test1');
+
+SELECT pg_sleep(0.5);
+SELECT uuid_generate_v4();
+SELECT md5('test_string');
+
+WITH recursive_cte AS (
+    SELECT 1 as n
+    UNION ALL
+    SELECT n + 1 FROM recursive_cte WHERE n < 3
+)
+SELECT * FROM recursive_cte;
+
+BEGIN;
+INSERT INTO test_table (name) VALUES ('tx_test');
+SAVEPOINT sp1;
+UPDATE test_table SET name = 'tx_updated' WHERE id = 1;
+ROLLBACK TO sp1;
+COMMIT;
+
+CREATE TABLE IF NOT EXISTS partitioned_table (
+    id SERIAL,
+    region TEXT,
+    amount DECIMAL
+) PARTITION BY RANGE (id);
+
+CREATE TABLE partitioned_table_1 PARTITION OF partitioned_table FOR VALUES FROM (0) TO (100);
